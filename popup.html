@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intelligent UI</title>
+  <link rel="stylesheet" href="/src/popup/popup.css" />
+</head>
+<body>
+  <div class="popup-container">
+    <header class="header">
+      <h1 class="title">Intelligent UI</h1>
+      <p class="subtitle">for Gemini &amp; Grok</p>
+    </header>
+
+    <div id="status-line" class="status-line status-muted">Open Gemini or Grok to use</div>
+
+    <section class="card instruction-card">
+      <div class="card-header">
+        <label for="system-instruction" class="card-title">System instruction</label>
+        <button id="copy-btn" class="btn btn-primary" type="button">Copy</button>
+      </div>
+      <textarea id="system-instruction" rows="10" readonly spellcheck="false"></textarea>
+      <p class="howto-text">Gemini: paste into a Gem's instructions or Settings › Instructions for Gemini. Grok: Settings › Customize › Custom Instructions, or a Project's instructions.</p>
+    </section>
+
+    <section class="card settings-card">
+      <div class="setting-item">
+        <span class="setting-label">Render UI blocks</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-render" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="setting-item">
+        <span class="setting-label">Auto-insert instruction into the first message (experimental)</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-autoinject" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="setting-item">
+        <label for="theme-select" class="setting-label">Theme</label>
+        <select id="theme-select" class="theme-select">
+          <option value="auto">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+    </section>
+  </div>
+  <script type="module" src="/src/popup/popup.ts"></script>
+</body>
+</html>

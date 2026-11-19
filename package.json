@@ -1,0 +1,25 @@
+{
+  "name": "intelligent-ui-ext",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build:popup": "vite build -c vite.config.ts",
+    "build:content": "vite build -c vite.content.config.ts",
+    "build": "npm run typecheck && npm run build:popup && npm run build:content",
+    "fixture": "vite build -c vite.fixture.config.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.7",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  },
+  "dependencies": {
+    "chart.js": "^4.6.1",
+    "lucide": "^1.76.0",
+    "mermaid": "^12.3.0"
+  }
+}
