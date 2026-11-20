@@ -2,10 +2,298 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Intelligent UI fixture</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BetterView Fixture Harness</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 32px;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      background: #F5F5F4;
+      color: #0A0A0A;
+    }
+    body[data-theme="dark"] {
+      background: #0A0A0A;
+      color: #FAFAFA;
+    }
+    .fixture-container {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .fixture-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #E7E7E7;
+    }
+    body[data-theme="dark"] .fixture-header {
+      border-bottom-color: #262626;
+    }
+    .fixture-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .fixture-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .fixture-section h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #6B6B6B;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    body[data-theme="dark"] .fixture-section h2 {
+      color: #A3A3A3;
+    }
+    .theme-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid #E7E7E7;
+      background: #FFFFFF;
+      color: #0A0A0A;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    body[data-theme="dark"] .theme-btn {
+      background: #141414;
+      color: #FAFAFA;
+      border-color: #262626;
+    }
+  </style>
 </head>
-<body>
-  <h1>Intelligent UI fixture</h1>
+<body data-theme="light">
+  <div class="fixture-container">
+    <div class="fixture-header">
+      <h1 class="fixture-title">BetterView Fixture Harness</h1>
+      <button id="theme-toggle" class="theme-btn" type="button">Switch to Dark Mode</button>
+    </div>
+
+    <!-- 1. Stepper: Build the URL shortener -->
+    <section class="fixture-section" id="section-stepper">
+      <h2>1. Stepper: Build the URL shortener</h2>
+      <div class="fixture-mount" data-spec-id="stepper-spec"></div>
+      <script type="application/json" id="stepper-spec">
+      {
+        "type": "stepper",
+        "title": "Build the URL shortener",
+        "steps": [
+          {
+            "title": "Design the API",
+            "detail": "Define REST endpoints for URL creation (POST /api/shorten) and redirection (GET /:code) with appropriate HTTP status codes (301 vs 302)."
+          },
+          {
+            "title": "Generate short codes (Base62)",
+            "detail": "Compute unique 6 to 7 character alphanumeric hashes using Base62 encoding to support billions of distinct URLs."
+          },
+          {
+            "title": "Store mappings",
+            "detail": "Persist the mapping between short codes and original destination URLs in a primary database with index on code."
+          },
+          {
+            "title": "Add a cache for redirects",
+            "detail": "Implement an in-memory Redis or Memcached layer to serve hot URL redirects with sub-millisecond latency."
+          },
+          {
+            "title": "Add analytics and rate limits",
+            "detail": "Track click counts and referrers asynchronously via message queues while enforcing per-IP rate limits against abuse."
+          }
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 2. Table: Capacity estimates -->
+    <section class="fixture-section" id="section-table-capacity">
+      <h2>2. Table: Capacity estimates</h2>
+      <div class="fixture-mount" data-spec-id="table-capacity-spec"></div>
+      <script type="application/json" id="table-capacity-spec">
+      {
+        "type": "table",
+        "title": "Capacity estimates",
+        "columns": ["Metric", "Value", "Notes"],
+        "rows": [
+          ["New URLs/day", "1M", "Write volume"],
+          ["Redirects/day", "100M", "Read volume"],
+          ["Read:write ratio", "100:1", "Read-heavy workload"],
+          ["Storage/5 years", "1.8 TB", "Assumes 500 bytes per record"],
+          ["Peak redirects/sec", "3,500", "2x daily average"],
+          ["Cache hit rate target", "90%", "Caches top 20% of active URLs"]
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 3. Table: Number sorting test -->
+    <section class="fixture-section" id="section-table-numbers">
+      <h2>3. Table: Number sorting test (12 rows of mixed numbers)</h2>
+      <div class="fixture-mount" data-spec-id="table-numbers-spec"></div>
+      <script type="application/json" id="table-numbers-spec">
+      {
+        "type": "table",
+        "title": "Number sorting test",
+        "columns": ["Item", "Count", "Share"],
+        "rows": [
+          ["Alpha", "1,200", "12%"],
+          ["Beta", "₹3.5k", "35%"],
+          ["Gamma", "45%", "4.5%"],
+          ["Delta", "250", "2.5%"],
+          ["Epsilon", "10M", "99%"],
+          ["Zeta", "$500", "5%"],
+          ["Eta", "2.4k", "24%"],
+          ["Theta", "85", "0.8%"],
+          ["Iota", "1.5B", "100%"],
+          ["Kappa", "750", "7.5%"],
+          ["Lambda", "₹12k", "50%"],
+          ["Mu", "30", "0.3%"]
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 4. Compare: SQL vs NoSQL for the URL store -->
+    <section class="fixture-section" id="section-compare">
+      <h2>4. Compare: SQL vs NoSQL for the URL store</h2>
+      <div class="fixture-mount" data-spec-id="compare-spec"></div>
+      <script type="application/json" id="compare-spec">
+      {
+        "type": "compare",
+        "title": "SQL vs NoSQL for the URL store",
+        "items": [
+          {
+            "label": "SQL",
+            "tone": "good",
+            "points": [
+              "ACID transactions guarantee unique short code constraints without race conditions.",
+              "Strong consistency ensures created URLs are immediately resolvable.",
+              "Rich relational indexes support fast code lookups and user ownership queries.",
+              "Mature tooling, migrations, and well-understood backup strategies."
+            ]
+          },
+          {
+            "label": "NoSQL",
+            "tone": "bad",
+            "points": [
+              "Eventual consistency may cause transient 404s immediately after creation.",
+              "Enforcing unique short codes requires distributed locking or conditional writes.",
+              "Complex secondary indexes can degrade write throughput under heavy load.",
+              "Potential operational overhead for cluster rebalancing and sharding."
+            ]
+          }
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 5. Quiz: Check your understanding -->
+    <section class="fixture-section" id="section-quiz">
+      <h2>5. Quiz: Check your understanding</h2>
+      <div class="fixture-mount" data-spec-id="quiz-spec"></div>
+      <script type="application/json" id="quiz-spec">
+      {
+        "type": "quiz",
+        "title": "Check your understanding",
+        "questions": [
+          {
+            "q": "Why is Base62 commonly used for short URL codes?",
+            "options": [
+              "It is encrypted so users cannot guess destination URLs",
+              "It uses alphanumeric characters [0-9, a-z, A-Z] safe for URLs without escaping",
+              "It compresses binary data better than Base64",
+              "It automatically expires URLs after 30 days"
+            ],
+            "answer": 1,
+            "explain": "Base62 uses 62 alphanumeric characters (0-9, a-z, A-Z) which are all URL-safe and do not require special URL percent-encoding."
+          },
+          {
+            "q": "What should the cache store to optimize URL redirection?",
+            "options": [
+              "Full HTML responses of the destination websites",
+              "User session tokens and browser cookies",
+              "Mapping of short codes to destination URLs",
+              "Historical visitor IP addresses"
+            ],
+            "answer": 2,
+            "explain": "Caching the short code to long URL mapping in memory (e.g. Redis) allows the service to return 301/302 redirects with sub-millisecond latency."
+          },
+          {
+            "q": "How can the system avoid collisions when generating short codes from an auto-incrementing ID?",
+            "options": [
+              "By converting the unique database counter directly to Base62",
+              "By randomly generating 6 characters and overwriting existing keys",
+              "By appending the current millisecond timestamp to every code",
+              "By hashing the user's IP address with MD5"
+            ],
+            "answer": 0,
+            "explain": "Converting a monotonically increasing unique ID directly into Base62 guarantees that every code is mathematically unique, completely eliminating collision risk."
+          }
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 6. Flow (Debug renderer) -->
+    <section class="fixture-section" id="section-flow">
+      <h2>6. Flow (Debug renderer)</h2>
+      <div class="fixture-mount" data-spec-id="flow-spec"></div>
+      <script type="application/json" id="flow-spec">
+      {
+        "type": "flow",
+        "title": "Architecture Overview",
+        "nodes": [
+          { "id": "client", "label": "Client Application" },
+          { "id": "lb", "label": "Load Balancer" },
+          { "id": "service", "label": "Shortener API" },
+          { "id": "db", "label": "SQL Database" }
+        ],
+        "edges": [
+          { "from": "client", "to": "lb" },
+          { "from": "lb", "to": "service" },
+          { "from": "service", "to": "db" }
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 7. Chart (Debug renderer) -->
+    <section class="fixture-section" id="section-chart">
+      <h2>7. Chart (Debug renderer)</h2>
+      <div class="fixture-mount" data-spec-id="chart-spec"></div>
+      <script type="application/json" id="chart-spec">
+      {
+        "type": "chart",
+        "title": "Redirect Traffic",
+        "chartType": "line",
+        "labels": ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00"],
+        "datasets": [
+          { "label": "Requests/sec", "data": [450, 200, 1200, 3500, 2800, 1900] }
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 8. Mermaid (Debug renderer) -->
+    <section class="fixture-section" id="section-mermaid">
+      <h2>8. Mermaid (Debug renderer)</h2>
+      <div class="fixture-mount" data-spec-id="mermaid-spec"></div>
+      <script type="application/json" id="mermaid-spec">
+      {
+        "type": "mermaid",
+        "title": "Sequence Diagram",
+        "code": "sequenceDiagram\nClient->>Server: GET /xyz\nServer->>Cache: Lookup xyz\nCache-->>Server: Hit\nServer-->>Client: 301 Moved Permanently"
+      }
+      </script>
+    </section>
+  </div>
   <script src="fixture.js"></script>
 </body>
 </html>

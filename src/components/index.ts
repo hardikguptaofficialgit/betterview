@@ -1,6 +1,10 @@
 import { ThemeMode } from '../core/theme';
 import { UISpec, UIType } from '../core/types';
 import { h } from '../core/dom';
+import { renderTable } from './table';
+import { renderCompare } from './compare';
+import { renderStepper } from './stepper';
+import { renderQuiz } from './quiz';
 
 export interface RenderContext {
   theme: ThemeMode;
@@ -21,10 +25,10 @@ function renderDebug(spec: UISpec, _ctx: RenderContext): HTMLElement {
 
 export const RENDERERS: { [K in UIType]: RenderFn<Extract<UISpec, { type: K }>> } = {
   flow: renderDebug as RenderFn<Extract<UISpec, { type: 'flow' }>>,
-  stepper: renderDebug as RenderFn<Extract<UISpec, { type: 'stepper' }>>,
-  table: renderDebug as RenderFn<Extract<UISpec, { type: 'table' }>>,
-  compare: renderDebug as RenderFn<Extract<UISpec, { type: 'compare' }>>,
-  quiz: renderDebug as RenderFn<Extract<UISpec, { type: 'quiz' }>>,
+  stepper: renderStepper,
+  table: renderTable,
+  compare: renderCompare,
+  quiz: renderQuiz,
   chart: renderDebug as RenderFn<Extract<UISpec, { type: 'chart' }>>,
   mermaid: renderDebug as RenderFn<Extract<UISpec, { type: 'mermaid' }>>,
 };

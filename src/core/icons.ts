@@ -78,6 +78,8 @@ import {
   Scale,
   Building2,
   House,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide';
 import type { IconNode } from 'lucide';
 
@@ -163,6 +165,8 @@ export const ICON_MAP: Record<string, IconNode> = {
   'scale': Scale,
   'building': Building2,
   'home': House,
+  'chevron-down': ChevronDown,
+  'chevron-up': ChevronUp,
 };
 
 export function normalizeIconName(name: string | undefined): string {
@@ -180,12 +184,12 @@ export function iconEl(name: string | undefined, size = 18): SVGElement {
   const el = createElement(node, {
     width: String(size),
     height: String(size),
-    'stroke-width': '2',
+    'stroke-width': '1.75',
     'aria-hidden': 'true',
   });
   el.setAttribute('width', String(size));
   el.setAttribute('height', String(size));
-  el.setAttribute('stroke-width', '2');
+  el.setAttribute('stroke-width', '1.75');
   el.setAttribute('aria-hidden', 'true');
   return el;
 }

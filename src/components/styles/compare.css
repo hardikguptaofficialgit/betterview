@@ -1,0 +1,81 @@
+.iui-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.iui-compare-panel {
+  border-radius: 12px;
+  padding: 16px;
+  background-color: var(--c-bg);
+  border: 1px solid var(--c-line);
+  display: flex;
+  flex-direction: column;
+}
+
+.iui-compare-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.iui-compare-iconbox {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background-color: var(--iui-bg);
+  border: 1px solid var(--c-line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--c-ink);
+}
+
+.iui-compare-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--iui-text);
+}
+
+.iui-compare-points {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.iui-compare-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.iui-compare-point-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--c-ink);
+  margin-top: 2px;
+}
+
+.iui-compare-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background-color: var(--c-ink);
+  flex-shrink: 0;
+  margin-top: 7px;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.iui-compare-point-text {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--iui-text);
+  flex: 1;
+}
