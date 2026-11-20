@@ -42,6 +42,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "content-main.js",
         "assets/*"
       ],
       "matches": [

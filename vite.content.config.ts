@@ -1,4 +1,4 @@
-import { defineConfig, Plugin } from 'vite';
+import { defineConfig, Plugin, build as viteBuild } from 'vite';
 
 function asciiPlugin(): Plugin {
   return {
@@ -15,14 +15,29 @@ function asciiPlugin(): Plugin {
   };
 }
 
-function chromeDynamicImportPlugin(): any {
+function buildLoaderPlugin(): Plugin {
   return {
-    name: 'chrome-dynamic-import',
-    renderDynamicImport() {
-      return {
-        left: `import(((u) => typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL(u.replace(/^\\.\\/?/, '')) : u)(`,
-        right: `))`,
-      };
+    name: 'build-loader',
+    async closeBundle() {
+      await viteBuild({
+        configFile: false,
+        publicDir: false,
+        plugins: [asciiPlugin()],
+        build: {
+          outDir: 'dist',
+          emptyOutDir: false,
+          target: 'es2020',
+          minify: 'esbuild',
+          rollupOptions: {
+            input: 'src/content/loader.ts',
+            output: {
+              format: 'iife',
+              entryFileNames: 'content.js',
+              charset: 'ascii',
+            },
+          },
+        },
+      });
     },
   };
 }
@@ -32,10 +47,7 @@ export default defineConfig({
   define: {
     'process.env.NODE_ENV': '"production"',
   },
-  esbuild: {
-    charset: 'ascii',
-  },
-  plugins: [chromeDynamicImportPlugin(), asciiPlugin()],
+  plugins: [asciiPlugin(), buildLoaderPlugin()],
   build: {
     outDir: 'dist',
     emptyOutDir: false,
@@ -43,11 +55,12 @@ export default defineConfig({
     minify: 'esbuild',
     cssCodeSplit: false,
     rollupOptions: {
-      input: 'src/content/index.ts',
+      input: 'src/content/main.ts',
       output: {
         format: 'es',
-        entryFileNames: 'content.js',
+        entryFileNames: 'content-main.js',
         chunkFileNames: 'assets/[name]-[hash].js',
+        charset: 'ascii',
       },
     },
   },

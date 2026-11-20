@@ -7,7 +7,7 @@
     "build:popup": "vite build -c vite.config.ts",
     "build:content": "vite build -c vite.content.config.ts",
     "build:background": "vite build -c vite.background.config.ts",
-    "build": "npm run typecheck && npm run build:popup && npm run build:content && npm run build:background && node scripts/check-ascii.mjs",
+    "build": "npm run typecheck && npm run build:popup && npm run build:content && npm run build:background && node scripts/check-ascii.mjs && node scripts/check-content.mjs",
     "fixture": "vite build -c vite.fixture.config.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

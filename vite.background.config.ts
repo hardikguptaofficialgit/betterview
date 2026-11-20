@@ -20,9 +20,6 @@ export default defineConfig({
   define: {
     'process.env.NODE_ENV': '"production"',
   },
-  esbuild: {
-    charset: 'ascii',
-  },
   plugins: [asciiPlugin()],
   build: {
     outDir: 'dist',
@@ -37,7 +34,7 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        inlineDynamicImports: true,
+        charset: 'ascii',
       },
     },
   },

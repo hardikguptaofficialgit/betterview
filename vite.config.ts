@@ -19,9 +19,6 @@ function asciiPlugin(): Plugin {
 export default defineConfig({
   base: './',
   publicDir: 'public',
-  esbuild: {
-    charset: 'ascii',
-  },
   plugins: [asciiPlugin()],
   build: {
     outDir: 'dist',
@@ -31,6 +28,9 @@ export default defineConfig({
       input: {
         popup: 'popup.html',
         welcome: 'welcome.html',
+      },
+      output: {
+        charset: 'ascii',
       },
     },
   },
