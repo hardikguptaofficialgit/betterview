@@ -62,6 +62,7 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
     clear(tbody);
     for (const item of entries) {
       const tr = h('tr', { class: 'iui-table-tr' });
+      tr.style.setProperty('--row-idx', String(item.idx));
       for (let c = 0; c < columns.length; c++) {
         const cellText = item.row[c] ?? '';
         const tdClasses = ['iui-table-td'];

@@ -1,46 +1,37 @@
-import {
-  Chart,
-  BarController,
-  LineController,
-  PieController,
-  DoughnutController,
-  RadarController,
-  CategoryScale,
-  LinearScale,
-  RadialLinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Tooltip,
-  Legend,
-  Title,
-  Filler,
-  ChartConfiguration,
-} from 'chart.js';
+import type { ChartConfiguration } from 'chart.js';
 import { ChartSpec } from '../core/types';
 import { ThemeMode } from '../core/theme';
 import { RenderContext } from './index';
 import { h } from '../core/dom';
 
-Chart.register(
-  BarController,
-  LineController,
-  PieController,
-  DoughnutController,
-  RadarController,
-  CategoryScale,
-  LinearScale,
-  RadialLinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Tooltip,
-  Legend,
-  Title,
-  Filler,
-);
+let chartClassPromise: Promise<any> | null = null;
+
+export async function getChartClass(): Promise<any> {
+  if (!chartClassPromise) {
+    chartClassPromise = import('chart.js').then((m) => {
+      m.Chart.register(
+        m.BarController,
+        m.LineController,
+        m.PieController,
+        m.DoughnutController,
+        m.RadarController,
+        m.CategoryScale,
+        m.LinearScale,
+        m.RadialLinearScale,
+        m.BarElement,
+        m.LineElement,
+        m.PointElement,
+        m.ArcElement,
+        m.Tooltip,
+        m.Legend,
+        m.Title,
+        m.Filler,
+      );
+      return m.Chart;
+    });
+  }
+  return chartClassPromise;
+}
 
 const FONT_STACK =
   'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Google Sans", Inter, sans-serif';
@@ -86,7 +77,7 @@ export function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export function buildChartConfig(spec: ChartSpec, theme: ThemeMode): ChartConfiguration {
+export function buildChartConfig(spec: ChartSpec, theme: ThemeMode, animated = false): ChartConfiguration {
   const isDark = theme === 'dark';
   const solids = isDark ? DARK_SOLIDS : LIGHT_SOLIDS;
   const inks = isDark ? DARK_INKS : LIGHT_INKS;
@@ -218,6 +209,13 @@ export function buildChartConfig(spec: ChartSpec, theme: ThemeMode): ChartConfig
 
   const showLegend = spec.datasets.length > 1 || isPieOrDoughnut;
 
+  const animationConfig = animated
+    ? {
+        duration: 800,
+        easing: 'easeOutQuart' as const,
+      }
+    : false;
+
   return {
     type: spec.chartType as any,
     data: {
@@ -227,7 +225,7 @@ export function buildChartConfig(spec: ChartSpec, theme: ThemeMode): ChartConfig
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: false,
+      animation: animationConfig as any,
       plugins: {
         legend: {
           display: showLegend,
@@ -285,7 +283,7 @@ export function buildChartConfig(spec: ChartSpec, theme: ThemeMode): ChartConfig
 }
 
 export function renderChart(spec: ChartSpec, ctx: RenderContext): HTMLElement {
-  const card = h('div', { class: 'iui-card' });
+  const card = h('div', { class: 'iui-card iui-chart-card' });
   if (spec.title) {
     card.appendChild(h('div', { class: 'iui-title' }, spec.title));
   }
@@ -312,20 +310,39 @@ export function renderChart(spec: ChartSpec, ctx: RenderContext): HTMLElement {
 
   card.appendChild(container);
 
-  const config = buildChartConfig(spec, ctx.theme);
+  const prefersReduced =
+    typeof window !== 'undefined' &&
+    window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  try {
-    const chart = new Chart(canvas, config);
-    ctx.onCleanup(() => {
+  const config = buildChartConfig(spec, ctx.theme, !prefersReduced);
+
+  let disposed = false;
+  let chartInstance: any = null;
+
+  ctx.onCleanup(() => {
+    disposed = true;
+    if (chartInstance) {
       try {
-        chart.destroy();
+        chartInstance.destroy();
       } catch {
         // ignore cleanup error
       }
+    }
+  });
+
+  getChartClass()
+    .then((Chart) => {
+      if (disposed) return;
+      try {
+        chartInstance = new Chart(canvas, config);
+      } catch (err) {
+        console.warn('[IUI] Chart initialization failed:', err);
+      }
+    })
+    .catch((err) => {
+      console.warn('[IUI] Failed to load Chart.js:', err);
     });
-  } catch (err) {
-    console.warn('[IUI] Chart initialization failed:', err);
-  }
 
   return card;
 }

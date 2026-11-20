@@ -15,6 +15,18 @@ function asciiPlugin(): Plugin {
   };
 }
 
+function chromeDynamicImportPlugin(): any {
+  return {
+    name: 'chrome-dynamic-import',
+    renderDynamicImport() {
+      return {
+        left: `import(((u) => typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL(u.replace(/^\\.\\/?/, '')) : u)(`,
+        right: `))`,
+      };
+    },
+  };
+}
+
 export default defineConfig({
   publicDir: false,
   define: {
@@ -23,22 +35,19 @@ export default defineConfig({
   esbuild: {
     charset: 'ascii',
   },
-  plugins: [asciiPlugin()],
+  plugins: [chromeDynamicImportPlugin(), asciiPlugin()],
   build: {
     outDir: 'dist',
     emptyOutDir: false,
     target: 'es2020',
     minify: 'esbuild',
     cssCodeSplit: false,
-    lib: {
-      entry: 'src/content/index.ts',
-      formats: ['iife'],
-      name: 'IUIContent',
-      fileName: () => 'content.js',
-    },
     rollupOptions: {
+      input: 'src/content/index.ts',
       output: {
-        inlineDynamicImports: true,
+        format: 'es',
+        entryFileNames: 'content.js',
+        chunkFileNames: 'assets/[name]-[hash].js',
       },
     },
   },

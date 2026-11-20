@@ -39,6 +39,80 @@ function initFixture(): void {
     }, 500);
   }
 
+  // Multi-type streaming simulation in 15-char chunks
+  const simulateStreamingBtn = document.getElementById('btn-simulate-streaming');
+  const streamingAllMount = document.getElementById('streaming-all-mount');
+  const streamingStatus = document.getElementById('streaming-status');
+
+  const STREAM_SPEC_IDS = [
+    'flow-spec-grouped',
+    'stepper-spec',
+    'table-capacity-spec',
+    'compare-spec',
+    'quiz-spec',
+    'chart-bar-spec',
+    'mermaid-sequence-spec',
+    'callout-spec',
+    'stats-spec',
+    'tabs-spec',
+    'timeline-spec',
+    'followups-spec',
+  ];
+
+  if (simulateStreamingBtn && streamingAllMount) {
+    let activeIntervals: number[] = [];
+
+    simulateStreamingBtn.addEventListener('click', () => {
+      // Clear any running intervals
+      activeIntervals.forEach((id) => window.clearInterval(id));
+      activeIntervals = [];
+
+      streamingAllMount.innerHTML = '';
+      if (streamingStatus) {
+        streamingStatus.textContent = 'Streaming all 12 types in 15-char chunks...';
+      }
+
+      let completedCount = 0;
+
+      STREAM_SPEC_IDS.forEach((specId, specIndex) => {
+        const scriptEl = document.getElementById(specId);
+        const fullJson = scriptEl?.textContent?.trim() || '';
+        if (!fullJson) return;
+
+        const cardMount = document.createElement('div');
+        cardMount.className = 'streaming-card-mount';
+        streamingAllMount.appendChild(cardMount);
+
+        const handle = mountBlock(cardMount, { theme: currentTheme, insert: 'inside' });
+        handles.push(handle);
+
+        let offset = 0;
+        // Stagger the start of each component by 60ms
+        const startDelay = specIndex * 60;
+
+        window.setTimeout(() => {
+          const intervalId = window.setInterval(() => {
+            offset += 15;
+            if (offset >= fullJson.length) {
+              handle.update(fullJson);
+              handle.finalize();
+              window.clearInterval(intervalId);
+              completedCount++;
+              if (completedCount === STREAM_SPEC_IDS.length && streamingStatus) {
+                streamingStatus.textContent = 'Completed streaming all 12 types in 15-char chunks!';
+              }
+            } else {
+              const partial = fullJson.slice(0, offset);
+              handle.update(partial);
+            }
+          }, 30);
+
+          activeIntervals.push(intervalId);
+        }, startDelay);
+      });
+    });
+  }
+
   const toggleBtn = document.getElementById('theme-toggle');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {

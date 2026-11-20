@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
 import { parseNumericValue } from '../src/components/table';
 import {
@@ -278,5 +279,45 @@ describe('RENDERERS registry', () => {
     expect(typeof RENDERERS.table).toBe('function');
     expect(typeof RENDERERS.compare).toBe('function');
     expect(typeof RENDERERS.quiz).toBe('function');
+    expect(typeof RENDERERS.callout).toBe('function');
+    expect(typeof RENDERERS.stats).toBe('function');
+    expect(typeof RENDERERS.tabs).toBe('function');
+    expect(typeof RENDERERS.timeline).toBe('function');
+    expect(typeof RENDERERS.followups).toBe('function');
+  });
+
+  it('renders all 5 new components into DOM nodes cleanly', () => {
+    const ctx = { theme: 'light' as const, onCleanup: () => {} };
+
+    const calloutEl = RENDERERS.callout(
+      { type: 'callout', tone: 'tip', title: 'Tip', text: 'Use caching' },
+      ctx,
+    );
+    expect(calloutEl.classList.contains('iui-card')).toBe(true);
+    expect(calloutEl.textContent).toContain('Use caching');
+
+    const statsEl = RENDERERS.stats(
+      { type: 'stats', items: [{ label: 'QPS', value: '10k', delta: '+5%' }, { label: 'Errors', value: '0%' }] },
+      ctx,
+    );
+    expect(statsEl.querySelectorAll('.iui-stat-item')).toHaveLength(2);
+
+    const tabsEl = RENDERERS.tabs(
+      { type: 'tabs', tabs: [{ label: 'T1', content: 'C1' }, { label: 'T2', content: ['A', 'B'] }] },
+      ctx,
+    );
+    expect(tabsEl.querySelectorAll('.iui-tabs-btn')).toHaveLength(2);
+
+    const timelineEl = RENDERERS.timeline(
+      { type: 'timeline', events: [{ title: 'Milestone 1', time: 'Jan', text: 'Started' }] },
+      ctx,
+    );
+    expect(timelineEl.querySelectorAll('.iui-timeline-row')).toHaveLength(1);
+
+    const followupsEl = RENDERERS.followups(
+      { type: 'followups', suggestions: ['Why use SQL?', 'Cost breakdown'] },
+      ctx,
+    );
+    expect(followupsEl.querySelectorAll('.iui-followup-chip')).toHaveLength(2);
   });
 });

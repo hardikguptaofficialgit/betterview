@@ -73,6 +73,14 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
   // Compute graph layout
   const layout = layoutFlow(nodes, edges);
 
+  const topoOrder = new Map<string, number>();
+  let topoIdx = 0;
+  for (const r of layout.ranks) {
+    for (const id of r) {
+      topoOrder.set(id, topoIdx++);
+    }
+  }
+
   const flowInner = h('div', { class: 'flow-inner' });
   const svgOverlay = svg('svg', { class: 'flow-svg-overlay' });
   const labelsLayer = h('div', { class: 'flow-labels-layer' });
@@ -113,6 +121,8 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
       'data-node-id': node.id,
       title: tooltip,
     });
+    const topoRank = topoOrder.get(node.id) ?? 0;
+    nodeEl.style.setProperty('--node-topo-idx', String(topoRank));
 
     // Iconbox
     const iconBox = h(
@@ -320,8 +330,14 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
       }
     }
 
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     // Draw edges
-    for (const e of edges) {
+    for (let edgeIdx = 0; edgeIdx < edges.length; edgeIdx++) {
+      const e = edges[edgeIdx];
       const sourceBox = nodeBoxes.get(e.from);
       const targetBox = nodeBoxes.get(e.to);
       if (!sourceBox || !targetBox) continue;
@@ -380,6 +396,22 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
         fill: 'none',
         'marker-end': `url(#${markerId})`,
       });
+
+      if (!prefersReduced && typeof requestAnimationFrame !== 'undefined') {
+        try {
+          const len = (pathEl as SVGGeometryElement).getTotalLength?.() || 200;
+          pathEl.style.strokeDasharray = `${len}`;
+          pathEl.style.strokeDashoffset = `${len}`;
+          const edgeDelay = 150 + edgeIdx * 100;
+          pathEl.style.transition = `stroke-dashoffset 400ms cubic-bezier(.2,.8,.2,1) ${edgeDelay}ms`;
+          requestAnimationFrame(() => {
+            pathEl.style.strokeDashoffset = '0';
+          });
+        } catch {
+          // ignore
+        }
+      }
+
       svgOverlay.appendChild(pathEl);
 
       // Edge label at curve midpoint (t = 0.5 on cubic Bézier)
@@ -402,6 +434,16 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
         );
         pill.style.left = `${mx}px`;
         pill.style.top = `${my}px`;
+
+        if (!prefersReduced && typeof requestAnimationFrame !== 'undefined') {
+          pill.style.opacity = '0';
+          const labelDelay = 150 + edgeIdx * 100 + 350;
+          pill.style.transition = `opacity 240ms cubic-bezier(.2,.8,.2,1) ${labelDelay}ms`;
+          requestAnimationFrame(() => {
+            pill.style.opacity = '1';
+          });
+        }
+
         labelsLayer.appendChild(pill);
       }
     }

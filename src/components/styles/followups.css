@@ -1,0 +1,49 @@
+.iui-followups-card {
+  border-radius: 18px;
+}
+
+.iui-followups-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.iui-followup-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 999px;
+  background-color: var(--iui-surface);
+  border: 1px solid var(--iui-border);
+  color: var(--iui-text);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 160ms cubic-bezier(.2,.8,.2,1), border-color 160ms cubic-bezier(.2,.8,.2,1), transform 160ms cubic-bezier(.2,.8,.2,1);
+}
+
+.iui-followup-chip:hover {
+  background-color: var(--c-bg, #F1EDFC);
+  border-color: var(--c-line, #DCD3F6);
+  color: var(--c-ink, #4C3D91);
+}
+
+.iui-followup-chip:active,
+.iui-followup-chip.is-clicked {
+  transform: scale(0.97);
+  background-color: var(--c-bg, #F1EDFC);
+}
+
+.iui-followup-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-ink, var(--iui-muted));
+  flex-shrink: 0;
+}
+
+.iui-followup-text {
+  line-height: 1.35;
+}

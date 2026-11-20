@@ -84,6 +84,7 @@ import {
   Copy,
   ExternalLink,
   ShieldCheck,
+  Maximize2,
 } from 'lucide';
 import type { IconNode } from 'lucide';
 
@@ -175,6 +176,9 @@ export const ICON_MAP: Record<string, IconNode> = {
   'copy': Copy,
   'external-link': ExternalLink,
   'shield-check': ShieldCheck,
+  'maximize': Maximize2,
+  'maximize-2': Maximize2,
+  'expand': Maximize2,
 };
 
 export function normalizeIconName(name: string | undefined): string {

@@ -1,38 +1,114 @@
-export const SYSTEM_INSTRUCTION = `You can show rich visual components in your answers. When a visual makes the answer clearer (a process, architecture, steps, a comparison, data, or a quiz), output it as a fenced code block whose language is exactly ui, containing ONE valid JSON object (double quotes, no comments, no trailing commas). Write one short sentence of normal text before each block. Use 1-5 blocks per answer, and use plain text when a visual adds nothing. Never invent numbers for charts.
+import { UIType } from '../core/types';
 
-Types and schemas:
+export interface ComponentCatalogEntry {
+  type: UIType;
+  required: string[];
+  whenToUse: string;
+  schemaSnippet: string;
+}
 
-flow (architecture or process diagram):
-{"type":"flow","title":"...","nodes":[{"id":"a","label":"User","sub":"Pastes a long URL","icon":"user","color":"blue","group":"client"}],"edges":[{"from":"a","to":"b","label":"Yes"}],"groups":[{"id":"client","label":"Client layer","color":"blue"}]}
-- icon: a Lucide icon name such as user, globe, server, database, shield, zap, link, key, cpu, cloud, lock, search, settings, code, mail, clock, layers, box, rocket, bot, brain, check-circle, x-circle, alert-triangle, bar-chart
-- color: blue, green, amber, red, purple, teal, pink or gray
-- groups and group are optional; use them for layers (client / API / data)
-- for a decision, give the node a question label and label its outgoing edges Yes / No
+export const COMPONENT_CATALOG: ComponentCatalogEntry[] = [
+  {
+    type: 'flow',
+    required: ['type', 'nodes', 'edges'],
+    whenToUse: 'Process flows, decision trees, or system architectures',
+    schemaSnippet: '{"type":"flow","title":"...","nodes":[{"id":"a","label":"User","icon":"user","color":"blue"}],"edges":[{"from":"a","to":"b","label":"Yes"}]}',
+  },
+  {
+    type: 'stepper',
+    required: ['type', 'steps'],
+    whenToUse: 'Linear sequential steps, instructions, or tutorials',
+    schemaSnippet: '{"type":"stepper","title":"...","steps":[{"title":"...","detail":"..."}]}',
+  },
+  {
+    type: 'table',
+    required: ['type', 'columns', 'rows'],
+    whenToUse: 'Structured tabular data, metrics, or comparisons',
+    schemaSnippet: '{"type":"table","title":"...","columns":["Metric","Value"],"rows":[["A","100"]]}',
+  },
+  {
+    type: 'compare',
+    required: ['type', 'items'],
+    whenToUse: 'Side-by-side pros vs cons, option comparisons, or trade-offs',
+    schemaSnippet: '{"type":"compare","title":"...","items":[{"label":"SQL","tone":"good","points":["..."]}]}',
+  },
+  {
+    type: 'quiz',
+    required: ['type', 'questions'],
+    whenToUse: 'Interactive multiple-choice knowledge checks',
+    schemaSnippet: '{"type":"quiz","title":"...","questions":[{"q":"...","options":["A","B"],"answer":0,"explain":"..."}]}',
+  },
+  {
+    type: 'chart',
+    required: ['type', 'chartType', 'labels', 'datasets'],
+    whenToUse: 'Quantitative data trends, distributions, or categorical comparisons',
+    schemaSnippet: '{"type":"chart","title":"...","chartType":"bar","labels":["Mon","Tue"],"datasets":[{"label":"Req","data":[10,20]}],"unit":"M"}',
+  },
+  {
+    type: 'mermaid',
+    required: ['type', 'code'],
+    whenToUse: 'Sequence diagrams, state machines, or ER diagrams when flow cannot express them',
+    schemaSnippet: '{"type":"mermaid","title":"...","code":"sequenceDiagram\\n  A->>B: ping"}',
+  },
+  {
+    type: 'callout',
+    required: ['type', 'tone', 'text'],
+    whenToUse: 'Key notices, warnings, tips, or success announcements',
+    schemaSnippet: '{"type":"callout","title":"...","tone":"info|success|warning|tip","text":"..."}',
+  },
+  {
+    type: 'stats',
+    required: ['type', 'items'],
+    whenToUse: '2-4 headline KPI metric cards with optional change delta and hint',
+    schemaSnippet: '{"type":"stats","title":"...","items":[{"label":"Uptime","value":"99.9%","delta":"+0.2%","hint":"Last 30d"}]}',
+  },
+  {
+    type: 'tabs',
+    required: ['type', 'tabs'],
+    whenToUse: 'Categorized alternate views or tabbed text/bullet lists',
+    schemaSnippet: '{"type":"tabs","title":"...","tabs":[{"label":"Overview","content":"..."},{"label":"Details","content":["..."]}]}',
+  },
+  {
+    type: 'timeline',
+    required: ['type', 'events'],
+    whenToUse: 'Chronological events, history, milestones, or roadmaps',
+    schemaSnippet: '{"type":"timeline","title":"...","events":[{"title":"Launch","time":"Q1","text":"..."}]}',
+  },
+  {
+    type: 'followups',
+    required: ['type', 'suggestions'],
+    whenToUse: '2-4 suggested next user prompts or follow-up question chips',
+    schemaSnippet: '{"type":"followups","title":"Suggested follow-ups","suggestions":["Tell me more","How to optimize?"]}',
+  },
+];
 
-stepper (numbered steps):
-{"type":"stepper","title":"...","steps":[{"title":"...","detail":"..."}]}
+function generateCatalogSection(): string {
+  return COMPONENT_CATALOG.map(
+    (c) => `${c.type} (${c.whenToUse}):\n${c.schemaSnippet}`
+  ).join('\n\n');
+}
 
-table:
-{"type":"table","title":"...","columns":["Metric","Value"],"rows":[["Reads/day","100M"]]}
+function generateCompactCatalog(): string {
+  return COMPONENT_CATALOG.map(
+    (c) => `${c.type}: ${c.schemaSnippet}`
+  ).join(' · ');
+}
 
-compare (side-by-side good vs bad, option A vs B):
-{"type":"compare","title":"...","items":[{"label":"SQL","tone":"good","points":["..."]},{"label":"NoSQL","tone":"bad","points":["..."]}]}
-- tone: good or bad (neutral allowed)
+export const SYSTEM_INSTRUCTION = `You can show rich visual components in your answers. When a visual makes the answer clearer (a process, architecture, steps, a comparison, data, callouts, stats, tabs, a timeline, or a quiz), output it as a fenced code block whose language is exactly ui, containing ONE valid JSON object (double quotes, no comments, no trailing commas).
 
-quiz (interactive multiple choice):
-{"type":"quiz","title":"...","questions":[{"q":"...","options":["...","...","..."],"answer":0,"explain":"..."}]}
-- answer is the 0-based index of the correct option
+Rules:
+1. Always put "type" first, then "title", then the content arrays/fields.
+2. Prefer several small, focused blocks over one giant block.
+3. Use UI only when it clearly helps the reader, and use normal plain text otherwise.
+4. End answers with one followups block when natural to offer next prompt ideas.
+5. Write one short sentence of normal text before each block.
+6. Never invent numbers for charts or stats.
 
-chart:
-{"type":"chart","title":"...","chartType":"bar","labels":["Mon","Tue"],"datasets":[{"label":"Requests","data":[120,180]}],"unit":"req"}
-- chartType: bar, line, pie, doughnut or radar
+Type catalog:
+${generateCatalogSection()}`;
 
-mermaid (only when the others can't express it, e.g. a sequence or state diagram):
-{"type":"mermaid","title":"...","code":"sequenceDiagram\\n  Client->>API: POST /shorten"}
-
-Rules: ids are unique, and every edge uses existing node ids. Labels stay under 40 characters and sub text under 70. Do not explain the JSON; refer to it as the diagram, table, chart or quiz.`;
-
-export const SYSTEM_INSTRUCTION_SHORT = `Show visuals as fenced code blocks with language ui holding ONE valid JSON object, with a short sentence before each (1-5 per answer). Types: flow {"type":"flow","title","nodes":[{"id","label","sub","icon"(lucide name),"color"(blue|green|amber|red|purple|teal|pink|gray),"group"?}],"edges":[{"from","to","label"?}],"groups"?:[{"id","label","color"}]} · stepper {"type":"stepper","title","steps":[{"title","detail"}]} · table {"type":"table","title","columns":[],"rows":[[]]} · compare {"type":"compare","title","items":[{"label","tone":"good|bad","points":[]}]} · quiz {"type":"quiz","title","questions":[{"q","options":[],"answer":0,"explain"}]} · chart {"type":"chart","title","chartType":"bar|line|pie|doughnut|radar","labels":[],"datasets":[{"label","data":[]}]} · mermaid {"type":"mermaid","title","code"}. Label decision edges Yes/No. Never invent chart data. Don't explain the JSON.`;
+export const SYSTEM_INSTRUCTION_SHORT = `Show visuals as fenced code blocks with language ui holding ONE valid JSON object. Rules: put "type" first, then "title", then content; prefer several small blocks over one giant block; use UI only when helpful; end with one followups block when natural; never invent numbers.
+Types: ${generateCompactCatalog()}`;
 
 export function getCompactInstruction(): string {
   return `[BetterView] ${SYSTEM_INSTRUCTION}`;

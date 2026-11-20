@@ -18,6 +18,7 @@ export function renderStepper(spec: StepperSpec, _ctx: RenderContext): HTMLEleme
     const isLast = i === steps.length - 1;
 
     const stepEl = h('div', { class: 'iui-stepper-step' });
+    stepEl.style.setProperty('--step-idx', String(i));
 
     // Left track: circle in sky pastel + connecting line
     const track = h('div', { class: 'iui-stepper-track' });

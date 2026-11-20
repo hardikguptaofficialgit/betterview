@@ -1,0 +1,53 @@
+.iui-stats-card {
+  border-radius: 18px;
+}
+
+.iui-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.iui-stat-item {
+  background-color: var(--iui-surface);
+  border: 1px solid var(--iui-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.iui-stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--iui-muted);
+  line-height: 1.3;
+}
+
+.iui-stat-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.iui-stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--iui-text);
+  line-height: 1.2;
+}
+
+.iui-stat-delta {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 1px 8px;
+}
+
+.iui-stat-hint {
+  font-size: 11.5px;
+  color: var(--iui-muted);
+  line-height: 1.3;
+}

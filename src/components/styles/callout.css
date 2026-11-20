@@ -1,0 +1,47 @@
+.iui-callout-card {
+  border-radius: 18px;
+}
+
+.iui-callout-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--c-line, var(--iui-border));
+  background-color: var(--c-bg, var(--iui-surface));
+  color: var(--c-ink, var(--iui-text));
+}
+
+.iui-callout-iconbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background-color: var(--iui-bg);
+  color: var(--c-ink, var(--iui-text));
+  border: 1px solid var(--c-line, var(--iui-border));
+  margin-top: 1px;
+}
+
+.iui-callout-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.iui-callout-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-ink, var(--iui-text));
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.iui-callout-text {
+  font-size: 13.5px;
+  color: var(--iui-text);
+  line-height: 1.5;
+}

@@ -69,6 +69,27 @@
   gap: 10px;
   box-sizing: border-box;
   font-family: inherit;
+  animation: iui-opt-fade-up 200ms cubic-bezier(.2,.8,.2,1) both;
+  animation-delay: calc(var(--opt-idx, 0) * 50ms);
+}
+
+@keyframes iui-opt-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iui-quiz-opt-btn {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
 }
 
 .iui-quiz-opt-btn:hover:not(:disabled) {

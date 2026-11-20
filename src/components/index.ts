@@ -7,6 +7,11 @@ import { renderQuiz } from './quiz';
 import { renderFlow } from './flow';
 import { renderChart } from './chart';
 import { renderMermaid } from './mermaid';
+import { renderCallout } from './callout';
+import { renderStats } from './stats';
+import { renderTabs } from './tabs';
+import { renderTimeline } from './timeline';
+import { renderFollowups } from './followups';
 
 export interface RenderContext {
   theme: ThemeMode;
@@ -23,4 +28,9 @@ export const RENDERERS: { [K in UIType]: RenderFn<Extract<UISpec, { type: K }>> 
   quiz: renderQuiz,
   chart: renderChart,
   mermaid: renderMermaid,
+  callout: renderCallout,
+  stats: renderStats,
+  tabs: renderTabs,
+  timeline: renderTimeline,
+  followups: renderFollowups,
 };

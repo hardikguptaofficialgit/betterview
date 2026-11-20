@@ -75,6 +75,7 @@ export function renderQuiz(spec: QuizSpec, _ctx: RenderContext): HTMLElement {
           {
             type: 'button',
             class: 'iui-btn secondary iui-quiz-opt-btn',
+            style: `--opt-idx: ${optIdx};`,
             onClick: () => {
               if (isQuestionLocked) return;
               isQuestionLocked = true;

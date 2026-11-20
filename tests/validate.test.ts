@@ -204,4 +204,166 @@ describe('validateSpec', () => {
       expect(result.spec.nodes[0].color).toBe(color1);
     }
   });
+
+  describe('new component types validation', () => {
+    it('validates callout with valid tones and defaults invalid tone to info', () => {
+      const validCallout = validateSpec({
+        type: 'callout',
+        title: 'Heads Up',
+        tone: 'warning',
+        text: 'This is an important advisory.',
+      });
+      expect(validCallout.ok).toBe(true);
+      if (validCallout.ok) {
+        expect(validCallout.spec.type).toBe('callout');
+        if (validCallout.spec.type === 'callout') {
+          expect(validCallout.spec.tone).toBe('warning');
+          expect(validCallout.spec.text).toBe('This is an important advisory.');
+        }
+      }
+
+      const invalidTone = validateSpec({
+        type: 'callout',
+        tone: 'unknown_tone',
+        text: 'Fallback to info',
+      });
+      expect(invalidTone.ok).toBe(true);
+      if (invalidTone.ok && invalidTone.spec.type === 'callout') {
+        expect(invalidTone.spec.tone).toBe('info');
+        expect(invalidTone.warnings).toContain('Invalid callout tone "unknown_tone", defaulting to info');
+      }
+
+      const missingText = validateSpec({
+        type: 'callout',
+        tone: 'tip',
+      });
+      expect(missingText.ok).toBe(false);
+      if (!missingText.ok) {
+        expect(missingText.error).toBe('callout must have non-empty text');
+      }
+    });
+
+    it('validates stats with 2-4 metric cards and caps at 4', () => {
+      const validStats = validateSpec({
+        type: 'stats',
+        title: 'KPI Scorecard',
+        items: [
+          { label: 'Uptime', value: '99.9%', delta: '+0.1%', hint: 'Last 30d' },
+          { label: 'Latency', value: 18, hint: 'p99 ms' },
+        ],
+      });
+      expect(validStats.ok).toBe(true);
+      if (validStats.ok && validStats.spec.type === 'stats') {
+        expect(validStats.spec.items).toHaveLength(2);
+        expect(validStats.spec.items[0].label).toBe('Uptime');
+        expect(validStats.spec.items[1].value).toBe(18);
+      }
+
+      const tooFewStats = validateSpec({
+        type: 'stats',
+        items: [{ label: 'Only One', value: 100 }],
+      });
+      expect(tooFewStats.ok).toBe(false);
+      if (!tooFewStats.ok) {
+        expect(tooFewStats.error).toBe('stats must have 2-4 metric cards');
+      }
+
+      const fiveStats = validateSpec({
+        type: 'stats',
+        items: [
+          { label: 'M1', value: 1 },
+          { label: 'M2', value: 2 },
+          { label: 'M3', value: 3 },
+          { label: 'M4', value: 4 },
+          { label: 'M5', value: 5 },
+        ],
+      });
+      expect(fiveStats.ok).toBe(true);
+      if (fiveStats.ok && fiveStats.spec.type === 'stats') {
+        expect(fiveStats.spec.items).toHaveLength(4);
+        expect(fiveStats.warnings).toContain('Stats items capped at 4');
+      }
+    });
+
+    it('validates tabs with string or array content', () => {
+      const validTabs = validateSpec({
+        type: 'tabs',
+        title: 'Architecture Options',
+        tabs: [
+          { label: 'REST API', content: 'Simple HTTP endpoint architecture.' },
+          { label: 'gRPC', content: ['Binary protobuf', 'Multiplexed HTTP/2', 'Streaming support'] },
+        ],
+      });
+      expect(validTabs.ok).toBe(true);
+      if (validTabs.ok && validTabs.spec.type === 'tabs') {
+        expect(validTabs.spec.tabs).toHaveLength(2);
+        expect(Array.isArray(validTabs.spec.tabs[1].content)).toBe(true);
+      }
+
+      const emptyTabs = validateSpec({
+        type: 'tabs',
+        tabs: [],
+      });
+      expect(emptyTabs.ok).toBe(false);
+      if (!emptyTabs.ok) {
+        expect(emptyTabs.error).toBe('tabs must have at least 1 tab');
+      }
+    });
+
+    it('validates timeline events and requires non-empty titles', () => {
+      const validTimeline = validateSpec({
+        type: 'timeline',
+        title: 'Deployment Phases',
+        events: [
+          { title: 'Alpha Canary', time: 'Day 1', text: '1% traffic routed to v2' },
+          { title: 'Full Rollout', time: 'Day 3', text: '100% traffic live' },
+        ],
+      });
+      expect(validTimeline.ok).toBe(true);
+      if (validTimeline.ok && validTimeline.spec.type === 'timeline') {
+        expect(validTimeline.spec.events).toHaveLength(2);
+        expect(validTimeline.spec.events[0].time).toBe('Day 1');
+      }
+
+      const emptyEvents = validateSpec({
+        type: 'timeline',
+        events: [],
+      });
+      expect(emptyEvents.ok).toBe(false);
+      if (!emptyEvents.ok) {
+        expect(emptyEvents.error).toBe('timeline must have at least 1 event');
+      }
+    });
+
+    it('validates followups with 2-4 suggestion chips', () => {
+      const validFollowups = validateSpec({
+        type: 'followups',
+        title: 'Next steps',
+        suggestions: ['How to scale to 10M users?', 'Compare with Kafka', 'Show deployment YAML'],
+      });
+      expect(validFollowups.ok).toBe(true);
+      if (validFollowups.ok && validFollowups.spec.type === 'followups') {
+        expect(validFollowups.spec.suggestions).toHaveLength(3);
+      }
+
+      const singleFollowup = validateSpec({
+        type: 'followups',
+        suggestions: ['Just one'],
+      });
+      expect(singleFollowup.ok).toBe(false);
+      if (!singleFollowup.ok) {
+        expect(singleFollowup.error).toBe('followups must have 2-4 suggestion chips');
+      }
+
+      const fiveFollowups = validateSpec({
+        type: 'followups',
+        suggestions: ['S1', 'S2', 'S3', 'S4', 'S5'],
+      });
+      expect(fiveFollowups.ok).toBe(true);
+      if (fiveFollowups.ok && fiveFollowups.spec.type === 'followups') {
+        expect(fiveFollowups.spec.suggestions).toHaveLength(4);
+        expect(fiveFollowups.warnings).toContain('Followup suggestions capped at 4');
+      }
+    });
+  });
 });

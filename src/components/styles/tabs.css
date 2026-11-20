@@ -1,0 +1,92 @@
+.iui-tabs-card {
+  border-radius: 18px;
+}
+
+.iui-tabs-nav {
+  position: relative;
+  display: inline-flex;
+  background-color: var(--iui-surface);
+  border: 1px solid var(--iui-border);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+  margin-bottom: 14px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.iui-tabs-indicator {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  border-radius: 999px;
+  background-color: var(--iui-bg);
+  border: 1px solid var(--iui-border);
+  pointer-events: none;
+  transition: transform 240ms cubic-bezier(.2,.8,.2,1), width 240ms cubic-bezier(.2,.8,.2,1);
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iui-tabs-indicator {
+    transition: none !important;
+  }
+}
+
+.iui-tabs-btn {
+  all: unset;
+  position: relative;
+  z-index: 1;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--iui-muted);
+  cursor: pointer;
+  border-radius: 999px;
+  white-space: nowrap;
+  user-select: none;
+  transition: color 180ms cubic-bezier(.2,.8,.2,1);
+}
+
+.iui-tabs-btn:hover {
+  color: var(--iui-text);
+}
+
+.iui-tabs-btn.is-active {
+  color: var(--iui-text);
+  font-weight: 600;
+}
+
+.iui-tabs-btn:focus-visible {
+  outline: 2px solid var(--iui-text);
+  outline-offset: 1px;
+}
+
+.iui-tabs-panel {
+  background-color: var(--iui-bg);
+  border: 1px solid var(--iui-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-height: 48px;
+  line-height: 1.5;
+}
+
+.iui-tabs-text {
+  font-size: 13.5px;
+  color: var(--iui-text);
+  white-space: pre-wrap;
+}
+
+.iui-tabs-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.iui-tabs-list-item {
+  font-size: 13.5px;
+  color: var(--iui-text);
+}

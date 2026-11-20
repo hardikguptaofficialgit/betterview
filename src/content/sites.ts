@@ -17,7 +17,7 @@ export interface SiteAdapter {
 }
 
 export const BETTERVIEW_STREAMING_TYPE_RE =
-  /^\s*\{\s*"type"\s*:\s*"(flow|stepper|table|compare|quiz|chart|mermaid)"/;
+  /^\s*\{\s*"type"\s*:\s*"(flow|stepper|table|compare|quiz|chart|mermaid|callout|stats|tabs|timeline|followups)"/;
 
 export const BETTERVIEW_TYPES = [
   'flow',
@@ -27,6 +27,11 @@ export const BETTERVIEW_TYPES = [
   'quiz',
   'chart',
   'mermaid',
+  'callout',
+  'stats',
+  'tabs',
+  'timeline',
+  'followups',
 ] as const;
 
 export const GEMINI_ADAPTER: SiteAdapter = {

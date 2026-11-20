@@ -12,7 +12,8 @@ export function renderCompare(spec: CompareSpec, _ctx: RenderContext): HTMLEleme
   const items = spec.items || [];
   const grid = h('div', { class: 'iui-compare-grid' });
 
-  for (const item of items) {
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx];
     const tone = item.tone || 'neutral';
     let colorClass = 'c-stone';
     let headerIconName = 'info';
@@ -25,7 +26,8 @@ export function renderCompare(spec: CompareSpec, _ctx: RenderContext): HTMLEleme
       headerIconName = 'x-circle';
     }
 
-    const panel = h('div', { class: `iui-card tinted iui-compare-panel ${colorClass}` });
+    const sideClass = idx % 2 === 0 ? 'is-col-left' : 'is-col-right';
+    const panel = h('div', { class: `iui-card tinted iui-compare-panel ${colorClass} ${sideClass}` });
 
     const header = h('div', { class: 'iui-compare-header' });
     const iconBox = h('div', { class: 'iui-compare-iconbox' }, iconEl(headerIconName, 16));

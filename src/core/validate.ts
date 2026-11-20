@@ -14,6 +14,14 @@ import {
   QuizSpec,
   ChartSpec,
   MermaidSpec,
+  CalloutSpec,
+  StatsSpec,
+  StatItem,
+  TabsSpec,
+  TabItem,
+  TimelineSpec,
+  TimelineEvent,
+  FollowupsSpec,
 } from './types';
 
 export type ValidateResult =
@@ -378,6 +386,157 @@ function validateMermaid(raw: Record<string, unknown>): { ok: true; spec: Mermai
   return { ok: true, spec: { type: 'mermaid', code } };
 }
 
+function validateCallout(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: CalloutSpec } | { ok: false; error: string } {
+  const text = cleanString(raw.text ?? raw.body ?? raw.message, 1200);
+  if (!text) {
+    return { ok: false, error: 'callout must have non-empty text' };
+  }
+
+  let toneStr = cleanString(raw.tone).toLowerCase();
+  const validTones = ['info', 'success', 'warning', 'tip'];
+  if (!validTones.includes(toneStr)) {
+    warnings.push(`Invalid callout tone "${raw.tone}", defaulting to info`);
+    toneStr = 'info';
+  }
+
+  return {
+    ok: true,
+    spec: {
+      type: 'callout',
+      tone: toneStr as CalloutSpec['tone'],
+      text,
+    },
+  };
+}
+
+function validateStats(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: StatsSpec } | { ok: false; error: string } {
+  let rawItems = Array.isArray(raw.items) ? raw.items : Array.isArray(raw.stats) ? raw.stats : [];
+  if (rawItems.length < 2) {
+    return { ok: false, error: 'stats must have 2-4 metric cards' };
+  }
+  if (rawItems.length > 4) {
+    warnings.push('Stats items capped at 4');
+    rawItems = rawItems.slice(0, 4);
+  }
+
+  const items: StatItem[] = [];
+  for (const it of rawItems) {
+    if (!it || typeof it !== 'object') {
+      return { ok: false, error: 'Stat item must be an object' };
+    }
+    const rec = it as Record<string, unknown>;
+    const label = cleanString(rec.label ?? rec.title);
+    if (!label) {
+      return { ok: false, error: 'Stat item must have a label' };
+    }
+    const valRaw = rec.value;
+    const value = typeof valRaw === 'number' ? valRaw : cleanString(valRaw);
+    if (value === '' && typeof valRaw !== 'number') {
+      return { ok: false, error: 'Stat item must have a value' };
+    }
+
+    const delta = cleanString(rec.delta ?? rec.change);
+    const hint = cleanString(rec.hint ?? rec.sub ?? rec.detail);
+
+    items.push({
+      label,
+      value,
+      ...(delta ? { delta } : {}),
+      ...(hint ? { hint } : {}),
+    });
+  }
+
+  return { ok: true, spec: { type: 'stats', items } };
+}
+
+function validateTabs(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: TabsSpec } | { ok: false; error: string } {
+  let rawTabs = Array.isArray(raw.tabs) ? raw.tabs : [];
+  if (rawTabs.length === 0) {
+    return { ok: false, error: 'tabs must have at least 1 tab' };
+  }
+  if (rawTabs.length > 8) {
+    warnings.push('Tabs capped at 8');
+    rawTabs = rawTabs.slice(0, 8);
+  }
+
+  const tabs: TabItem[] = [];
+  for (const t of rawTabs) {
+    if (!t || typeof t !== 'object') {
+      return { ok: false, error: 'Tab must be an object' };
+    }
+    const rec = t as Record<string, unknown>;
+    const label = cleanString(rec.label ?? rec.title);
+    if (!label) {
+      return { ok: false, error: 'Tab must have a label' };
+    }
+
+    let content: string | string[] = '';
+    if (Array.isArray(rec.content)) {
+      content = rec.content.map((c) => cleanString(c)).filter(Boolean);
+    } else {
+      content = cleanString(rec.content ?? rec.text ?? rec.body, 3000);
+    }
+
+    tabs.push({ label, content });
+  }
+
+  return { ok: true, spec: { type: 'tabs', tabs } };
+}
+
+function validateTimeline(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: TimelineSpec } | { ok: false; error: string } {
+  let rawEvents = Array.isArray(raw.events) ? raw.events : Array.isArray(raw.steps) ? raw.steps : [];
+  if (rawEvents.length === 0) {
+    return { ok: false, error: 'timeline must have at least 1 event' };
+  }
+  if (rawEvents.length > 20) {
+    warnings.push('Timeline events capped at 20');
+    rawEvents = rawEvents.slice(0, 20);
+  }
+
+  const events: TimelineEvent[] = [];
+  for (const e of rawEvents) {
+    if (!e || typeof e !== 'object') {
+      return { ok: false, error: 'Timeline event must be an object' };
+    }
+    const rec = e as Record<string, unknown>;
+    const title = cleanString(rec.title ?? rec.label);
+    if (!title) {
+      return { ok: false, error: 'Timeline event must have a title' };
+    }
+    const text = cleanString(rec.text ?? rec.detail ?? rec.description);
+    const time = cleanString(rec.time ?? rec.date ?? rec.timestamp);
+
+    events.push({
+      title,
+      text,
+      ...(time ? { time } : {}),
+    });
+  }
+
+  return { ok: true, spec: { type: 'timeline', events } };
+}
+
+function validateFollowups(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: FollowupsSpec } | { ok: false; error: string } {
+  let rawSuggestions = Array.isArray(raw.suggestions)
+    ? raw.suggestions
+    : Array.isArray(raw.items)
+      ? raw.items
+      : Array.isArray(raw.chips)
+        ? raw.chips
+        : [];
+
+  const suggestions = rawSuggestions.map((s) => cleanString(s)).filter(Boolean);
+  if (suggestions.length < 2) {
+    return { ok: false, error: 'followups must have 2-4 suggestion chips' };
+  }
+  if (suggestions.length > 4) {
+    warnings.push('Followup suggestions capped at 4');
+    suggestions.splice(4);
+  }
+
+  return { ok: true, spec: { type: 'followups', suggestions } };
+}
+
 export function validateSpec(input: unknown): ValidateResult {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     return { ok: false, error: 'unknown type' };
@@ -412,6 +571,21 @@ export function validateSpec(input: unknown): ValidateResult {
       break;
     case 'mermaid':
       result = validateMermaid(raw);
+      break;
+    case 'callout':
+      result = validateCallout(raw, warnings);
+      break;
+    case 'stats':
+      result = validateStats(raw, warnings);
+      break;
+    case 'tabs':
+      result = validateTabs(raw, warnings);
+      break;
+    case 'timeline':
+      result = validateTimeline(raw, warnings);
+      break;
+    case 'followups':
+      result = validateFollowups(raw, warnings);
       break;
     default:
       return { ok: false, error: 'unknown type' };

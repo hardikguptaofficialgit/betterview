@@ -416,9 +416,127 @@
       </script>
     </section>
 
-    <!-- 16. Host simulation section -->
+    <!-- 16. Callout: Production Tip -->
+    <section class="fixture-section" id="section-callout">
+      <h2>16. Callout: Production Deployment Tip</h2>
+      <div class="fixture-mount" data-spec-id="callout-spec"></div>
+      <script type="application/json" id="callout-spec">
+      {
+        "type": "callout",
+        "title": "Production Deployment Tip",
+        "tone": "tip",
+        "text": "Enable HTTP/2 server push and Brotli compression to achieve sub-50ms roundtrip redirects globally."
+      }
+      </script>
+    </section>
+
+    <!-- 17. Stats: System Health & Scale -->
+    <section class="fixture-section" id="section-stats">
+      <h2>17. Stats: System Health &amp; Scale</h2>
+      <div class="fixture-mount" data-spec-id="stats-spec"></div>
+      <script type="application/json" id="stats-spec">
+      {
+        "type": "stats",
+        "title": "System Health & Scale",
+        "items": [
+          { "label": "Active URLs", "value": "2.4M", "delta": "+12.4%", "hint": "Past 30 days" },
+          { "label": "Avg Latency", "value": 18, "delta": "-4ms", "hint": "p99 redirect time" },
+          { "label": "Availability", "value": "99.99%", "hint": "SLA target met" },
+          { "label": "Cache Hit Rate", "value": "94.2%", "delta": "+1.8%", "hint": "Redis hot keys" }
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 18. Tabs: API Protocol Options -->
+    <section class="fixture-section" id="section-tabs">
+      <h2>18. Tabs: API Protocol Options</h2>
+      <div class="fixture-mount" data-spec-id="tabs-spec"></div>
+      <script type="application/json" id="tabs-spec">
+      {
+        "type": "tabs",
+        "title": "API Protocol Options",
+        "tabs": [
+          {
+            "label": "REST API",
+            "content": "Standard JSON over HTTPS with standard status codes 301/302. Best for public developer access and curl debugging."
+          },
+          {
+            "label": "gRPC Service",
+            "content": [
+              "Binary Protocol Buffers serialization with near-zero overhead",
+              "HTTP/2 connection multiplexing and bidirectional streaming",
+              "Strict contract generation in TypeScript, Go, and Python"
+            ]
+          },
+          {
+            "label": "GraphQL Gateway",
+            "content": "Single endpoint query resolution for mobile apps requesting analytics along with short links in one network roundtrip."
+          }
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 19. Timeline: Deployment Roadmap -->
+    <section class="fixture-section" id="section-timeline">
+      <h2>19. Timeline: Deployment &amp; Scale Roadmap</h2>
+      <div class="fixture-mount" data-spec-id="timeline-spec"></div>
+      <script type="application/json" id="timeline-spec">
+      {
+        "type": "timeline",
+        "title": "Deployment & Scale Roadmap",
+        "events": [
+          {
+            "title": "Phase 1: Architecture RFC",
+            "time": "Month 1",
+            "text": "Finalized Base62 collision-free ID hashing and Redis cluster caching topology."
+          },
+          {
+            "title": "Phase 2: Alpha Canary Release",
+            "time": "Month 2",
+            "text": "Deployed to 1% of internal traffic with automated latency regression monitoring."
+          },
+          {
+            "title": "Phase 3: Global Edge Rollout",
+            "time": "Month 3",
+            "text": "100% production traffic live across 18 edge point-of-presence data centers."
+          }
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 20. Followups: Suggested Next Steps -->
+    <section class="fixture-section" id="section-followups">
+      <h2>20. Followups: Suggested Next Steps</h2>
+      <div class="fixture-mount" data-spec-id="followups-spec"></div>
+      <script type="application/json" id="followups-spec">
+      {
+        "type": "followups",
+        "title": "Suggested Next Steps",
+        "suggestions": [
+          "How to handle custom vanity short domains?",
+          "Show Redis cache eviction strategy configuration",
+          "Compare cost of PostgreSQL vs DynamoDB at scale"
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 21. Progressive Streaming Simulation (All 12 Types) -->
+    <section class="fixture-section" id="section-simulate-streaming">
+      <h2>21. Progressive Streaming Simulation (All 12 Types)</h2>
+      <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
+        <button id="btn-simulate-streaming" class="theme-btn" type="button">Simulate streaming</button>
+        <span id="streaming-status" style="font-size: 13px; color: #6B6B6B;">Click to stream all 12 sample specs in 15-char chunks</span>
+      </div>
+      <div id="streaming-all-mount" style="display: flex; flex-direction: column; gap: 20px;"></div>
+    </section>
+
+    <!-- 22. Host simulation section -->
     <section class="fixture-section" id="section-host-sim">
-      <h2>16. Host simulation (Gemini &amp; Grok Scanner)</h2>
+      <h2>22. Host simulation (Gemini &amp; Grok Scanner)</h2>
       <button id="btn-run-simulation" class="theme-btn" type="button" style="align-self: flex-start; margin-bottom: 12px;">Run host simulation</button>
 
       <h3>Simulated Gemini DOM</h3>
