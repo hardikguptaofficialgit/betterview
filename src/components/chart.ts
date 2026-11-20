@@ -1,0 +1,331 @@
+import {
+  Chart,
+  BarController,
+  LineController,
+  PieController,
+  DoughnutController,
+  RadarController,
+  CategoryScale,
+  LinearScale,
+  RadialLinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Title,
+  Filler,
+  ChartConfiguration,
+} from 'chart.js';
+import { ChartSpec } from '../core/types';
+import { ThemeMode } from '../core/theme';
+import { RenderContext } from './index';
+import { h } from '../core/dom';
+
+Chart.register(
+  BarController,
+  LineController,
+  PieController,
+  DoughnutController,
+  RadarController,
+  CategoryScale,
+  LinearScale,
+  RadialLinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Title,
+  Filler,
+);
+
+const FONT_STACK =
+  'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Google Sans", Inter, sans-serif';
+
+export const LIGHT_SOLIDS = [
+  '#A9D3F5', // sky
+  '#A6DEC0', // mint
+  '#F6C0A0', // peach
+  '#C6B9F2', // lavender
+  '#F2DC8A', // butter
+  '#F2B1C0', // rose
+  '#D6D6D3', // stone
+];
+
+export const DARK_SOLIDS = [
+  '#6FA8D6', // sky
+  '#6DBF95', // mint
+  '#D9946C', // peach
+  '#9585D6', // lavender
+  '#CDB45A', // butter
+  '#D47F95', // rose
+  '#8F8F8B', // stone
+];
+
+export const LIGHT_INKS = [
+  '#1F5F8F', // sky
+  '#1E6B48', // mint
+  '#8C4A20', // peach
+  '#4C3D91', // lavender
+  '#7A5E10', // butter
+  '#8E2E46', // rose
+  '#4A4A47', // stone
+];
+
+// Dark: the light solids
+export const DARK_INKS = [...LIGHT_SOLIDS];
+
+export function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export function buildChartConfig(spec: ChartSpec, theme: ThemeMode): ChartConfiguration {
+  const isDark = theme === 'dark';
+  const solids = isDark ? DARK_SOLIDS : LIGHT_SOLIDS;
+  const inks = isDark ? DARK_INKS : LIGHT_INKS;
+  const cardBg = isDark ? '#0A0A0A' : '#FFFFFF';
+  const mutedColor = isDark ? '#A3A3A3' : '#6B6B6B';
+  const borderColor = isDark ? '#262626' : '#E7E7E7';
+  const tooltipBg = isDark ? '#FAFAFA' : '#0A0A0A';
+  const tooltipText = isDark ? '#0A0A0A' : '#FAFAFA';
+
+  const isPieOrDoughnut = spec.chartType === 'pie' || spec.chartType === 'doughnut';
+
+  let chartDatasets: any[] = [];
+
+  if (spec.chartType === 'bar') {
+    chartDatasets = spec.datasets.map((ds, idx) => ({
+      label: ds.label,
+      data: ds.data,
+      backgroundColor: solids[idx % solids.length],
+      borderColor: inks[idx % inks.length],
+      borderWidth: 1,
+      borderRadius: 4,
+    }));
+  } else if (spec.chartType === 'line') {
+    chartDatasets = spec.datasets.map((ds, idx) => ({
+      label: ds.label,
+      data: ds.data,
+      borderColor: inks[idx % inks.length],
+      borderWidth: 2,
+      tension: 0.3,
+      pointRadius: 3,
+      pointBackgroundColor: solids[idx % solids.length],
+      pointBorderColor: inks[idx % inks.length],
+      pointBorderWidth: 1,
+      fill: false,
+    }));
+  } else if (isPieOrDoughnut) {
+    const sliceSolids = spec.labels.map((_, idx) => solids[idx % solids.length]);
+    chartDatasets = spec.datasets.map((ds) => ({
+      label: ds.label,
+      data: ds.data,
+      backgroundColor: sliceSolids,
+      borderColor: cardBg,
+      borderWidth: 2,
+    }));
+  } else if (spec.chartType === 'radar') {
+    chartDatasets = spec.datasets.map((ds, idx) => ({
+      label: ds.label,
+      data: ds.data,
+      borderColor: inks[idx % inks.length],
+      borderWidth: 1.5,
+      backgroundColor: hexToRgba(solids[idx % solids.length], 0.35),
+      fill: true,
+      pointRadius: 3,
+      pointBackgroundColor: solids[idx % solids.length],
+      pointBorderColor: inks[idx % inks.length],
+      pointBorderWidth: 1,
+    }));
+  }
+
+  let scales: any = undefined;
+  if (spec.chartType === 'bar' || spec.chartType === 'line') {
+    scales = {
+      x: {
+        grid: {
+          color: borderColor,
+          lineWidth: 1,
+        },
+        border: {
+          display: false,
+        },
+        ticks: {
+          color: mutedColor,
+          font: {
+            family: FONT_STACK,
+            size: 12,
+          },
+        },
+      },
+      y: {
+        beginAtZero: spec.chartType === 'bar',
+        grid: {
+          color: borderColor,
+          lineWidth: 1,
+        },
+        border: {
+          display: false,
+        },
+        ticks: {
+          color: mutedColor,
+          font: {
+            family: FONT_STACK,
+            size: 12,
+          },
+        },
+      },
+    };
+  } else if (spec.chartType === 'radar') {
+    scales = {
+      r: {
+        grid: {
+          color: borderColor,
+          lineWidth: 1,
+        },
+        angleLines: {
+          color: borderColor,
+          lineWidth: 1,
+        },
+        border: {
+          display: false,
+        },
+        ticks: {
+          color: mutedColor,
+          backdropColor: 'transparent',
+          font: {
+            family: FONT_STACK,
+            size: 11,
+          },
+        },
+        pointLabels: {
+          color: mutedColor,
+          font: {
+            family: FONT_STACK,
+            size: 12,
+          },
+        },
+      },
+    };
+  }
+
+  const showLegend = spec.datasets.length > 1 || isPieOrDoughnut;
+
+  return {
+    type: spec.chartType as any,
+    data: {
+      labels: spec.labels,
+      datasets: chartDatasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: {
+          display: showLegend,
+          position: 'bottom',
+          labels: {
+            usePointStyle: true,
+            pointStyle: 'circle',
+            color: mutedColor,
+            font: {
+              family: FONT_STACK,
+              size: 12,
+            },
+            padding: 16,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        title: {
+          display: false,
+        },
+        tooltip: {
+          backgroundColor: tooltipBg,
+          titleColor: tooltipText,
+          bodyColor: tooltipText,
+          cornerRadius: 8,
+          padding: 10,
+          titleFont: {
+            family: FONT_STACK,
+            size: 12,
+            weight: 600,
+          },
+          bodyFont: {
+            family: FONT_STACK,
+            size: 12,
+          },
+          callbacks: {
+            label: (context: any) => {
+              const rawVal = context.raw;
+              const num = typeof rawVal === 'number' ? rawVal : Number(rawVal);
+              const formatted = !Number.isNaN(num) ? num.toLocaleString() : String(rawVal ?? '');
+              const unitSuffix = spec.unit ? ` ${spec.unit}` : '';
+              if (isPieOrDoughnut) {
+                const label = context.label || '';
+                return label ? `${label}: ${formatted}${unitSuffix}` : `${formatted}${unitSuffix}`;
+              }
+              const dsLabel = context.dataset?.label || '';
+              return dsLabel ? `${dsLabel}: ${formatted}${unitSuffix}` : `${formatted}${unitSuffix}`;
+            },
+          },
+        },
+      },
+      ...(scales ? { scales } : {}),
+    },
+  };
+}
+
+export function renderChart(spec: ChartSpec, ctx: RenderContext): HTMLElement {
+  const card = h('div', { class: 'iui-card' });
+  if (spec.title) {
+    card.appendChild(h('div', { class: 'iui-title' }, spec.title));
+  }
+
+  const isPieOrDoughnut = spec.chartType === 'pie' || spec.chartType === 'doughnut';
+  const height = isPieOrDoughnut ? '280px' : '300px';
+
+  const ariaLabel = spec.title
+    ? `${spec.chartType} chart: ${spec.title}`
+    : `${spec.chartType} chart`;
+
+  const canvas = h('canvas', {
+    role: 'img',
+    'aria-label': ariaLabel,
+  }) as HTMLCanvasElement;
+
+  const container = h(
+    'div',
+    {
+      style: `position: relative; height: ${height};`,
+    },
+    canvas,
+  );
+
+  card.appendChild(container);
+
+  const config = buildChartConfig(spec, ctx.theme);
+
+  try {
+    const chart = new Chart(canvas, config);
+    ctx.onCleanup(() => {
+      try {
+        chart.destroy();
+      } catch {
+        // ignore cleanup error
+      }
+    });
+  } catch (err) {
+    console.warn('[IUI] Chart initialization failed:', err);
+  }
+
+  return card;
+}

@@ -3,6 +3,7 @@ import compareCss from './styles/compare.css?inline';
 import stepperCss from './styles/stepper.css?inline';
 import quizCss from './styles/quiz.css?inline';
 import flowCss from './styles/flow.css?inline';
+import mermaidCss from './styles/mermaid.css?inline';
 
 export const COMPONENT_STYLES: string[] = [
   tableCss,
@@ -10,4 +11,5 @@ export const COMPONENT_STYLES: string[] = [
   stepperCss,
   quizCss,
   flowCss,
+  mermaidCss,
 ];

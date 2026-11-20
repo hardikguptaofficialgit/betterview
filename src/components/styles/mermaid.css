@@ -1,0 +1,13 @@
+.iui-mermaid-wrap {
+  width: 100%;
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.iui-mermaid-wrap svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}

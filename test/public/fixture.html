@@ -317,32 +317,101 @@
       <div id="streaming-mount"></div>
     </section>
 
-    <!-- 10. Chart (Debug renderer) -->
-    <section class="fixture-section" id="section-chart">
-      <h2>10. Chart (Debug renderer)</h2>
-      <div class="fixture-mount" data-spec-id="chart-spec"></div>
-      <script type="application/json" id="chart-spec">
+    <!-- 10. Chart: Redirects per day (millions) (bar) -->
+    <section class="fixture-section" id="section-chart-bar">
+      <h2>10. Chart: Redirects per day (millions) (bar)</h2>
+      <div class="fixture-mount" data-spec-id="chart-bar-spec"></div>
+      <script type="application/json" id="chart-bar-spec">
       {
         "type": "chart",
-        "title": "Redirect Traffic",
-        "chartType": "line",
-        "labels": ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00"],
+        "title": "Redirects per day (millions)",
+        "chartType": "bar",
+        "labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
         "datasets": [
-          { "label": "Requests/sec", "data": [450, 200, 1200, 3500, 2800, 1900] }
+          { "label": "Redirects", "data": [12, 19, 15, 17, 24, 28, 22] }
+        ],
+        "unit": "M"
+      }
+      </script>
+    </section>
+
+    <!-- 11. Chart: Read vs write traffic (line) -->
+    <section class="fixture-section" id="section-chart-line">
+      <h2>11. Chart: Read vs write traffic (line)</h2>
+      <div class="fixture-mount" data-spec-id="chart-line-spec"></div>
+      <script type="application/json" id="chart-line-spec">
+      {
+        "type": "chart",
+        "title": "Read vs write traffic",
+        "chartType": "line",
+        "labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        "datasets": [
+          { "label": "Read Traffic", "data": [1200, 1900, 1500, 1700, 2400, 2800, 2200] },
+          { "label": "Write Traffic", "data": [12, 19, 15, 17, 24, 28, 22] }
+        ],
+        "unit": "req/s"
+      }
+      </script>
+    </section>
+
+    <!-- 12. Chart: Storage by data type (doughnut) -->
+    <section class="fixture-section" id="section-chart-doughnut">
+      <h2>12. Chart: Storage by data type (doughnut)</h2>
+      <div class="fixture-mount" data-spec-id="chart-doughnut-spec"></div>
+      <script type="application/json" id="chart-doughnut-spec">
+      {
+        "type": "chart",
+        "title": "Storage by data type",
+        "chartType": "doughnut",
+        "labels": ["URL Mappings", "Click Analytics", "System Logs", "Database Backups"],
+        "datasets": [
+          { "label": "Storage (GB)", "data": [450, 280, 150, 120] }
+        ],
+        "unit": "GB"
+      }
+      </script>
+    </section>
+
+    <!-- 13. Chart: System qualities (radar) -->
+    <section class="fixture-section" id="section-chart-radar">
+      <h2>13. Chart: System qualities (radar)</h2>
+      <div class="fixture-mount" data-spec-id="chart-radar-spec"></div>
+      <script type="application/json" id="chart-radar-spec">
+      {
+        "type": "chart",
+        "title": "System qualities",
+        "chartType": "radar",
+        "labels": ["Latency", "Throughput", "Consistency", "Availability", "Scalability"],
+        "datasets": [
+          { "label": "SQL Store", "data": [85, 75, 95, 80, 70] },
+          { "label": "NoSQL Store", "data": [90, 95, 70, 95, 90] }
         ]
       }
       </script>
     </section>
 
-    <!-- 11. Mermaid (Debug renderer) -->
-    <section class="fixture-section" id="section-mermaid">
-      <h2>11. Mermaid (Debug renderer)</h2>
-      <div class="fixture-mount" data-spec-id="mermaid-spec"></div>
-      <script type="application/json" id="mermaid-spec">
+    <!-- 14. Mermaid: Redirect sequence -->
+    <section class="fixture-section" id="section-mermaid-sequence">
+      <h2>14. Mermaid: Redirect sequence</h2>
+      <div class="fixture-mount" data-spec-id="mermaid-sequence-spec"></div>
+      <script type="application/json" id="mermaid-sequence-spec">
       {
         "type": "mermaid",
-        "title": "Sequence Diagram",
-        "code": "sequenceDiagram\nClient->>Server: GET /xyz\nServer->>Cache: Lookup xyz\nCache-->>Server: Hit\nServer-->>Client: 301 Moved Permanently"
+        "title": "Redirect sequence",
+        "code": "sequenceDiagram\n  autonumber\n  actor Client\n  participant API as API Server\n  participant Cache as Redis Cache\n  participant DB as Database\n  Client->>API: GET /:shortCode\n  API->>Cache: Lookup shortCode\n  alt Cache hit\n    Cache-->>API: destination URL\n  else Cache miss\n    Cache-->>API: null\n    API->>DB: Query by shortCode\n    DB-->>API: destination URL\n    API->>Cache: Store mapping (TTL 24h)\n  end\n  API-->>Client: 301 Moved Permanently (Location: destination)"
+      }
+      </script>
+    </section>
+
+    <!-- 15. Mermaid: Invalid diagram test -->
+    <section class="fixture-section" id="section-mermaid-invalid">
+      <h2>15. Mermaid: Invalid diagram test (Error box)</h2>
+      <div class="fixture-mount" data-spec-id="mermaid-invalid-spec"></div>
+      <script type="application/json" id="mermaid-invalid-spec">
+      {
+        "type": "mermaid",
+        "title": "Invalid diagram test",
+        "code": "graph TD\n A-->"
       }
       </script>
     </section>
