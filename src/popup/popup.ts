@@ -28,6 +28,9 @@ export function initPopup(): () => void {
   const checkGemini = document.getElementById('check-gemini');
   const checkGrok = document.getElementById('check-grok');
 
+  const welcomeTourLink = document.getElementById('welcome-tour-link') as HTMLAnchorElement | null;
+  const whatsNewLink = document.getElementById('whats-new-link') as HTMLAnchorElement | null;
+
   // Insert Lucide icons
   if (iconGemini && !iconGemini.hasChildNodes()) {
     iconGemini.appendChild(iconEl('sparkles', 14));
@@ -86,28 +89,35 @@ export function initPopup(): () => void {
 
   // Storage listener for setup status
   if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-    chrome.storage.local.get(['gemini_setup_status', 'grok_setup_status'], (items) => {
-      const gemini = items.gemini_setup_status as { status: string; error?: string; timestamp?: number } | undefined;
-      const grok = items.grok_setup_status as { status: string; error?: string; timestamp?: number } | undefined;
+    chrome.storage.local.get(
+      ['gemini_setup_status', 'grok_setup_status', 'hasUpdateDot', 'lastSeenVersion'],
+      (items) => {
+        const gemini = items.gemini_setup_status as { status: string; error?: string; timestamp?: number } | undefined;
+        const grok = items.grok_setup_status as { status: string; error?: string; timestamp?: number } | undefined;
 
-      if (gemini?.status === 'added' || gemini?.status === 'already') {
-        setupGeminiBtn?.classList.add('is-done');
-      }
-      if (grok?.status === 'added' || grok?.status === 'already') {
-        setupGrokBtn?.classList.add('is-done');
-      }
+        if (gemini?.status === 'added' || gemini?.status === 'already') {
+          setupGeminiBtn?.classList.add('is-done');
+        }
+        if (grok?.status === 'added' || grok?.status === 'already') {
+          setupGrokBtn?.classList.add('is-done');
+        }
 
-      if (gemini && grok) {
-        const geminiTime = gemini.timestamp || 0;
-        const grokTime = grok.timestamp || 0;
-        const recent = geminiTime >= grokTime ? gemini : grok;
-        renderSetupStatus(geminiTime >= grokTime ? 'gemini' : 'grok', recent);
-      } else if (gemini) {
-        renderSetupStatus('gemini', gemini);
-      } else if (grok) {
-        renderSetupStatus('grok', grok);
-      }
-    });
+        if (gemini && grok) {
+          const geminiTime = gemini.timestamp || 0;
+          const grokTime = grok.timestamp || 0;
+          const recent = geminiTime >= grokTime ? gemini : grok;
+          renderSetupStatus(geminiTime >= grokTime ? 'gemini' : 'grok', recent);
+        } else if (gemini) {
+          renderSetupStatus('gemini', gemini);
+        } else if (grok) {
+          renderSetupStatus('grok', grok);
+        }
+
+        if (items.hasUpdateDot || items.lastSeenVersion) {
+          whatsNewLink?.classList.remove('hidden');
+        }
+      },
+    );
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'local') {
@@ -123,7 +133,53 @@ export function initPopup(): () => void {
             changes.grok_setup_status.newValue as { status: string; error?: string } | undefined,
           );
         }
+        if (changes.hasUpdateDot) {
+          if (changes.hasUpdateDot.newValue) {
+            whatsNewLink?.classList.remove('hidden');
+          } else {
+            whatsNewLink?.classList.add('hidden');
+          }
+        }
       }
+    });
+  }
+
+  // Welcome tour and What's new links
+  if (welcomeTourLink) {
+    welcomeTourLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const url =
+        typeof chrome !== 'undefined' && chrome.runtime?.getURL
+          ? chrome.runtime.getURL('welcome.html')
+          : 'welcome.html';
+      if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+        chrome.tabs.create({ url });
+      } else if (typeof window !== 'undefined') {
+        window.open(url, '_blank');
+      }
+    });
+  }
+
+  if (whatsNewLink) {
+    whatsNewLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const url =
+        typeof chrome !== 'undefined' && chrome.runtime?.getURL
+          ? chrome.runtime.getURL('welcome.html#whats-new')
+          : 'welcome.html#whats-new';
+      if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+        chrome.tabs.create({ url });
+      } else if (typeof window !== 'undefined') {
+        window.open(url, '_blank');
+      }
+
+      if (typeof chrome !== 'undefined' && chrome.action?.setBadgeText) {
+        chrome.action.setBadgeText({ text: '' });
+      }
+      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        chrome.storage.local.set({ hasUpdateDot: false });
+      }
+      whatsNewLink.classList.add('hidden');
     });
   }
 

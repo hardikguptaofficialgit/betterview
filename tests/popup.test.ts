@@ -62,9 +62,15 @@ describe('BetterView Popup', () => {
         query: vi.fn((_query: unknown, cb: (tabs: Array<{ url: string }>) => void) => {
           cb([{ url: activeTabUrl }]);
         }),
+        create: vi.fn(),
+      },
+      action: {
+        setBadgeText: vi.fn(),
+        setBadgeBackgroundColor: vi.fn(),
       },
       runtime: {
         sendMessage: vi.fn(),
+        getURL: vi.fn((path: string) => path),
         lastError: null,
       },
     };
@@ -145,7 +151,10 @@ describe('BetterView Popup', () => {
         </section>
 
         <footer class="popup-footer">
+          <a id="welcome-tour-link" class="footer-link" href="#" role="button">Welcome tour</a>
+          <span class="footer-dot" aria-hidden="true">&middot;</span>
           <span class="version-tag">v0.1.0</span>
+          <a id="whats-new-link" class="footer-link hidden" href="#" role="button">What's new</a>
         </footer>
       </div>
     `;
@@ -391,6 +400,37 @@ describe('BetterView Popup', () => {
       expect(checkGemini.querySelector('svg')).not.toBeNull();
       expect(checkGrok.querySelector('svg')).not.toBeNull();
       expect(chevron.querySelector('svg')).not.toBeNull();
+    });
+  });
+
+  describe('Footer Links', () => {
+    it('opens welcome.html when Welcome tour is clicked', () => {
+      cleanupPopup = initPopup();
+
+      const tourLink = document.getElementById('welcome-tour-link')!;
+      tourLink.click();
+
+      expect(chrome.tabs.create).toHaveBeenCalledWith({ url: 'welcome.html' });
+    });
+
+    it('shows What is new link when update dot or lastSeenVersion is set', () => {
+      localStore.hasUpdateDot = true;
+      cleanupPopup = initPopup();
+
+      const whatsNew = document.getElementById('whats-new-link')!;
+      expect(whatsNew.classList.contains('hidden')).toBe(false);
+    });
+
+    it('opens welcome.html#whats-new and clears badge dot when What is new is clicked', () => {
+      localStore.hasUpdateDot = true;
+      cleanupPopup = initPopup();
+
+      const whatsNew = document.getElementById('whats-new-link')!;
+      whatsNew.click();
+
+      expect(chrome.tabs.create).toHaveBeenCalledWith({ url: 'welcome.html#whats-new' });
+      expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '' });
+      expect(whatsNew.classList.contains('hidden')).toBe(true);
     });
   });
 });

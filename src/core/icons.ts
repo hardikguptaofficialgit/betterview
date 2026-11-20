@@ -80,6 +80,10 @@ import {
   House,
   ChevronDown,
   ChevronUp,
+  Table,
+  Copy,
+  ExternalLink,
+  ShieldCheck,
 } from 'lucide';
 import type { IconNode } from 'lucide';
 
@@ -167,6 +171,10 @@ export const ICON_MAP: Record<string, IconNode> = {
   'home': House,
   'chevron-down': ChevronDown,
   'chevron-up': ChevronUp,
+  'table': Table,
+  'copy': Copy,
+  'external-link': ExternalLink,
+  'shield-check': ShieldCheck,
 };
 
 export function normalizeIconName(name: string | undefined): string {
