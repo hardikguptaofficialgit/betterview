@@ -415,6 +415,44 @@
       }
       </script>
     </section>
+
+    <!-- 16. Host simulation section -->
+    <section class="fixture-section" id="section-host-sim">
+      <h2>16. Host simulation (Gemini &amp; Grok Scanner)</h2>
+      <button id="btn-run-simulation" class="theme-btn" type="button" style="align-self: flex-start; margin-bottom: 12px;">Run host simulation</button>
+
+      <h3>Simulated Gemini DOM</h3>
+      <div id="sim-gemini">
+        <code-block>
+          <div class="code-block-decoration">ui</div>
+          <pre><code>{"type":"flow","title":"Simulated Gemini Architecture","nodes":[{"id":"client","label":"User Browser","icon":"globe","color":"blue"},{"id":"api","label":"API Gateway","icon":"server","color":"purple"}],"edges":[{"from":"client","to":"api"}]}</code></pre>
+        </code-block>
+      </div>
+
+      <h3 style="margin-top: 16px;">Simulated Grok DOM</h3>
+      <div id="sim-grok">
+        <div>
+          <div><span>ui</span><button type="button">Copy</button></div>
+          <pre><code>{"type":"quiz","title":"Simulated Grok Quiz","questions":[{"q":"Does scanner work?","options":["Yes","No"],"answer":0,"explain":"It works flawlessly."}]}</code></pre>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 16px;">Simulated Streaming Block (Gemini)</h3>
+      <div id="sim-streaming">
+        <code-block>
+          <div class="code-block-decoration">ui</div>
+          <pre><code id="sim-stream-code"></code></pre>
+        </code-block>
+      </div>
+
+      <h3 style="margin-top: 16px;">Simulated Invalid Block (Grok)</h3>
+      <div id="sim-invalid">
+        <div>
+          <div><span>ui</span><button type="button">Copy</button></div>
+          <pre><code id="sim-invalid-code">{"type":"flow","title":"Corrupted JSON</code></pre>
+        </div>
+      </div>
+    </section>
   </div>
   <script src="fixture.js"></script>
 </body>

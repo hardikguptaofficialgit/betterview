@@ -16,6 +16,72 @@ document.addEventListener('DOMContentLoaded', () => {
     textarea.value = SYSTEM_INSTRUCTION;
   }
 
+  const setupGeminiBtn = document.getElementById('setup-gemini-btn') as HTMLButtonElement | null;
+  const setupGeminiStatus = document.getElementById('setup-gemini-status');
+  const setupGrokBtn = document.getElementById('setup-grok-btn') as HTMLButtonElement | null;
+  const setupGrokStatus = document.getElementById('setup-grok-status');
+
+  function renderSetupStatus(el: HTMLElement | null, data?: { status: string }): void {
+    if (!el) return;
+    if (!data) {
+      el.textContent = '';
+      el.className = 'setup-status';
+      return;
+    }
+    if (data.status === 'added') {
+      el.textContent = '✓ Added';
+      el.className = 'setup-status status-success';
+    } else if (data.status === 'already') {
+      el.textContent = '✓ Already set up';
+      el.className = 'setup-status status-success';
+    } else if (data.status === 'failed') {
+      el.textContent = "Couldn't do it, use Copy";
+      el.className = 'setup-status status-error';
+    }
+  }
+
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    chrome.storage.local.get(['gemini_setup_status', 'grok_setup_status'], (items) => {
+      renderSetupStatus(setupGeminiStatus, items.gemini_setup_status as { status: string } | undefined);
+      renderSetupStatus(setupGrokStatus, items.grok_setup_status as { status: string } | undefined);
+    });
+
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local') {
+        if (changes.gemini_setup_status) {
+          renderSetupStatus(setupGeminiStatus, changes.gemini_setup_status.newValue as { status: string } | undefined);
+        }
+        if (changes.grok_setup_status) {
+          renderSetupStatus(setupGrokStatus, changes.grok_setup_status.newValue as { status: string } | undefined);
+        }
+      }
+    });
+  }
+
+  if (setupGeminiBtn) {
+    setupGeminiBtn.addEventListener('click', () => {
+      if (setupGeminiStatus) {
+        setupGeminiStatus.textContent = 'Opening...';
+        setupGeminiStatus.className = 'setup-status';
+      }
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'gemini' });
+      }
+    });
+  }
+
+  if (setupGrokBtn) {
+    setupGrokBtn.addEventListener('click', () => {
+      if (setupGrokStatus) {
+        setupGrokStatus.textContent = 'Opening...';
+        setupGrokStatus.className = 'setup-status';
+      }
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'grok' });
+      }
+    });
+  }
+
   let copyTimeoutId: number | null = null;
   if (copyBtn) {
     copyBtn.addEventListener('click', async () => {

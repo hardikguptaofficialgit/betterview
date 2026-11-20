@@ -33,3 +33,7 @@ mermaid (only when the others can't express it, e.g. a sequence or state diagram
 Rules: ids are unique, and every edge uses existing node ids. Labels stay under 40 characters and sub text under 70. Do not explain the JSON; refer to it as the diagram, table, chart or quiz.`;
 
 export const SYSTEM_INSTRUCTION_SHORT = `Show visuals as fenced code blocks with language ui holding ONE valid JSON object, with a short sentence before each (1-5 per answer). Types: flow {"type":"flow","title","nodes":[{"id","label","sub","icon"(lucide name),"color"(blue|green|amber|red|purple|teal|pink|gray),"group"?}],"edges":[{"from","to","label"?}],"groups"?:[{"id","label","color"}]} · stepper {"type":"stepper","title","steps":[{"title","detail"}]} · table {"type":"table","title","columns":[],"rows":[[]]} · compare {"type":"compare","title","items":[{"label","tone":"good|bad","points":[]}]} · quiz {"type":"quiz","title","questions":[{"q","options":[],"answer":0,"explain"}]} · chart {"type":"chart","title","chartType":"bar|line|pie|doughnut|radar","labels":[],"datasets":[{"label","data":[]}]} · mermaid {"type":"mermaid","title","code"}. Label decision edges Yes/No. Never invent chart data. Don't explain the JSON.`;
+
+export function getCompactInstruction(): string {
+  return `[BetterView] ${SYSTEM_INSTRUCTION}`;
+}

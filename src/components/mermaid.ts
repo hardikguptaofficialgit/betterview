@@ -72,6 +72,8 @@ export function renderMermaid(spec: MermaidSpec, ctx: RenderContext): HTMLElemen
     theme: 'base',
     fontFamily: FONT_STACK,
     themeVariables,
+    suppressErrorRendering: true,
+    logLevel: 'fatal' as any,
   });
 
   const renderId = 'iui-mmd-' + (++mermaidIdCounter);

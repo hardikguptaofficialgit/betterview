@@ -1,8 +1,11 @@
 import { mountBlock, BlockHandle } from '../core/mount';
 import { ThemeMode } from '../core/theme';
+import { startScanner } from '../content/scanner';
+import { GEMINI_ADAPTER, GROK_ADAPTER } from '../content/sites';
 
 function initFixture(): void {
   const handles: BlockHandle[] = [];
+  const scanners: ReturnType<typeof startScanner>[] = [];
   let currentTheme: ThemeMode = (document.body.getAttribute('data-theme') as ThemeMode) || 'light';
 
   const mounts = document.querySelectorAll<HTMLElement>('.fixture-mount');
@@ -43,6 +46,54 @@ function initFixture(): void {
       document.body.setAttribute('data-theme', currentTheme);
       toggleBtn.textContent = currentTheme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode';
       handles.forEach((h) => h.setTheme(currentTheme));
+      scanners.forEach((s) => s.setTheme(currentTheme));
+    });
+  }
+
+  const runSimBtn = document.getElementById('btn-run-simulation');
+  if (runSimBtn) {
+    runSimBtn.addEventListener('click', () => {
+      const simGemini = document.getElementById('sim-gemini');
+      const simGrok = document.getElementById('sim-grok');
+      const simStreaming = document.getElementById('sim-streaming');
+      const simInvalid = document.getElementById('sim-invalid');
+
+      if (simGemini) {
+        scanners.push(startScanner(GEMINI_ADAPTER, () => currentTheme, simGemini));
+      }
+      if (simGrok) {
+        scanners.push(startScanner(GROK_ADAPTER, () => currentTheme, simGrok));
+      }
+      if (simStreaming) {
+        scanners.push(startScanner(GEMINI_ADAPTER, () => currentTheme, simStreaming));
+      }
+      if (simInvalid) {
+        scanners.push(startScanner(GROK_ADAPTER, () => currentTheme, simInvalid));
+      }
+
+      // Stream text in 20-char chunks
+      const streamCode = document.getElementById('sim-stream-code');
+      if (streamCode) {
+        const fullText = JSON.stringify({
+          type: 'stepper',
+          title: 'Streaming Simulation',
+          steps: [
+            { title: 'Step 1', detail: 'Connecting to service...' },
+            { title: 'Step 2', detail: 'Received stream chunks.' },
+          ],
+        });
+        streamCode.textContent = '';
+        let offset = 0;
+        const intervalId = window.setInterval(() => {
+          if (offset < fullText.length) {
+            const nextChunk = fullText.slice(offset, offset + 20);
+            offset += 20;
+            streamCode.textContent += nextChunk;
+          } else {
+            window.clearInterval(intervalId);
+          }
+        }, 50);
+      }
     });
   }
 

@@ -6,8 +6,7 @@
 }
 
 .iui-table-scroll {
-  max-height: 420px;
-  overflow: auto;
+  overflow-x: auto;
 }
 
 .iui-table {

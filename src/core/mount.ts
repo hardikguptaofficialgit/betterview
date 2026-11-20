@@ -77,7 +77,11 @@ function createSkeleton(typeHint?: UIType): HTMLElement {
 
 export function mountBlock(
   anchor: HTMLElement,
-  opts: { theme: ThemeMode; insert?: 'after' | 'inside' },
+  opts: {
+    theme: ThemeMode;
+    insert?: 'after' | 'inside';
+    onStateChange?: (state: 'skeleton' | 'rendered' | 'fallback') => void;
+  },
 ): BlockHandle {
   const host = h('div', { class: 'iui-host', 'data-iui': '1' });
 
@@ -124,6 +128,7 @@ export function mountBlock(
     const skel = createSkeleton(typeHint);
     root.appendChild(skel);
     currentState = 'skeleton';
+    opts.onStateChange?.('skeleton');
   }
 
   function showFallback(errorMessage: string, rawText: string): void {
@@ -140,6 +145,7 @@ export function mountBlock(
     );
     root.appendChild(fallback);
     currentState = 'fallback';
+    opts.onStateChange?.('fallback');
   }
 
   function renderSpec(spec: UISpec, rawText: string): void {
@@ -186,6 +192,7 @@ export function mountBlock(
       root.appendChild(wrapper);
 
       currentState = 'rendered';
+      opts.onStateChange?.('rendered');
       lastRenderedSpec = spec;
       lastRenderedSpecJson = JSON.stringify(spec);
     } catch (err: unknown) {

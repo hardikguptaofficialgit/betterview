@@ -214,6 +214,53 @@ body {
   opacity: 0.85;
 }
 
+.btn-secondary {
+  background-color: transparent;
+  color: var(--iui-text);
+  border: 1px solid var(--iui-border);
+}
+
+.btn-secondary:hover {
+  background-color: var(--iui-surface);
+}
+
+.setup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--iui-border);
+}
+
+.setup-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--iui-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.setup-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.setup-status {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--iui-muted);
+}
+
+.setup-status.status-success {
+  color: var(--c-mint-ink);
+}
+
+.setup-status.status-error {
+  color: #8E2E46;
+}
+
 textarea#system-instruction {
   width: 100%;
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
