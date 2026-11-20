@@ -8,60 +8,77 @@
 </head>
 <body>
   <div class="popup-container">
-    <header class="header">
-      <picture id="header-logo">
-        <source id="logo-source" media="(prefers-color-scheme: dark)" srcset="/brand/logo-horizontal-white.png" />
-        <img id="logo-img" src="/brand/logo-horizontal-black.png" alt="BetterView" height="22" />
-      </picture>
-      <p class="subtitle">Visual answers for Gemini &amp; Grok</p>
+    <!-- Top row -->
+    <header class="header-row">
+      <div class="header-brand">
+        <picture id="header-logo" class="logo-picture">
+          <source id="logo-source" media="(prefers-color-scheme: dark)" srcset="/brand/mark-white.png" />
+          <img id="logo-img" src="/brand/mark-black.png" alt="BetterView" width="20" height="20" />
+        </picture>
+        <span class="brand-title">BetterView</span>
+      </div>
+      <div id="status-line" class="status-pill status-muted">Open Gemini or Grok</div>
     </header>
 
-    <div id="status-line" class="status-line status-muted">Open Gemini or Grok to use</div>
-
-    <section class="card instruction-card">
-      <div class="card-header">
-        <label for="system-instruction" class="card-title">System instruction</label>
-        <button id="copy-btn" class="btn btn-primary" type="button">Copy</button>
+    <!-- Card 1: Setup -->
+    <section class="card setup-card" id="setup-card">
+      <div class="card-title">Setup</div>
+      <div class="setup-buttons">
+        <button id="setup-gemini-btn" class="pill-btn setup-btn" type="button" aria-label="Set up Gemini">
+          <span class="btn-site-icon" id="icon-gemini"></span>
+          <span class="btn-label">Gemini</span>
+          <span class="btn-check" id="check-gemini"></span>
+        </button>
+        <button id="setup-grok-btn" class="pill-btn setup-btn" type="button" aria-label="Set up Grok">
+          <span class="btn-site-icon" id="icon-grok"></span>
+          <span class="btn-label">Grok</span>
+          <span class="btn-check" id="check-grok"></span>
+        </button>
       </div>
-      <textarea id="system-instruction" rows="10" readonly spellcheck="false"></textarea>
-      <p class="howto-text">Gemini: paste into a Gem's instructions or Settings › Instructions for Gemini. Grok: Settings › Customize › Custom Instructions, or a Project's instructions.</p>
-      <div class="setup-section">
-        <span class="setup-section-title">Set up automatically</span>
-        <div class="setup-row">
-          <button id="setup-gemini-btn" class="btn btn-secondary" type="button">Set up Gemini</button>
-          <span id="setup-gemini-status" class="setup-status"></span>
-        </div>
-        <div class="setup-row">
-          <button id="setup-grok-btn" class="btn btn-secondary" type="button">Set up Grok</button>
-          <span id="setup-grok-status" class="setup-status"></span>
+      <div id="setup-status" class="setup-status-line"></div>
+      <span id="setup-gemini-status" class="visually-hidden"></span>
+      <span id="setup-grok-status" class="visually-hidden"></span>
+    </section>
+
+    <!-- Card 2: Appearance -->
+    <section class="card appearance-card" id="appearance-card">
+      <div class="card-title">Appearance</div>
+      <div class="segmented-control" id="theme-segmented" role="radiogroup" aria-label="Appearance theme" data-value="auto">
+        <div class="segmented-thumb" aria-hidden="true"></div>
+        <button type="button" class="segmented-btn is-active" data-value="auto" role="radio" aria-checked="true">Auto</button>
+        <button type="button" class="segmented-btn" data-value="light" role="radio" aria-checked="false">Light</button>
+        <button type="button" class="segmented-btn" data-value="dark" role="radio" aria-checked="false">Dark</button>
+      </div>
+      <select id="theme-select" class="visually-hidden" aria-hidden="true" tabindex="-1">
+        <option value="auto">Auto</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </section>
+
+    <!-- Manual setup row -->
+    <section class="manual-setup-section" id="manual-setup-section">
+      <button id="manual-setup-toggle" class="manual-setup-toggle" type="button" aria-expanded="false" aria-controls="manual-setup-content">
+        <span class="manual-setup-title">Manual setup</span>
+        <span class="manual-setup-chevron" id="manual-setup-chevron"></span>
+      </button>
+      <div id="manual-setup-content" class="manual-setup-content">
+        <div class="manual-setup-inner">
+          <div id="system-instruction" class="instruction-preview" role="region" aria-label="System instruction preview" tabindex="0"></div>
+          <div class="manual-setup-action">
+            <button id="copy-btn" class="pill-btn copy-btn" type="button">
+              <span class="copy-label">Copy</span>
+            </button>
+          </div>
+          <p class="manual-setup-hint">Paste into Gemini &rsaquo; Saved info, or Grok &rsaquo; Settings &rsaquo; Customize &rsaquo; Custom.</p>
         </div>
       </div>
     </section>
 
-    <section class="card settings-card">
-      <div class="setting-item">
-        <span class="setting-label">Render UI blocks</span>
-        <label class="switch">
-          <input type="checkbox" id="toggle-render" />
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div class="setting-item">
-        <span class="setting-label">Auto-insert instruction into the first message (experimental)</span>
-        <label class="switch">
-          <input type="checkbox" id="toggle-autoinject" />
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div class="setting-item">
-        <label for="theme-select" class="setting-label">Theme</label>
-        <select id="theme-select" class="theme-select">
-          <option value="auto">Auto</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-      </div>
-    </section>
+    <!-- Footer -->
+    <footer class="popup-footer">
+      <span class="version-tag">v0.1.0</span>
+    </footer>
   </div>
   <script type="module" src="/src/popup/popup.ts"></script>
 </body>

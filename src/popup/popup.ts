@@ -1,69 +1,136 @@
 import './popup.css';
 import { loadSettings, saveSettings, onSettingsChange, Settings } from '../shared/settings';
 import { SYSTEM_INSTRUCTION } from '../shared/systemInstruction';
+import { h, clear } from '../core/dom';
+import { iconEl } from '../core/icons';
 
-document.addEventListener('DOMContentLoaded', () => {
+export function initPopup(): () => void {
   const statusLine = document.getElementById('status-line');
   const copyBtn = document.getElementById('copy-btn') as HTMLButtonElement | null;
-  const textarea = document.getElementById('system-instruction') as HTMLTextAreaElement | null;
-  const toggleRender = document.getElementById('toggle-render') as HTMLInputElement | null;
-  const toggleAutoInject = document.getElementById('toggle-autoinject') as HTMLInputElement | null;
+  const instructionEl = document.getElementById('system-instruction');
+  const themeSegmented = document.getElementById('theme-segmented');
   const themeSelect = document.getElementById('theme-select') as HTMLSelectElement | null;
   const logoImg = document.getElementById('logo-img') as HTMLImageElement | null;
   const logoSource = document.getElementById('logo-source') as HTMLSourceElement | null;
 
-  if (textarea) {
-    textarea.value = SYSTEM_INSTRUCTION;
-  }
-
   const setupGeminiBtn = document.getElementById('setup-gemini-btn') as HTMLButtonElement | null;
-  const setupGeminiStatus = document.getElementById('setup-gemini-status');
   const setupGrokBtn = document.getElementById('setup-grok-btn') as HTMLButtonElement | null;
+  const setupStatusEl = document.getElementById('setup-status');
+  const setupGeminiStatus = document.getElementById('setup-gemini-status');
   const setupGrokStatus = document.getElementById('setup-grok-status');
 
-  function renderSetupStatus(el: HTMLElement | null, data?: { status: string; error?: string }): void {
-    if (!el) return;
-    if (!data) {
-      el.textContent = '';
-      el.className = 'setup-status';
-      return;
-    }
-    if (data.status === 'added') {
-      el.textContent = '✓ Added';
-      el.className = 'setup-status status-success';
-    } else if (data.status === 'already') {
-      el.textContent = '✓ Already set up';
-      el.className = 'setup-status status-success';
-    } else if (data.status === 'failed') {
-      el.textContent = data.error || "Couldn't do it, use Copy";
-      el.className = 'setup-status status-error';
+  const manualToggle = document.getElementById('manual-setup-toggle') as HTMLButtonElement | null;
+  const manualContent = document.getElementById('manual-setup-content');
+  const manualChevron = document.getElementById('manual-setup-chevron');
+
+  const iconGemini = document.getElementById('icon-gemini');
+  const iconGrok = document.getElementById('icon-grok');
+  const checkGemini = document.getElementById('check-gemini');
+  const checkGrok = document.getElementById('check-grok');
+
+  // Insert Lucide icons
+  if (iconGemini && !iconGemini.hasChildNodes()) {
+    iconGemini.appendChild(iconEl('sparkles', 14));
+  }
+  if (iconGrok && !iconGrok.hasChildNodes()) {
+    iconGrok.appendChild(iconEl('bot', 14));
+  }
+  if (checkGemini && !checkGemini.hasChildNodes()) {
+    checkGemini.appendChild(iconEl('check', 13));
+  }
+  if (checkGrok && !checkGrok.hasChildNodes()) {
+    checkGrok.appendChild(iconEl('check', 13));
+  }
+  if (manualChevron && !manualChevron.hasChildNodes()) {
+    manualChevron.appendChild(iconEl('chevron-down', 14));
+  }
+
+  // Populate system instruction preview
+  if (instructionEl) {
+    instructionEl.textContent = SYSTEM_INSTRUCTION;
+    if ('value' in instructionEl) {
+      (instructionEl as HTMLTextAreaElement).value = SYSTEM_INSTRUCTION;
     }
   }
 
+  // Status text helper with crossfade animation
+  function setStatusText(text: string, type: 'muted' | 'success' | 'error' = 'muted'): void {
+    if (setupStatusEl) {
+      setupStatusEl.textContent = text;
+      setupStatusEl.className = `setup-status-line status-${type}`;
+      setupStatusEl.classList.remove('crossfade');
+      // Trigger reflow to restart CSS crossfade animation
+      void setupStatusEl.offsetWidth;
+      setupStatusEl.classList.add('crossfade');
+    }
+    if (setupGeminiStatus) setupGeminiStatus.textContent = text;
+    if (setupGrokStatus) setupGrokStatus.textContent = text;
+  }
+
+  // Render setup status for a site
+  function renderSetupStatus(site: 'gemini' | 'grok', data?: { status: string; error?: string }): void {
+    const btn = site === 'gemini' ? setupGeminiBtn : setupGrokBtn;
+    if (!data) return;
+
+    if (data.status === 'added') {
+      btn?.classList.add('is-done');
+      setStatusText('Added \u2713', 'success');
+    } else if (data.status === 'already') {
+      btn?.classList.add('is-done');
+      setStatusText('Already set up \u2713', 'success');
+    } else if (data.status === 'failed') {
+      btn?.classList.remove('is-done');
+      setStatusText(data.error || "Couldn't do it, use Copy", 'error');
+    }
+  }
+
+  // Storage listener for setup status
   if (typeof chrome !== 'undefined' && chrome.storage?.local) {
     chrome.storage.local.get(['gemini_setup_status', 'grok_setup_status'], (items) => {
-      renderSetupStatus(setupGeminiStatus, items.gemini_setup_status as { status: string; error?: string } | undefined);
-      renderSetupStatus(setupGrokStatus, items.grok_setup_status as { status: string; error?: string } | undefined);
+      const gemini = items.gemini_setup_status as { status: string; error?: string; timestamp?: number } | undefined;
+      const grok = items.grok_setup_status as { status: string; error?: string; timestamp?: number } | undefined;
+
+      if (gemini?.status === 'added' || gemini?.status === 'already') {
+        setupGeminiBtn?.classList.add('is-done');
+      }
+      if (grok?.status === 'added' || grok?.status === 'already') {
+        setupGrokBtn?.classList.add('is-done');
+      }
+
+      if (gemini && grok) {
+        const geminiTime = gemini.timestamp || 0;
+        const grokTime = grok.timestamp || 0;
+        const recent = geminiTime >= grokTime ? gemini : grok;
+        renderSetupStatus(geminiTime >= grokTime ? 'gemini' : 'grok', recent);
+      } else if (gemini) {
+        renderSetupStatus('gemini', gemini);
+      } else if (grok) {
+        renderSetupStatus('grok', grok);
+      }
     });
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'local') {
         if (changes.gemini_setup_status) {
-          renderSetupStatus(setupGeminiStatus, changes.gemini_setup_status.newValue as { status: string; error?: string } | undefined);
+          renderSetupStatus(
+            'gemini',
+            changes.gemini_setup_status.newValue as { status: string; error?: string } | undefined,
+          );
         }
         if (changes.grok_setup_status) {
-          renderSetupStatus(setupGrokStatus, changes.grok_setup_status.newValue as { status: string; error?: string } | undefined);
+          renderSetupStatus(
+            'grok',
+            changes.grok_setup_status.newValue as { status: string; error?: string } | undefined,
+          );
         }
       }
     });
   }
 
+  // Setup buttons click handlers
   if (setupGeminiBtn) {
     setupGeminiBtn.addEventListener('click', () => {
-      if (setupGeminiStatus) {
-        setupGeminiStatus.textContent = 'Opening...';
-        setupGeminiStatus.className = 'setup-status';
-      }
+      setStatusText('Setting up\u2026', 'muted');
       if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
         chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'gemini' });
       }
@@ -72,33 +139,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (setupGrokBtn) {
     setupGrokBtn.addEventListener('click', () => {
-      if (setupGrokStatus) {
-        setupGrokStatus.textContent = 'Opening...';
-        setupGrokStatus.className = 'setup-status';
-      }
+      setStatusText('Setting up\u2026', 'muted');
       if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
         chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'grok' });
       }
     });
   }
 
+  // Copy button handler
   let copyTimeoutId: number | null = null;
   if (copyBtn) {
     copyBtn.addEventListener('click', async () => {
       try {
-        await navigator.clipboard.writeText(SYSTEM_INSTRUCTION);
-        copyBtn.textContent = 'Copied ✓';
+        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(SYSTEM_INSTRUCTION);
+        }
+        copyBtn.classList.add('is-copied');
+        const copyLabel = copyBtn.querySelector('.copy-label') as HTMLElement | null;
+        if (copyLabel) {
+          copyLabel.textContent = 'Copied \u2713';
+          copyLabel.classList.remove('fade-in');
+          void copyLabel.offsetWidth;
+          copyLabel.classList.add('fade-in');
+        } else {
+          copyBtn.textContent = 'Copied \u2713';
+        }
+
         if (copyTimeoutId !== null) {
           window.clearTimeout(copyTimeoutId);
         }
         copyTimeoutId = window.setTimeout(() => {
-          copyBtn.textContent = 'Copy';
+          copyBtn.classList.remove('is-copied');
+          if (copyLabel) {
+            copyLabel.textContent = 'Copy';
+            copyLabel.classList.remove('fade-in');
+            void copyLabel.offsetWidth;
+            copyLabel.classList.add('fade-in');
+          } else {
+            copyBtn.textContent = 'Copy';
+          }
           copyTimeoutId = null;
         }, 1500);
       } catch (err) {
         console.error('Failed to copy system instruction:', err);
       }
     });
+  }
+
+  // Active tab detection
+  function renderTabStatus(isActive: boolean): void {
+    if (!statusLine) return;
+    clear(statusLine);
+    if (isActive) {
+      statusLine.className = 'status-pill status-active';
+      const dot = h('span', { class: 'status-dot' });
+      statusLine.appendChild(dot);
+      statusLine.appendChild(document.createTextNode('Active'));
+    } else {
+      statusLine.className = 'status-pill status-muted';
+      statusLine.appendChild(document.createTextNode('Open Gemini or Grok'));
+    }
   }
 
   if (statusLine) {
@@ -108,61 +208,86 @@ document.addEventListener('DOMContentLoaded', () => {
           const tab = tabs && tabs[0];
           const url = tab?.url || '';
           if (url.includes('gemini.google.com') || url.includes('grok.com')) {
-            statusLine.textContent = 'Active on this tab ✓';
-            statusLine.className = 'status-line status-active';
+            renderTabStatus(true);
           } else {
-            statusLine.textContent = 'Open Gemini or Grok to use';
-            statusLine.className = 'status-line status-muted';
+            renderTabStatus(false);
           }
         });
       } catch {
-        statusLine.textContent = 'Open Gemini or Grok to use';
-        statusLine.className = 'status-line status-muted';
+        renderTabStatus(false);
       }
     } else {
-      statusLine.textContent = 'Open Gemini or Grok to use';
-      statusLine.className = 'status-line status-muted';
+      renderTabStatus(false);
+    }
+  }
+
+  // Manual setup expand/collapse
+  if (manualToggle && manualContent) {
+    manualToggle.addEventListener('click', () => {
+      const isExpanded = manualToggle.getAttribute('aria-expanded') === 'true';
+      const nextExpanded = !isExpanded;
+      manualToggle.setAttribute('aria-expanded', String(nextExpanded));
+      if (nextExpanded) {
+        manualContent.classList.add('is-expanded');
+      } else {
+        manualContent.classList.remove('is-expanded');
+      }
+    });
+  }
+
+  // Appearance & Theme settings
+  function updateThemeUI(theme: Settings['theme']): void {
+    if (themeSegmented) {
+      themeSegmented.setAttribute('data-value', theme);
+      const buttons = themeSegmented.querySelectorAll<HTMLButtonElement>('.segmented-btn');
+      buttons.forEach((btn) => {
+        const val = btn.getAttribute('data-value');
+        const isActive = val === theme;
+        btn.setAttribute('aria-checked', String(isActive));
+        if (isActive) {
+          btn.classList.add('is-active');
+        } else {
+          btn.classList.remove('is-active');
+        }
+      });
+    }
+
+    if (themeSelect) {
+      themeSelect.value = theme;
+    }
+
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      if (logoImg) logoImg.src = '/brand/mark-black.png';
+      if (logoSource) logoSource.srcset = '/brand/mark-black.png';
+    } else if (theme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      if (logoImg) logoImg.src = '/brand/mark-white.png';
+      if (logoSource) logoSource.srcset = '/brand/mark-white.png';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      if (logoImg) logoImg.src = '/brand/mark-black.png';
+      if (logoSource) logoSource.srcset = '/brand/mark-white.png';
     }
   }
 
   function applySettingsToUI(s: Settings): void {
-    if (toggleRender) {
-      toggleRender.checked = s.renderEnabled;
-    }
-    if (toggleAutoInject) {
-      toggleAutoInject.checked = s.autoInject;
-    }
-    if (themeSelect) {
-      themeSelect.value = s.theme;
-    }
-    if (s.theme === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
-      if (logoImg) logoImg.src = '/brand/logo-horizontal-black.png';
-      if (logoSource) logoSource.srcset = '/brand/logo-horizontal-black.png';
-    } else if (s.theme === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      if (logoImg) logoImg.src = '/brand/logo-horizontal-white.png';
-      if (logoSource) logoSource.srcset = '/brand/logo-horizontal-white.png';
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      if (logoImg) logoImg.src = '/brand/logo-horizontal-black.png';
-      if (logoSource) logoSource.srcset = '/brand/logo-horizontal-white.png';
-    }
+    updateThemeUI(s.theme);
   }
 
   loadSettings().then(applySettingsToUI).catch(console.error);
+  const unsubscribeSettings = onSettingsChange(applySettingsToUI);
 
-  onSettingsChange(applySettingsToUI);
-
-  if (toggleRender) {
-    toggleRender.addEventListener('change', () => {
-      saveSettings({ renderEnabled: toggleRender.checked }).catch(console.error);
-    });
-  }
-
-  if (toggleAutoInject) {
-    toggleAutoInject.addEventListener('change', () => {
-      saveSettings({ autoInject: toggleAutoInject.checked }).catch(console.error);
+  if (themeSegmented) {
+    const buttons = themeSegmented.querySelectorAll<HTMLButtonElement>('.segmented-btn');
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const val = btn.getAttribute('data-value') as Settings['theme'];
+        if (val === 'auto' || val === 'light' || val === 'dark') {
+          saveSettings({ theme: val }).catch(console.error);
+          updateThemeUI(val);
+        }
+      });
     });
   }
 
@@ -170,11 +295,24 @@ document.addEventListener('DOMContentLoaded', () => {
     themeSelect.addEventListener('change', () => {
       const theme = themeSelect.value as Settings['theme'];
       saveSettings({ theme }).catch(console.error);
-      applySettingsToUI({
-        renderEnabled: toggleRender?.checked ?? true,
-        autoInject: toggleAutoInject?.checked ?? false,
-        theme,
-      });
+      updateThemeUI(theme);
     });
   }
-});
+
+  return () => {
+    unsubscribeSettings();
+    if (copyTimeoutId !== null) {
+      window.clearTimeout(copyTimeoutId);
+    }
+  };
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initPopup();
+    });
+  } else {
+    initPopup();
+  }
+}
