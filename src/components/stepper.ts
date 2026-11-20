@@ -2,6 +2,7 @@ import { StepperSpec } from '../core/types';
 import { RenderContext } from './index';
 import { clear, h } from '../core/dom';
 import { iconEl } from '../core/icons';
+import { renderMathText } from '../core/mathParser';
 
 export function renderStepper(spec: StepperSpec, _ctx: RenderContext): HTMLElement {
   const card = h('div', { class: 'iui-card iui-stepper-card' });
@@ -41,13 +42,11 @@ export function renderStepper(spec: StepperSpec, _ctx: RenderContext): HTMLEleme
         { class: 'iui-stepper-chevron' },
         iconEl(isExpanded ? 'caret-up' : 'caret-down', 16),
       );
-      const titleSpan = h('span', { class: 'iui-stepper-title' }, step.title);
+      const titleSpan = h('span', { class: 'iui-stepper-title' });
+      renderMathText(titleSpan, step.title);
 
-      const detailEl = h(
-        'div',
-        { class: `iui-stepper-detail${isExpanded ? '' : ' is-collapsed'}` },
-        step.detail,
-      );
+      const detailEl = h('div', { class: `iui-stepper-detail${isExpanded ? '' : ' is-collapsed'}` });
+      renderMathText(detailEl, step.detail);
 
       const btn = h(
         'button',
@@ -74,11 +73,9 @@ export function renderStepper(spec: StepperSpec, _ctx: RenderContext): HTMLEleme
       content.appendChild(btn);
       content.appendChild(detailEl);
     } else {
-      const headerStatic = h(
-        'div',
-        { class: 'iui-stepper-header-static' },
-        h('span', { class: 'iui-stepper-title' }, step.title),
-      );
+      const titleSpan = h('span', { class: 'iui-stepper-title' });
+      renderMathText(titleSpan, step.title);
+      const headerStatic = h('div', { class: 'iui-stepper-header-static' }, titleSpan);
       content.appendChild(headerStatic);
     }
 

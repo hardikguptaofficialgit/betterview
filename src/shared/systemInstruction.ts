@@ -11,7 +11,7 @@ export const COMPONENT_CATALOG: ComponentCatalogEntry[] = [
   {
     type: 'flow',
     required: ['type', 'nodes', 'edges'],
-    whenToUse: 'Process flows or architectures',
+    whenToUse: 'Process flows or architecture',
     schemaSnippet: '{"type":"flow","title":"...","nodes":[{"id":"a","label":"User","icon":"user","color":"blue"}],"edges":[{"from":"a","to":"b","label":"Yes"}]}',
   },
   {
@@ -23,37 +23,37 @@ export const COMPONENT_CATALOG: ComponentCatalogEntry[] = [
   {
     type: 'table',
     required: ['type', 'columns', 'rows'],
-    whenToUse: 'Structured tabular data or metrics',
+    whenToUse: 'Tabular data or metrics',
     schemaSnippet: '{"type":"table","title":"...","columns":["Metric","Value"],"rows":[["A","100"]]}',
   },
   {
     type: 'compare',
     required: ['type', 'items'],
-    whenToUse: 'Side-by-side pros vs cons or trade-offs',
+    whenToUse: 'Side-by-side trade-offs',
     schemaSnippet: '{"type":"compare","title":"...","items":[{"label":"SQL","tone":"good","points":["..."]}]}',
   },
   {
     type: 'quiz',
     required: ['type', 'questions'],
-    whenToUse: 'Interactive multiple-choice checks',
+    whenToUse: 'Multiple-choice checks',
     schemaSnippet: '{"type":"quiz","title":"...","questions":[{"q":"...","options":["A","B"],"answer":0,"explain":"..."}]}',
   },
   {
     type: 'chart',
     required: ['type', 'chartType', 'labels', 'datasets'],
-    whenToUse: 'Data trends or comparisons',
+    whenToUse: 'Data trends or charts',
     schemaSnippet: '{"type":"chart","title":"...","chartType":"bar","labels":["Mon","Tue"],"datasets":[{"label":"Req","data":[10,20]}],"unit":"M"}',
   },
   {
     type: 'mermaid',
     required: ['type', 'code'],
-    whenToUse: 'Sequence, state, or ER diagrams',
+    whenToUse: 'Sequence, state, or ER diagram',
     schemaSnippet: '{"type":"mermaid","title":"...","code":"sequenceDiagram\\n  A->>B: ping"}',
   },
   {
     type: 'callout',
     required: ['type', 'tone', 'text'],
-    whenToUse: 'Notices, warnings, tips, or success notes',
+    whenToUse: 'Notices, tips, or warnings',
     schemaSnippet: '{"type":"callout","title":"...","tone":"info|success|warning|tip","text":"...","icon":"rocket"}',
   },
   {
@@ -65,13 +65,13 @@ export const COMPONENT_CATALOG: ComponentCatalogEntry[] = [
   {
     type: 'tabs',
     required: ['type', 'tabs'],
-    whenToUse: 'Categorized alternate views or lists',
+    whenToUse: 'Categorized views or lists',
     schemaSnippet: '{"type":"tabs","title":"...","tabs":[{"label":"Overview","content":"..."},{"label":"Details","content":["..."]}]}',
   },
   {
     type: 'timeline',
     required: ['type', 'events'],
-    whenToUse: 'Chronological events or roadmaps',
+    whenToUse: 'Chronological roadmaps',
     schemaSnippet: '{"type":"timeline","title":"...","events":[{"title":"Launch","time":"Q1","text":"...","icon":"rocket"}]}',
   },
   {
@@ -79,6 +79,18 @@ export const COMPONENT_CATALOG: ComponentCatalogEntry[] = [
     required: ['type', 'suggestions'],
     whenToUse: '2-4 suggested next prompt chips',
     schemaSnippet: '{"type":"followups","title":"Suggested follow-ups","suggestions":["Tell me more","How to optimize?"]}',
+  },
+  {
+    type: 'math',
+    required: ['type', 'latex'],
+    whenToUse: 'Formulas or derivations',
+    schemaSnippet: '{"type":"math","title":"...","latex":"E = mc^2","steps":[{"latex":"...","note":"..."}]}',
+  },
+  {
+    type: 'code',
+    required: ['type', 'language', 'code'],
+    whenToUse: 'Syntax-highlighted code',
+    schemaSnippet: '{"type":"code","title":"...","language":"typescript","code":"const x = 1;","filename":"main.ts"}',
   },
 ];
 
@@ -105,7 +117,7 @@ Rules:
 4. End answers with one followups block when natural.
 5. Write one short sentence before each block.
 6. Never invent numbers for charts or stats.
-7. Optional icon: stats, timeline, callouts, and flow nodes can include an optional "icon" (e.g. globe, lock, server, database, lightning, rocket, clock, users, code, cloud, shield-check, chart-line, cpu, wifi-high). Unknown names use default.
+7. Optional icon: stats, timeline, callouts, and flow nodes can include an "icon" (e.g. globe, lock, server, rocket, clock, users, code). Unknown names use default.
 
 Type catalog:
 ${generateCatalogSection()}`;

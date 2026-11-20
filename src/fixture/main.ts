@@ -102,6 +102,8 @@ function initFixture(): void {
     'tabs-spec',
     'timeline-spec',
     'followups-spec',
+    'math-spec',
+    'code-spec',
   ];
 
   if (simulateStreamingBtn && streamingAllMount) {

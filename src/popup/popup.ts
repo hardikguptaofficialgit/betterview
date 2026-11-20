@@ -11,6 +11,7 @@ export function initPopup(): () => void {
   const instructionEl = document.getElementById('system-instruction');
   const themeSegmented = document.getElementById('theme-segmented');
   const themeSelect = document.getElementById('theme-select') as HTMLSelectElement | null;
+  const watermarkToggle = document.getElementById('watermark-toggle') as HTMLInputElement | null;
   const logoImg = document.getElementById('logo-img') as HTMLImageElement | null;
   const logoSource = document.getElementById('logo-source') as HTMLSourceElement | null;
 
@@ -454,10 +455,19 @@ export function initPopup(): () => void {
 
   function applySettingsToUI(s: Settings): void {
     updateThemeUI(s.theme);
+    if (watermarkToggle) {
+      watermarkToggle.checked = s.watermark !== false;
+    }
   }
 
   loadSettings().then(applySettingsToUI).catch(console.error);
   const unsubscribeSettings = onSettingsChange(applySettingsToUI);
+
+  if (watermarkToggle) {
+    watermarkToggle.addEventListener('change', () => {
+      saveSettings({ watermark: watermarkToggle.checked }).catch(console.error);
+    });
+  }
 
   if (themeSegmented) {
     const buttons = themeSegmented.querySelectorAll<HTMLButtonElement>('.segmented-btn');

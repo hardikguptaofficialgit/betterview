@@ -336,6 +336,8 @@ export function renderChart(spec: ChartSpec, ctx: RenderContext): HTMLElement {
       if (disposed) return;
       try {
         chartInstance = new Chart(canvas, config);
+        (card as any).__chartInstance = chartInstance;
+        (canvas as any).__chartInstance = chartInstance;
       } catch (err) {
         console.warn('[IUI] Chart initialization failed:', err);
       }

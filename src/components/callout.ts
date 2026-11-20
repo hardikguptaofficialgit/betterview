@@ -2,6 +2,7 @@ import { CalloutSpec } from '../core/types';
 import { RenderContext } from './index';
 import { h } from '../core/dom';
 import { iconEl } from '../core/icons';
+import { renderMathText } from '../core/mathParser';
 
 export function renderCallout(spec: CalloutSpec, _ctx: RenderContext): HTMLElement {
   const card = h('div', { class: 'iui-card iui-callout-card' });
@@ -34,11 +35,13 @@ export function renderCallout(spec: CalloutSpec, _ctx: RenderContext): HTMLEleme
 
   const content = h('div', { class: 'iui-callout-content' });
   if (spec.title) {
-    const titleEl = h('div', { class: 'iui-callout-title' }, spec.title);
+    const titleEl = h('div', { class: 'iui-callout-title' });
+    renderMathText(titleEl, spec.title);
     content.appendChild(titleEl);
   }
 
-  const textEl = h('div', { class: 'iui-callout-text' }, spec.text);
+  const textEl = h('div', { class: 'iui-callout-text' });
+  renderMathText(textEl, spec.text);
   content.appendChild(textEl);
 
   box.appendChild(content);

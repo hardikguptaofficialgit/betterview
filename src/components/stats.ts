@@ -2,6 +2,7 @@ import { StatsSpec, StatItem } from '../core/types';
 import { RenderContext } from './index';
 import { h } from '../core/dom';
 import { iconEl } from '../core/icons';
+import { renderMathText } from '../core/mathParser';
 
 function parseNumberParts(raw: string | number): { prefix: string; value: number; suffix: string; decimals: number } | null {
   if (typeof raw === 'number') {
@@ -38,7 +39,8 @@ export function renderStats(spec: StatsSpec, ctx: RenderContext): HTMLElement {
 
     // Label row with optional icon
     const labelRow = h('div', { class: 'iui-stat-label-row' });
-    const label = h('div', { class: 'iui-stat-label' }, item.label);
+    const label = h('div', { class: 'iui-stat-label' });
+    renderMathText(label, item.label);
     labelRow.appendChild(label);
     if (item.icon) {
       const iconWrap = h('span', { class: 'iui-stat-item-icon' }, iconEl(item.icon, 15));

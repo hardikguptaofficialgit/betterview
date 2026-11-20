@@ -5,6 +5,62 @@
   background-color: var(--iui-bg);
 }
 
+/* Filter bar for > 6 rows */
+.iui-table-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 12px;
+}
+
+.iui-table-filter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--iui-surface);
+  border: 1px solid var(--iui-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  flex: 1;
+  max-width: 280px;
+  transition: border-color 160ms cubic-bezier(.2,.8,.2,1);
+}
+
+.iui-table-filter-wrap:focus-within {
+  border-color: var(--iui-text);
+}
+
+.iui-table-filter-icon {
+  color: var(--iui-muted);
+  flex-shrink: 0;
+}
+
+.iui-table-filter-input {
+  all: unset;
+  font-size: 12px;
+  color: var(--iui-text);
+  width: 100%;
+}
+
+.iui-table-filter-input::placeholder {
+  color: var(--iui-muted);
+}
+
+.iui-table-filter-count {
+  font-size: 12px;
+  color: var(--iui-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.iui-table-empty-td {
+  padding: 24px;
+  text-align: center;
+  color: var(--iui-muted);
+  font-size: 13px;
+}
+
 .iui-table-scroll {
   overflow-x: auto;
   mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);

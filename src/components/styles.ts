@@ -9,6 +9,8 @@ import statsCss from './styles/stats.css?inline';
 import tabsCss from './styles/tabs.css?inline';
 import timelineCss from './styles/timeline.css?inline';
 import followupsCss from './styles/followups.css?inline';
+import mathCss from './styles/math.css?inline';
+import codeCss from './styles/code.css?inline';
 
 export const COMPONENT_STYLES: string[] = [
   tableCss,
@@ -22,4 +24,6 @@ export const COMPONENT_STYLES: string[] = [
   tabsCss,
   timelineCss,
   followupsCss,
+  mathCss,
+  codeCss,
 ];

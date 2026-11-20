@@ -338,6 +338,99 @@
   outline-offset: 1px;
 }
 
+/* Export dropdown menu */
+.iui-export-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.iui-export-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 1000;
+  background-color: var(--iui-bg);
+  border: 1px solid var(--iui-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: iui-menu-in 120ms cubic-bezier(.2,.8,.2,1);
+}
+
+.iui-export-menu.is-hidden {
+  display: none;
+}
+
+@keyframes iui-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.iui-export-item {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--iui-text);
+  cursor: pointer;
+  box-sizing: border-box;
+  width: 100%;
+  transition: background-color 120ms cubic-bezier(.2,.8,.2,1);
+}
+
+.iui-export-item:hover,
+.iui-export-item:focus-visible {
+  background-color: var(--iui-surface);
+}
+
+.iui-export-item-icon {
+  color: var(--iui-muted);
+  flex-shrink: 0;
+}
+
+/* Card Toast */
+.iui-toast {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--iui-text);
+  color: var(--iui-bg);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  z-index: 200;
+  animation: iui-toast-pop 160ms cubic-bezier(.2,.8,.2,1);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.iui-toast.is-hiding {
+  opacity: 0;
+  transform: translate(-50%, 4px);
+}
+
+@keyframes iui-toast-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
 /* Expand Modal Overlay */
 .iui-modal-overlay {
   position: fixed;

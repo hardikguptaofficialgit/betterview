@@ -14,8 +14,13 @@ import statsDuo from '@phosphor-icons/core/assets/duotone/trend-up-duotone.svg?r
 import tabsDuo from '@phosphor-icons/core/assets/duotone/tabs-duotone.svg?raw';
 import timelineDuo from '@phosphor-icons/core/assets/duotone/hourglass-duotone.svg?raw';
 import followupsDuo from '@phosphor-icons/core/assets/duotone/sparkle-duotone.svg?raw';
+import functionDuo from '@phosphor-icons/core/assets/duotone/function-duotone.svg?raw';
+import codeBlockDuo from '@phosphor-icons/core/assets/duotone/code-block-duotone.svg?raw';
 
 // Regular SVGs for UI chrome & common allowlist
+import exportReg from '@phosphor-icons/core/assets/regular/export.svg?raw';
+import downloadSimpleReg from '@phosphor-icons/core/assets/regular/download-simple.svg?raw';
+import imageReg from '@phosphor-icons/core/assets/regular/image.svg?raw';
 import copyReg from '@phosphor-icons/core/assets/regular/copy.svg?raw';
 import codeReg from '@phosphor-icons/core/assets/regular/code.svg?raw';
 import cornersOutReg from '@phosphor-icons/core/assets/regular/corners-out.svg?raw';
@@ -122,9 +127,15 @@ export const CARD_TYPE_DUOTONE: Record<UIType, string> = {
   tabs: tabsDuo,
   timeline: timelineDuo,
   followups: followupsDuo,
+  math: functionDuo,
+  code: codeBlockDuo,
 };
 
 export const REGULAR_ICON_MAP: Record<string, string> = {
+  'export': exportReg,
+  'download': downloadSimpleReg,
+  'download-simple': downloadSimpleReg,
+  'image': imageReg,
   'copy': copyReg,
   'code': codeReg,
   'corners-out': cornersOutReg,

@@ -21,6 +21,8 @@ export const TYPE_META: Record<UIType, TypeMeta> = {
   tabs: { icon: 'tabs', color: 'stone', label: 'Tabs' },
   timeline: { icon: 'hourglass', color: 'rose', label: 'Timeline' },
   followups: { icon: 'sparkle', color: 'mint', label: 'Suggestions' },
+  math: { icon: 'function', color: 'purple', label: 'Math' },
+  code: { icon: 'code', color: 'sky', label: 'Code' },
 };
 
 export interface DiffResult<T> {
@@ -172,6 +174,19 @@ export function createTypeSkeleton(typeHint?: UIType): HTMLElement {
     wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 34px; width: 120px; border-radius: 999px;' }));
     wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 34px; width: 160px; border-radius: 999px;' }));
     wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 34px; width: 140px; border-radius: 999px;' }));
+    card.appendChild(wrap);
+  } else if (typeHint === 'math') {
+    const wrap = h('div', { style: 'display: flex; flex-direction: column; gap: 12px; align-items: center;' });
+    wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 48px; width: 70%; border-radius: 8px;' }));
+    wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 24px; width: 85%; border-radius: 6px;' }));
+    card.appendChild(wrap);
+  } else if (typeHint === 'code') {
+    const wrap = h('div', { style: 'display: flex; flex-direction: column; gap: 8px;' });
+    wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 28px; width: 100%; border-radius: 6px; margin-bottom: 6px;' }));
+    wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 16px; width: 60%;' }));
+    wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 16px; width: 80%;' }));
+    wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 16px; width: 45%;' }));
+    wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 16px; width: 70%;' }));
     card.appendChild(wrap);
   } else {
     // Default 4 lines with varied deterministic widths

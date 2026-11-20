@@ -563,9 +563,55 @@
       </script>
     </section>
 
-    <!-- 21. Progressive Streaming Simulation (All 12 Types) -->
+    <!-- 21. Math: Bayes Theorem Derivation -->
+    <section class="fixture-section" id="section-math">
+      <h2>21. Math: Bayes Theorem Derivation</h2>
+      <div class="fixture-mount" data-spec-id="math-spec"></div>
+      <script type="application/json" id="math-spec">
+      {
+        "type": "math",
+        "title": "Bayes Theorem Derivation",
+        "latex": "P(A|B) = \\frac{P(B|A)P(A)}{P(B)}",
+        "steps": [
+          {
+            "latex": "P(A \\cap B) = P(A|B)P(B)",
+            "note": "Definition of conditional probability for event A given B"
+          },
+          {
+            "latex": "P(B \\cap A) = P(B|A)P(A)",
+            "note": "Definition of conditional probability for event B given A"
+          },
+          {
+            "latex": "P(A|B)P(B) = P(B|A)P(A)",
+            "note": "Equating the symmetric joint probabilities P(A \\cap B) = P(B \\cap A)"
+          },
+          {
+            "latex": "P(A|B) = \\frac{P(B|A)P(A)}{P(B)}",
+            "note": "Dividing both sides by the prior probability P(B) > 0"
+          }
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 22. Code: Quick Sort Algorithm -->
+    <section class="fixture-section" id="section-code">
+      <h2>22. Code: Quick Sort Algorithm</h2>
+      <div class="fixture-mount" data-spec-id="code-spec"></div>
+      <script type="application/json" id="code-spec">
+      {
+        "type": "code",
+        "title": "Quick Sort Implementation",
+        "language": "typescript",
+        "filename": "quicksort.ts",
+        "code": "function quickSort(arr: number[]): number[] {\n  if (arr.length <= 1) return arr;\n  const pivot = arr[arr.length - 1];\n  const left: number[] = [];\n  const right: number[] = [];\n  for (let i = 0; i < arr.length - 1; i++) {\n    if (arr[i] < pivot) left.push(arr[i]);\n    else right.push(arr[i]);\n  }\n  return [...quickSort(left), pivot, ...quickSort(right)];\n}"
+      }
+      </script>
+    </section>
+
+    <!-- 23. Progressive Streaming Simulation (All Types) -->
     <section class="fixture-section" id="section-simulate-streaming">
-      <h2>21. Progressive Streaming Simulation (All 12 Types)</h2>
+      <h2>23. Progressive Streaming Simulation (All Types)</h2>
       <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
         <button id="btn-simulate-streaming" class="theme-btn" type="button">Simulate streaming</button>
         <span id="streaming-status" style="font-size: 13px; color: #6B6B6B;">Click to stream all 12 sample specs in 15-char chunks</span>

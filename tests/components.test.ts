@@ -284,6 +284,8 @@ describe('RENDERERS registry', () => {
     expect(typeof RENDERERS.tabs).toBe('function');
     expect(typeof RENDERERS.timeline).toBe('function');
     expect(typeof RENDERERS.followups).toBe('function');
+    expect(typeof RENDERERS.math).toBe('function');
+    expect(typeof RENDERERS.code).toBe('function');
   });
 
   it('renders all 5 new components into DOM nodes cleanly', () => {

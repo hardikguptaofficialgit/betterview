@@ -1,0 +1,213 @@
+/* Math Component Styles */
+.iui-math-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.iui-math-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  background-color: var(--iui-surface);
+  border: 1px solid var(--iui-border);
+  border-radius: 12px;
+  overflow-x: auto;
+  font-size: 18px;
+  line-height: 1.4;
+  color: var(--iui-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.iui-math-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.iui-math-steps-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--iui-muted);
+  margin-bottom: 2px;
+}
+
+.iui-math-step {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  background-color: var(--iui-bg);
+  border: 1px solid var(--iui-border);
+  border-radius: 10px;
+  align-items: flex-start;
+  transition: background-color 160ms cubic-bezier(.2,.8,.2,1);
+}
+
+.iui-math-step:hover {
+  background-color: var(--iui-surface);
+}
+
+.iui-math-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background-color: var(--c-bg, #F1EDFC);
+  color: var(--c-ink, #4C3D91);
+  border: 1px solid var(--c-line, #DCD3F6);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.iui-math-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.iui-math-step-formula {
+  overflow-x: auto;
+  font-size: 15px;
+  color: var(--iui-text);
+}
+
+.iui-math-step-note {
+  font-size: 12.5px;
+  color: var(--iui-muted);
+  line-height: 1.4;
+}
+
+.iui-math-inline {
+  display: inline-block;
+  vertical-align: middle;
+  padding: 0 2px;
+}
+
+.iui-math-display {
+  display: block;
+  text-align: center;
+  margin: 6px 0;
+  overflow-x: auto;
+}
+
+/* Minimal KaTeX layout rules (no external font URLs) */
+.katex {
+  font-family: KaTeX_Main, "Times New Roman", STIXGeneral, serif;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-indent: 0;
+  text-rendering: auto;
+}
+.katex * {
+  -webkit-font-smoothing: antialiased;
+}
+.katex .katex-html {
+  display: inline-block;
+}
+.katex .katex-mathml {
+  clip: rect(1px, 1px, 1px, 1px);
+  border: 0;
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+.katex .base {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+  width: min-content;
+}
+.katex .strut {
+  display: inline-block;
+  height: 2em;
+}
+.katex .mord {
+  display: inline-block;
+}
+.katex .mbin,
+.katex .mrel,
+.katex .mopen,
+.katex .mclose,
+.katex .mpunct,
+.katex .minner {
+  display: inline-block;
+}
+.katex .mbin {
+  margin-left: 0.2222em;
+  margin-right: 0.2222em;
+}
+.katex .mrel {
+  margin-left: 0.2778em;
+  margin-right: 0.2778em;
+}
+.katex .mop {
+  display: inline-block;
+}
+.katex .mfrac {
+  display: inline-block;
+  vertical-align: -0.5em;
+  text-align: center;
+}
+.katex .frac-line {
+  display: block;
+  border-bottom-style: solid;
+  border-bottom-width: 0.04em;
+  width: 100%;
+}
+.katex .vlist-t {
+  display: inline-table;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.katex .vlist-r {
+  display: table-row;
+}
+.katex .vlist {
+  display: table-cell;
+  vertical-align: bottom;
+  position: relative;
+}
+.katex .vlist>span {
+  display: block;
+  height: 0;
+  position: relative;
+}
+.katex .vlist>span>span {
+  display: inline-block;
+}
+.katex .msupsub {
+  display: inline-block;
+  vertical-align: -0.5em;
+}
+.katex .sqrt {
+  display: inline-block;
+}
+.katex .sqrt>.root {
+  margin-left: 0.2778em;
+  margin-right: -0.5556em;
+}
+.katex-display {
+  display: block;
+  margin: 0.5em 0;
+  text-align: center;
+}
+.katex-display > .katex {
+  display: block;
+  text-align: center;
+  white-space: nowrap;
+}
+.katex-display > .katex > .katex-html {
+  display: block;
+  position: relative;
+}

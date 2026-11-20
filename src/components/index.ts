@@ -12,6 +12,8 @@ import { renderStats } from './stats';
 import { renderTabs } from './tabs';
 import { renderTimeline } from './timeline';
 import { renderFollowups } from './followups';
+import { renderMath } from './math';
+import { renderCode } from './code';
 
 export interface RenderContext {
   theme: ThemeMode;
@@ -33,4 +35,6 @@ export const RENDERERS: { [K in UIType]: RenderFn<Extract<UISpec, { type: K }>> 
   tabs: renderTabs,
   timeline: renderTimeline,
   followups: renderFollowups,
+  math: renderMath,
+  code: renderCode,
 };

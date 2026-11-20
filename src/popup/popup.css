@@ -498,6 +498,26 @@ html, body {
   height: 32px;
 }
 
+.watermark-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--iui-border);
+}
+
+.watermark-label {
+  font-size: 11.5px;
+  color: var(--iui-muted);
+  cursor: pointer;
+}
+
+.watermark-checkbox {
+  cursor: pointer;
+  accent-color: var(--iui-text);
+}
+
 .segmented-thumb {
   position: absolute;
   top: 2px;

@@ -22,6 +22,9 @@ import {
   TimelineSpec,
   TimelineEvent,
   FollowupsSpec,
+  MathSpec,
+  MathStep,
+  CodeSpec,
 } from './types';
 
 export type ValidateResult =
@@ -544,6 +547,57 @@ function validateFollowups(raw: Record<string, unknown>, warnings: string[]): { 
   return { ok: true, spec: { type: 'followups', suggestions } };
 }
 
+function validateMath(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: MathSpec } | { ok: false; error: string } {
+  const latex = cleanString(raw.latex, 8000);
+  if (!latex) {
+    return { ok: false, error: 'math must have non-empty latex' };
+  }
+  let steps: MathStep[] | undefined = undefined;
+  if (Array.isArray(raw.steps)) {
+    steps = [];
+    for (const s of raw.steps) {
+      if (s && typeof s === 'object') {
+        const stepLatex = cleanString((s as Record<string, unknown>).latex, 4000);
+        if (stepLatex) {
+          const stepNote = cleanString((s as Record<string, unknown>).note, 500);
+          steps.push({ latex: stepLatex, ...(stepNote ? { note: stepNote } : {}) });
+        }
+      }
+    }
+    if (steps.length > 30) {
+      warnings.push('Math steps capped at 30');
+      steps = steps.slice(0, 30);
+    }
+  }
+  return {
+    ok: true,
+    spec: {
+      type: 'math',
+      latex,
+      ...(steps && steps.length > 0 ? { steps } : {}),
+    },
+  };
+}
+
+function validateCode(raw: Record<string, unknown>, _warnings: string[]): { ok: true; spec: CodeSpec } | { ok: false; error: string } {
+  const codeRaw = raw.code;
+  const code = typeof codeRaw === 'string' ? codeRaw : '';
+  if (!code.trim()) {
+    return { ok: false, error: 'code must have non-empty code' };
+  }
+  const language = cleanString(raw.language ?? raw.lang) || 'text';
+  const filename = cleanString(raw.filename ?? raw.file);
+  return {
+    ok: true,
+    spec: {
+      type: 'code',
+      language,
+      code,
+      ...(filename ? { filename } : {}),
+    },
+  };
+}
+
 export function validateSpec(input: unknown): ValidateResult {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     return { ok: false, error: 'unknown type' };
@@ -593,6 +647,12 @@ export function validateSpec(input: unknown): ValidateResult {
       break;
     case 'followups':
       result = validateFollowups(raw, warnings);
+      break;
+    case 'math':
+      result = validateMath(raw, warnings);
+      break;
+    case 'code':
+      result = validateCode(raw, warnings);
       break;
     default:
       return { ok: false, error: 'unknown type' };

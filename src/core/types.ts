@@ -10,7 +10,9 @@ export type UIType =
   | 'stats'
   | 'tabs'
   | 'timeline'
-  | 'followups';
+  | 'followups'
+  | 'math'
+  | 'code';
 
 export const UI_TYPES: readonly UIType[] = [
   'flow',
@@ -25,6 +27,8 @@ export const UI_TYPES: readonly UIType[] = [
   'tabs',
   'timeline',
   'followups',
+  'math',
+  'code',
 ] as const;
 
 export type Color =
@@ -186,6 +190,26 @@ export interface FollowupsSpec {
   suggestions: string[];
 }
 
+export interface MathStep {
+  latex: string;
+  note?: string;
+}
+
+export interface MathSpec {
+  type: 'math';
+  title?: string;
+  latex: string;
+  steps?: MathStep[];
+}
+
+export interface CodeSpec {
+  type: 'code';
+  title?: string;
+  language: string;
+  code: string;
+  filename?: string;
+}
+
 export type UISpec =
   | FlowSpec
   | StepperSpec
@@ -198,4 +222,6 @@ export type UISpec =
   | StatsSpec
   | TabsSpec
   | TimelineSpec
-  | FollowupsSpec;
+  | FollowupsSpec
+  | MathSpec
+  | CodeSpec;

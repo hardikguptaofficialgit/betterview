@@ -2,12 +2,14 @@ export interface Settings {
   renderEnabled: boolean;
   autoInject: boolean;
   theme: 'auto' | 'light' | 'dark';
+  watermark: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   renderEnabled: true,
   autoInject: false,
   theme: 'auto',
+  watermark: true,
 };
 
 export function loadSettings(): Promise<Settings> {
@@ -25,6 +27,7 @@ export function loadSettings(): Promise<Settings> {
         renderEnabled: typeof items.renderEnabled === 'boolean' ? items.renderEnabled : DEFAULT_SETTINGS.renderEnabled,
         autoInject: typeof items.autoInject === 'boolean' ? items.autoInject : DEFAULT_SETTINGS.autoInject,
         theme: items.theme === 'light' || items.theme === 'dark' || items.theme === 'auto' ? items.theme : DEFAULT_SETTINGS.theme,
+        watermark: typeof items.watermark === 'boolean' ? items.watermark : DEFAULT_SETTINGS.watermark,
       });
     });
   });

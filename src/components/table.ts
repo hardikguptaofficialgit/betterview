@@ -1,6 +1,8 @@
 import { TableSpec } from '../core/types';
 import { RenderContext } from './index';
 import { clear, h } from '../core/dom';
+import { iconEl } from '../core/icons';
+import { renderMathText } from '../core/mathParser';
 
 export function parseNumericValue(raw: string): number | null {
   if (typeof raw !== 'string') return null;
@@ -18,6 +20,66 @@ export function parseNumericValue(raw: string): number | null {
   return base;
 }
 
+export function parseDateValue(raw: string): number | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.length < 4) return null;
+  // Don't treat pure numbers or currency or percentage as date
+  if (/^[+-]?\d+(?:\.\d+)?$/.test(trimmed) || /[\$€₹%]/.test(trimmed)) return null;
+  const hasDatePattern =
+    /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/.test(trimmed) ||
+    /^\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}/.test(trimmed) ||
+    /^[A-Za-z]{3,}\.?\s+\d{1,2}/.test(trimmed) ||
+    /^\d{1,2}\s+[A-Za-z]{3,}/.test(trimmed) ||
+    /^\d{4}-\d{2}-\d{2}T/.test(trimmed);
+  if (!hasDatePattern) return null;
+  const ts = Date.parse(trimmed);
+  if (Number.isNaN(ts)) return null;
+  return ts;
+}
+
+export type ColumnType = 'numeric' | 'date' | 'string';
+
+export function detectColumnType(rows: string[][], colIdx: number): ColumnType {
+  let hasValid = false;
+  let allNumeric = true;
+  let allDate = true;
+
+  for (const r of rows) {
+    const val = r[colIdx];
+    if (val !== undefined && val.trim() !== '') {
+      hasValid = true;
+      if (parseNumericValue(val) === null) {
+        allNumeric = false;
+      }
+      if (parseDateValue(val) === null) {
+        allDate = false;
+      }
+    }
+  }
+
+  if (hasValid && allNumeric) return 'numeric';
+  if (hasValid && allDate) return 'date';
+  return 'string';
+}
+
+export function compareCellValues(valA: string, valB: string, type: ColumnType): number {
+  if (type === 'numeric') {
+    const numA = parseNumericValue(valA);
+    const numB = parseNumericValue(valB);
+    if (numA !== null && numB !== null) {
+      return numA - numB;
+    }
+  } else if (type === 'date') {
+    const dateA = parseDateValue(valA);
+    const dateB = parseDateValue(valB);
+    if (dateA !== null && dateB !== null) {
+      return dateA - dateB;
+    }
+  }
+  return valA.localeCompare(valB, undefined, { numeric: true });
+}
+
 export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
   const card = h('div', { class: 'iui-card iui-table-card' });
   if (spec.title) {
@@ -27,28 +89,8 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
   const columns = spec.columns || [];
   const rows = spec.rows || [];
 
-  const isNumericCol: boolean[] = columns.map((_, colIdx) => {
-    if (rows.length === 0) return false;
-    let validCount = 0;
-    for (const r of rows) {
-      const val = r[colIdx];
-      if (val !== undefined && val.trim() !== '') {
-        if (parseNumericValue(val) === null) return false;
-        validCount++;
-      }
-    }
-    return validCount > 0;
-  });
-
-  const scrollWrap = h('div', { class: 'iui-table-wrap' });
-  const innerScroll = h('div', { class: 'iui-table-scroll' });
-  const table = h('table', { class: 'iui-table' });
-  const thead = h('thead', { class: 'iui-table-header c-stone' });
-  const headerTr = h('tr', { class: 'iui-table-header-tr' });
-
-  type SortDir = 'none' | 'asc' | 'desc';
-  let sortCol: number | null = null;
-  let sortDir: SortDir = 'none';
+  const columnTypes: ColumnType[] = columns.map((_, colIdx) => detectColumnType(rows, colIdx));
+  const isNumericCol: boolean[] = columnTypes.map((t) => t === 'numeric');
 
   interface IndexedRow {
     row: string[];
@@ -56,10 +98,64 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
   }
   const originalRows: IndexedRow[] = rows.map((r, i) => ({ row: r, idx: i }));
 
+  type SortDir = 'none' | 'asc' | 'desc';
+  let sortCol: number | null = null;
+  let sortDir: SortDir = 'none';
+  let filterQuery = '';
+
+  // Filter input bar for tables with > 6 rows
+  let filterCountEl: HTMLElement | null = null;
+  if (rows.length > 6) {
+    const filterBar = h('div', { class: 'iui-table-filter-bar' });
+    const filterWrap = h('div', { class: 'iui-table-filter-wrap' });
+    const searchIcon = iconEl('magnifying-glass', 14, 'iui-table-filter-icon');
+
+    const filterInput = h('input', {
+      class: 'iui-table-filter-input',
+      type: 'search',
+      placeholder: 'Filter rows...',
+      'aria-label': 'Filter table rows',
+      onInput: (e: Event) => {
+        filterQuery = (e.target as HTMLInputElement).value.trim().toLowerCase();
+        updateDisplay();
+      },
+    }) as HTMLInputElement;
+
+    filterCountEl = h('span', { class: 'iui-table-filter-count' }, `${rows.length} of ${rows.length} rows`);
+
+    filterWrap.appendChild(searchIcon);
+    filterWrap.appendChild(filterInput);
+    filterBar.appendChild(filterWrap);
+    filterBar.appendChild(filterCountEl);
+    card.appendChild(filterBar);
+  }
+
+  const scrollWrap = h('div', { class: 'iui-table-wrap' });
+  const innerScroll = h('div', { class: 'iui-table-scroll' });
+  const table = h('table', { class: 'iui-table' });
+  const thead = h('thead', { class: 'iui-table-header c-stone' });
+  const headerTr = h('tr', { class: 'iui-table-header-tr' });
+
   const tbody = h('tbody', { class: 'iui-table-tbody' });
 
   function renderRows(entries: IndexedRow[]): void {
     clear(tbody);
+
+    if (entries.length === 0) {
+      const emptyTr = h('tr', { class: 'iui-table-empty-tr' });
+      const emptyTd = h(
+        'td',
+        {
+          class: 'iui-table-empty-td',
+          colspan: String(Math.max(columns.length, 1)),
+        },
+        'No matching rows',
+      );
+      emptyTr.appendChild(emptyTd);
+      tbody.appendChild(emptyTr);
+      return;
+    }
+
     for (const item of entries) {
       const tr = h('tr', { class: 'iui-table-tr' });
       tr.style.setProperty('--row-idx', String(item.idx));
@@ -95,10 +191,15 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
         if (isBest) {
           tdClasses.push('is-highlighted');
         }
-        const cellContent = isBest
-          ? h('span', { class: 'iui-table-highlight-pill c-mint' }, cellText)
-          : cellText;
-        const td = h('td', { class: tdClasses.join(' ') }, cellContent);
+
+        const td = h('td', { class: tdClasses.join(' ') });
+        if (isBest) {
+          const pill = h('span', { class: 'iui-table-highlight-pill c-mint' });
+          renderMathText(pill, cellText);
+          td.appendChild(pill);
+        } else {
+          renderMathText(td, cellText);
+        }
         tr.appendChild(td);
       }
       tbody.appendChild(tr);
@@ -109,24 +210,31 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
   const btnElements: HTMLElement[] = [];
   const arrowElements: HTMLElement[] = [];
 
-  function updateSort(): void {
+  function updateDisplay(): void {
+    // 1. Filter rows
+    let filtered = originalRows;
+    if (filterQuery) {
+      filtered = originalRows.filter((item) =>
+        item.row.some((cell) => cell.toLowerCase().includes(filterQuery)),
+      );
+    }
+
+    if (filterCountEl) {
+      filterCountEl.textContent = `${filtered.length} of ${rows.length} rows`;
+    }
+
+    // 2. Sort rows
     let sorted: IndexedRow[];
     if (sortCol === null || sortDir === 'none') {
-      sorted = [...originalRows];
+      sorted = [...filtered];
     } else {
       const col = sortCol;
       const dir = sortDir;
-      sorted = [...originalRows].sort((a, b) => {
+      const type = columnTypes[col];
+      sorted = [...filtered].sort((a, b) => {
         const valA = a.row[col] ?? '';
         const valB = b.row[col] ?? '';
-        const numA = parseNumericValue(valA);
-        const numB = parseNumericValue(valB);
-        let cmp: number;
-        if (numA !== null && numB !== null) {
-          cmp = numA - numB;
-        } else {
-          cmp = valA.localeCompare(valB, undefined, { numeric: true });
-        }
+        const cmp = compareCellValues(valA, valB, type);
         if (cmp === 0) {
           return a.idx - b.idx;
         }
@@ -136,19 +244,22 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
 
     renderRows(sorted);
 
+    // Update header icons and ARIA attributes
     for (let c = 0; c < columns.length; c++) {
       const th = thElements[c];
       const btn = btnElements[c];
       const arrow = arrowElements[c];
+      clear(arrow);
+
       if (sortCol === c && sortDir !== 'none') {
         const sortVal = sortDir === 'asc' ? 'ascending' : 'descending';
         th.setAttribute('aria-sort', sortVal);
         btn.setAttribute('aria-sort', sortVal);
-        arrow.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
+        const iconName = sortDir === 'asc' ? 'caret-up' : 'caret-down';
+        arrow.appendChild(iconEl(iconName, 12, 'iui-table-caret-svg'));
       } else {
         th.setAttribute('aria-sort', 'none');
         btn.setAttribute('aria-sort', 'none');
-        arrow.textContent = '';
       }
     }
   }
@@ -183,7 +294,14 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
               sortDir = 'asc';
             }
           }
-          updateSort();
+          updateDisplay();
+        },
+        onKeyDown: (e: Event) => {
+          const ke = e as KeyboardEvent;
+          if (ke.key === 'Enter' || ke.key === ' ') {
+            e.preventDefault();
+            btn.click();
+          }
         },
       },
       colName,
@@ -203,7 +321,7 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
   scrollWrap.appendChild(innerScroll);
   card.appendChild(scrollWrap);
 
-  renderRows(originalRows);
+  updateDisplay();
 
   return card;
 }

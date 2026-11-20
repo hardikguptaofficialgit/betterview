@@ -9,6 +9,8 @@ import { TYPE_META, createTypeSkeleton, diffChildren } from './incremental';
 import { RENDERERS, RenderContext } from '../components/index';
 import baseCss from './styles/base.css?inline';
 import { COMPONENT_STYLES } from '../components/styles';
+import { exportCard } from './export';
+import { loadSettings, onSettingsChange } from '../shared/settings';
 
 export interface BlockHandle {
   update(text: string): void;
@@ -91,6 +93,18 @@ export function mountBlock(
 
   let hasGoodRender = false;
   let activeModalEl: HTMLElement | null = null;
+  let watermarkEnabled = true;
+
+  loadSettings()
+    .then((s) => {
+      watermarkEnabled = s.watermark !== false;
+    })
+    .catch(() => {});
+  cleanups.push(
+    onSettingsChange((s) => {
+      watermarkEnabled = s.watermark !== false;
+    }),
+  );
 
   function runCleanups(): void {
     for (const fn of cleanups) {
@@ -132,7 +146,11 @@ export function mountBlock(
     }
   }
 
-  function createHeaderToolbar(titleText: string, getSpec: () => UISpec | null): {
+  function createHeaderToolbar(
+    titleText: string,
+    getSpec: () => UISpec | null,
+    getCardEl: () => HTMLElement | null,
+  ): {
     header: HTMLElement;
     sourcePanel: HTMLElement;
     sourcePre: HTMLElement;
@@ -177,6 +195,136 @@ export function mountBlock(
 
     // Right: hover toolbar
     const toolbar = h('div', { class: 'iui-card-toolbar' });
+
+    // Export button and dropdown menu
+    const exportWrap = h('div', { class: 'iui-export-wrap' });
+    const exportMenu = h('div', { class: 'iui-export-menu is-hidden', role: 'menu' });
+
+    function closeExportMenu(): void {
+      exportMenu.classList.add('is-hidden');
+      exportBtn.setAttribute('aria-expanded', 'false');
+      toolbar.classList.remove('is-open');
+      document.removeEventListener('click', closeExportMenu);
+    }
+
+    function toggleExportMenu(): void {
+      const isHidden = exportMenu.classList.contains('is-hidden');
+      if (isHidden) {
+        clear(exportMenu);
+        const spec = getSpec();
+        const canSvg = spec ? ['flow', 'mermaid', 'chart'].includes(spec.type) : false;
+
+        const copyItem = h(
+          'button',
+          {
+            class: 'iui-export-item',
+            type: 'button',
+            role: 'menuitem',
+            onClick: async (e: Event) => {
+              e.stopPropagation();
+              closeExportMenu();
+              const cardEl = getCardEl();
+              if (cardEl) {
+                await exportCard(cardEl, 'copy', {
+                  watermark: watermarkEnabled,
+                  theme: currentTheme,
+                  allStyles: ALL_STYLES,
+                  cardType: spec?.type,
+                  title: spec?.title,
+                });
+              }
+            },
+          },
+          iconEl('image', 14, 'iui-export-item-icon'),
+          document.createTextNode('Copy as image'),
+        );
+
+        const pngItem = h(
+          'button',
+          {
+            class: 'iui-export-item',
+            type: 'button',
+            role: 'menuitem',
+            onClick: async (e: Event) => {
+              e.stopPropagation();
+              closeExportMenu();
+              const cardEl = getCardEl();
+              if (cardEl) {
+                await exportCard(cardEl, 'png', {
+                  watermark: watermarkEnabled,
+                  theme: currentTheme,
+                  allStyles: ALL_STYLES,
+                  cardType: spec?.type,
+                  title: spec?.title,
+                });
+              }
+            },
+          },
+          iconEl('download-simple', 14, 'iui-export-item-icon'),
+          document.createTextNode('Download PNG'),
+        );
+
+        exportMenu.appendChild(copyItem);
+        exportMenu.appendChild(pngItem);
+
+        if (canSvg) {
+          const svgItem = h(
+            'button',
+            {
+              class: 'iui-export-item',
+              type: 'button',
+              role: 'menuitem',
+              onClick: async (e: Event) => {
+                e.stopPropagation();
+                closeExportMenu();
+                const cardEl = getCardEl();
+                if (cardEl) {
+                  await exportCard(cardEl, 'svg', {
+                    watermark: watermarkEnabled,
+                    theme: currentTheme,
+                    allStyles: ALL_STYLES,
+                    cardType: spec?.type,
+                    title: spec?.title,
+                  });
+                }
+              },
+            },
+            iconEl('code', 14, 'iui-export-item-icon'),
+            document.createTextNode('Download SVG'),
+          );
+          exportMenu.appendChild(svgItem);
+        }
+
+        exportMenu.classList.remove('is-hidden');
+        exportBtn.setAttribute('aria-expanded', 'true');
+        toolbar.classList.add('is-open');
+        setTimeout(() => {
+          document.addEventListener('click', closeExportMenu);
+        }, 10);
+      } else {
+        closeExportMenu();
+      }
+    }
+
+    const exportBtn = h(
+      'button',
+      {
+        class: 'iui-tool-btn',
+        type: 'button',
+        title: 'Export card',
+        'aria-label': 'Export card',
+        'aria-haspopup': 'menu',
+        'aria-expanded': 'false',
+        onClick: (e: Event) => {
+          e.stopPropagation();
+          toggleExportMenu();
+        },
+      },
+      iconEl('export', 15),
+    );
+
+    exportWrap.appendChild(exportBtn);
+    exportWrap.appendChild(exportMenu);
 
     // 1. Copy data button
     const copyBtn = h(
@@ -245,6 +393,7 @@ export function mountBlock(
       iconEl('corners-out', 15),
     );
 
+    toolbar.appendChild(exportWrap);
     toolbar.appendChild(copyBtn);
     toolbar.appendChild(sourceBtn);
     toolbar.appendChild(expandBtn);
@@ -412,7 +561,11 @@ export function mountBlock(
         existingTitle.remove();
       }
 
-      const { header, sourcePanel, sourcePre } = createHeaderToolbar(titleText, () => lastRenderedSpec);
+      const { header, sourcePanel, sourcePre } = createHeaderToolbar(
+        titleText,
+        () => lastRenderedSpec,
+        () => componentEl,
+      );
 
       // Insert header as first child of component card
       componentEl.insertBefore(header, componentEl.firstChild);
