@@ -1,0 +1,387 @@
+:host {
+  all: initial;
+  display: block;
+  margin: 16px 0;
+}
+
+.iui-root {
+  box-sizing: border-box;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Google Sans", Inter, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--iui-text);
+  background: transparent;
+}
+
+.iui-root *,
+.iui-root *::before,
+.iui-root *::after {
+  box-sizing: border-box;
+}
+
+.iui-root[data-theme="light"],
+.iui-root:not([data-theme="dark"]) {
+  --iui-bg: #FFFFFF;
+  --iui-surface: #FAFAFA;
+  --iui-border: #E7E7E7;
+  --iui-text: #0A0A0A;
+  --iui-muted: #6B6B6B;
+  --iui-subtle: #A3A3A3;
+}
+
+.iui-root[data-theme="dark"] {
+  --iui-bg: #0A0A0A;
+  --iui-surface: #141414;
+  --iui-border: #262626;
+  --iui-text: #FAFAFA;
+  --iui-muted: #A3A3A3;
+  --iui-subtle: #5C5C5C;
+}
+
+/* Light pastel palette */
+.iui-root[data-theme="light"] .c-blue,
+.iui-root[data-theme="light"] .c-sky,
+.iui-root:not([data-theme="dark"]) .c-blue,
+.iui-root:not([data-theme="dark"]) .c-sky {
+  --c-bg: #EAF4FD;
+  --c-line: #CFE5F8;
+  --c-ink: #1F5F8F;
+  --c-solid: #A9D3F5;
+}
+
+.iui-root[data-theme="light"] .c-green,
+.iui-root[data-theme="light"] .c-teal,
+.iui-root[data-theme="light"] .c-mint,
+.iui-root[data-theme="light"] .c-good,
+.iui-root:not([data-theme="dark"]) .c-green,
+.iui-root:not([data-theme="dark"]) .c-teal,
+.iui-root:not([data-theme="dark"]) .c-mint,
+.iui-root:not([data-theme="dark"]) .c-good {
+  --c-bg: #E9F7F0;
+  --c-line: #CBEBDA;
+  --c-ink: #1E6B48;
+  --c-solid: #A6DEC0;
+}
+
+.iui-root[data-theme="light"] .c-amber,
+.iui-root[data-theme="light"] .c-butter,
+.iui-root[data-theme="light"] .c-warning,
+.iui-root:not([data-theme="dark"]) .c-amber,
+.iui-root:not([data-theme="dark"]) .c-butter,
+.iui-root:not([data-theme="dark"]) .c-warning {
+  --c-bg: #FDF7E1;
+  --c-line: #F3E4A8;
+  --c-ink: #7A5E10;
+  --c-solid: #F2DC8A;
+}
+
+.iui-root[data-theme="light"] .c-orange,
+.iui-root[data-theme="light"] .c-peach,
+.iui-root:not([data-theme="dark"]) .c-orange,
+.iui-root:not([data-theme="dark"]) .c-peach {
+  --c-bg: #FDEFE6;
+  --c-line: #F7D4BE;
+  --c-ink: #8C4A20;
+  --c-solid: #F6C0A0;
+}
+
+.iui-root[data-theme="light"] .c-red,
+.iui-root[data-theme="light"] .c-pink,
+.iui-root[data-theme="light"] .c-rose,
+.iui-root[data-theme="light"] .c-bad,
+.iui-root:not([data-theme="dark"]) .c-red,
+.iui-root:not([data-theme="dark"]) .c-pink,
+.iui-root:not([data-theme="dark"]) .c-rose,
+.iui-root:not([data-theme="dark"]) .c-bad {
+  --c-bg: #FCECEF;
+  --c-line: #F5CDD6;
+  --c-ink: #8E2E46;
+  --c-solid: #F2B1C0;
+}
+
+.iui-root[data-theme="light"] .c-purple,
+.iui-root[data-theme="light"] .c-lavender,
+.iui-root:not([data-theme="dark"]) .c-purple,
+.iui-root:not([data-theme="dark"]) .c-lavender {
+  --c-bg: #F1EDFC;
+  --c-line: #DCD3F6;
+  --c-ink: #4C3D91;
+  --c-solid: #C6B9F2;
+}
+
+.iui-root[data-theme="light"] .c-gray,
+.iui-root[data-theme="light"] .c-stone,
+.iui-root[data-theme="light"] .c-neutral,
+.iui-root:not([data-theme="dark"]) .c-gray,
+.iui-root:not([data-theme="dark"]) .c-stone,
+.iui-root:not([data-theme="dark"]) .c-neutral {
+  --c-bg: #F5F5F4;
+  --c-line: #E4E4E2;
+  --c-ink: #4A4A47;
+  --c-solid: #D6D6D3;
+}
+
+/* Dark pastel palette */
+.iui-root[data-theme="dark"] .c-blue,
+.iui-root[data-theme="dark"] .c-sky {
+  --c-bg: #16212B;
+  --c-line: #263A4C;
+  --c-ink: #A9D3F5;
+  --c-solid: #6FA8D6;
+}
+
+.iui-root[data-theme="dark"] .c-green,
+.iui-root[data-theme="dark"] .c-teal,
+.iui-root[data-theme="dark"] .c-mint,
+.iui-root[data-theme="dark"] .c-good {
+  --c-bg: #15241D;
+  --c-line: #254134;
+  --c-ink: #A6DEC0;
+  --c-solid: #6DBF95;
+}
+
+.iui-root[data-theme="dark"] .c-amber,
+.iui-root[data-theme="dark"] .c-butter,
+.iui-root[data-theme="dark"] .c-warning {
+  --c-bg: #26231A;
+  --c-line: #463F27;
+  --c-ink: #F2DC8A;
+  --c-solid: #CDB45A;
+}
+
+.iui-root[data-theme="dark"] .c-orange,
+.iui-root[data-theme="dark"] .c-peach {
+  --c-bg: #281E18;
+  --c-line: #4A3528;
+  --c-ink: #F6C0A0;
+  --c-solid: #D9946C;
+}
+
+.iui-root[data-theme="dark"] .c-red,
+.iui-root[data-theme="dark"] .c-pink,
+.iui-root[data-theme="dark"] .c-rose,
+.iui-root[data-theme="dark"] .c-bad {
+  --c-bg: #29191D;
+  --c-line: #4A2C34;
+  --c-ink: #F2B1C0;
+  --c-solid: #D47F95;
+}
+
+.iui-root[data-theme="dark"] .c-purple,
+.iui-root[data-theme="dark"] .c-lavender {
+  --c-bg: #1E1B29;
+  --c-line: #383150;
+  --c-ink: #C6B9F2;
+  --c-solid: #9585D6;
+}
+
+.iui-root[data-theme="dark"] .c-gray,
+.iui-root[data-theme="dark"] .c-stone,
+.iui-root[data-theme="dark"] .c-neutral {
+  --c-bg: #1C1C1C;
+  --c-line: #333333;
+  --c-ink: #D6D6D3;
+  --c-solid: #8F8F8B;
+}
+
+/* Card */
+.iui-card {
+  background-color: var(--iui-bg);
+  border: 1px solid var(--iui-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.iui-card.tinted {
+  background-color: var(--c-bg, var(--iui-surface));
+  border-color: var(--c-line, var(--iui-border));
+  color: var(--c-ink, var(--iui-text));
+}
+
+/* Typography */
+.iui-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  color: var(--iui-text);
+}
+
+.iui-sub {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--iui-muted);
+}
+
+/* Chips / Pills */
+.iui-chip {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--c-bg, var(--iui-surface));
+  border: 1px solid var(--c-line, var(--iui-border));
+  color: var(--c-ink, var(--iui-text));
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Buttons */
+.iui-btn {
+  background-color: var(--iui-text);
+  color: var(--iui-bg);
+  border: 1px solid var(--iui-text);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.iui-btn:hover {
+  opacity: 0.85;
+}
+
+.iui-btn.secondary {
+  background-color: transparent;
+  border: 1px solid var(--iui-border);
+  color: var(--iui-text);
+}
+
+.iui-btn.secondary:hover {
+  background-color: var(--iui-surface);
+}
+
+.iui-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--iui-text);
+  outline-offset: 2px;
+}
+
+/* Iconbox */
+.iui-iconbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: var(--c-bg, var(--iui-surface));
+  color: var(--c-ink, var(--iui-text));
+  flex-shrink: 0;
+}
+
+/* Skeleton */
+.iui-skel {
+  background-color: var(--iui-surface);
+  border: 1px solid var(--iui-border);
+  border-radius: 8px;
+}
+
+.iui-skel-line {
+  height: 18px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.iui-skel-line:last-child {
+  margin-bottom: 0;
+}
+
+.iui-skel-flow-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.iui-skel-flow-row {
+  display: flex;
+  gap: 12px;
+}
+
+.iui-skel-flow-box {
+  flex: 1;
+  height: 60px;
+}
+
+.iui-skel-chart {
+  height: 220px;
+  width: 100%;
+}
+
+.iui-skel-quiz-bar {
+  height: 36px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.iui-skel-quiz-bar:last-child {
+  margin-bottom: 0;
+}
+
+/* Fallback */
+.iui-fallback {
+  border: 1px dashed var(--iui-border);
+  border-radius: 8px;
+  padding: 12px;
+  background-color: var(--iui-bg);
+}
+
+.iui-fallback-note {
+  font-size: 12.5px;
+  color: var(--iui-muted);
+  margin-bottom: 8px;
+}
+
+.iui-fallback pre,
+.iui-fallback-pre {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  background-color: var(--iui-surface);
+  border: 1px solid var(--iui-border);
+  border-radius: 6px;
+  padding: 8px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--iui-text);
+  margin: 0;
+}
+
+/* View source */
+.iui-source-toggle {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  margin-top: 12px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  color: var(--iui-muted);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.iui-source-toggle:hover {
+  color: var(--iui-text);
+}
+
+.iui-source-pre {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  background-color: var(--iui-surface);
+  border: 1px solid var(--iui-border);
+  border-radius: 8px;
+  padding: 10px;
+  overflow-x: auto;
+  margin-top: 8px;
+  color: var(--iui-text);
+  white-space: pre-wrap;
+  word-break: break-all;
+}

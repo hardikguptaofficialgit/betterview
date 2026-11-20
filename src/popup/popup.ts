@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleRender = document.getElementById('toggle-render') as HTMLInputElement | null;
   const toggleAutoInject = document.getElementById('toggle-autoinject') as HTMLInputElement | null;
   const themeSelect = document.getElementById('theme-select') as HTMLSelectElement | null;
+  const logoImg = document.getElementById('logo-img') as HTMLImageElement | null;
+  const logoSource = document.getElementById('logo-source') as HTMLSourceElement | null;
 
   if (textarea) {
     textarea.value = SYSTEM_INSTRUCTION;
@@ -39,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           const tab = tabs && tabs[0];
           const url = tab?.url || '';
-          if (url.startsWith('https://gemini.google.com/') || url.startsWith('https://grok.com/')) {
+          if (url.includes('gemini.google.com') || url.includes('grok.com')) {
             statusLine.textContent = 'Active on this tab ✓';
             statusLine.className = 'status-line status-active';
           } else {
@@ -69,10 +71,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (s.theme === 'light') {
       document.documentElement.setAttribute('data-theme', 'light');
+      if (logoImg) logoImg.src = '/brand/logo-horizontal-black.png';
+      if (logoSource) logoSource.srcset = '/brand/logo-horizontal-black.png';
     } else if (s.theme === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');
+      if (logoImg) logoImg.src = '/brand/logo-horizontal-white.png';
+      if (logoSource) logoSource.srcset = '/brand/logo-horizontal-white.png';
     } else {
       document.documentElement.removeAttribute('data-theme');
+      if (logoImg) logoImg.src = '/brand/logo-horizontal-black.png';
+      if (logoSource) logoSource.srcset = '/brand/logo-horizontal-white.png';
     }
   }
 
@@ -96,13 +104,11 @@ document.addEventListener('DOMContentLoaded', () => {
     themeSelect.addEventListener('change', () => {
       const theme = themeSelect.value as Settings['theme'];
       saveSettings({ theme }).catch(console.error);
-      if (theme === 'light') {
-        document.documentElement.setAttribute('data-theme', 'light');
-      } else if (theme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      } else {
-        document.documentElement.removeAttribute('data-theme');
-      }
+      applySettingsToUI({
+        renderEnabled: toggleRender?.checked ?? true,
+        autoInject: toggleAutoInject?.checked ?? false,
+        theme,
+      });
     });
   }
 });

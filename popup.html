@@ -3,14 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Intelligent UI</title>
+  <title>BetterView</title>
   <link rel="stylesheet" href="/src/popup/popup.css" />
 </head>
 <body>
   <div class="popup-container">
     <header class="header">
-      <h1 class="title">Intelligent UI</h1>
-      <p class="subtitle">for Gemini &amp; Grok</p>
+      <picture id="header-logo">
+        <source id="logo-source" media="(prefers-color-scheme: dark)" srcset="/brand/logo-horizontal-white.png" />
+        <img id="logo-img" src="/brand/logo-horizontal-black.png" alt="BetterView" height="22" />
+      </picture>
+      <p class="subtitle">Visual answers for Gemini &amp; Grok</p>
     </header>
 
     <div id="status-line" class="status-line status-muted">Open Gemini or Grok to use</div>
