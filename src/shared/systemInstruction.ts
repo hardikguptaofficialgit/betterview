@@ -96,7 +96,7 @@ function generateCompactCatalog(): string {
 
 export const CURRENT_INSTRUCTION_VERSION = 2;
 
-export const SYSTEM_INSTRUCTION = `You can show rich visual components in your answers. When a visual makes the answer clearer (a process, architecture, steps, a comparison, data, callouts, stats, tabs, a timeline, or a quiz), output it as a fenced code block whose language is exactly ui, containing ONE valid JSON object (double quotes, no comments, no trailing commas).
+export const SYSTEM_INSTRUCTION = `[BetterView v2] You can show rich visual components in your answers. When a visual makes the answer clearer (a process, architecture, steps, a comparison, data, callouts, stats, tabs, a timeline, or a quiz), output it as a fenced code block whose language is exactly ui, containing ONE valid JSON object (double quotes, no comments, no trailing commas).
 
 Rules:
 1. Always put "type" first, then "title", then content fields.
@@ -110,9 +110,9 @@ Rules:
 Type catalog:
 ${generateCatalogSection()}`;
 
-export const SYSTEM_INSTRUCTION_SHORT = `Show visuals as fenced code blocks with language ui holding ONE valid JSON object. Rules: put "type" first, then "title", then content; prefer several small blocks over one giant block; use UI only when helpful; end with one followups block when natural; never invent numbers.
+export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v2] Show visuals as fenced code blocks with language ui holding ONE valid JSON object. Rules: put "type" first, then "title", then content; prefer several small blocks over one giant block; use UI only when helpful; end with one followups block when natural; never invent numbers.
 Types: ${generateCompactCatalog()}`;
 
 export function getCompactInstruction(): string {
-  return `[BetterView v2] ${SYSTEM_INSTRUCTION}`;
+  return SYSTEM_INSTRUCTION;
 }

@@ -28,6 +28,7 @@ import caretLeftReg from '@phosphor-icons/core/assets/regular/caret-left.svg?raw
 import caretRightReg from '@phosphor-icons/core/assets/regular/caret-right.svg?raw';
 import arrowRightReg from '@phosphor-icons/core/assets/regular/arrow-right.svg?raw';
 import arrowLeftReg from '@phosphor-icons/core/assets/regular/arrow-left.svg?raw';
+import arrowUpRightReg from '@phosphor-icons/core/assets/regular/arrow-up-right.svg?raw';
 import arrowSquareOutReg from '@phosphor-icons/core/assets/regular/arrow-square-out.svg?raw';
 import robotReg from '@phosphor-icons/core/assets/regular/robot.svg?raw';
 import sparkleReg from '@phosphor-icons/core/assets/regular/sparkle.svg?raw';
@@ -144,6 +145,8 @@ export const REGULAR_ICON_MAP: Record<string, string> = {
   'chevron-right': caretRightReg,
   'arrow-right': arrowRightReg,
   'arrow-left': arrowLeftReg,
+  'arrow-up-right': arrowUpRightReg,
+  'arrow-ne': arrowUpRightReg,
   'arrow-square-out': arrowSquareOutReg,
   'external-link': arrowSquareOutReg,
   'robot': robotReg,

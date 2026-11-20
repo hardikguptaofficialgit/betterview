@@ -93,7 +93,7 @@ export function initPopup(): () => void {
   // Render setup status for a site
   function renderSetupStatus(
     site: 'gemini' | 'grok',
-    data?: { status: string; version?: number; error?: string },
+    data?: { status: string; version?: number; error?: string; hasOldEntry?: boolean },
   ): void {
     const btn = site === 'gemini' ? setupGeminiBtn : setupGrokBtn;
     const label = site === 'gemini' ? labelGemini : labelGrok;
@@ -131,7 +131,11 @@ export function initPopup(): () => void {
         }
         if (label) label.textContent = 'Redo';
         if (site === 'gemini' && geminiUpdateHint) {
-          geminiUpdateHint.classList.add('hidden');
+          if (data.hasOldEntry) {
+            geminiUpdateHint.classList.remove('hidden');
+          } else {
+            geminiUpdateHint.classList.add('hidden');
+          }
         }
         setStatusText(data.status === 'added' ? 'Added \u2713' : 'Already set up \u2713', 'success');
       }

@@ -90,15 +90,15 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
   const defs = svg('defs');
   const marker = svg('marker', {
     id: markerId,
-    viewBox: '0 0 10 10',
-    refX: 7,
-    refY: 5,
-    markerWidth: 6,
-    markerHeight: 6,
+    viewBox: '0 0 8 8',
+    refX: 6,
+    refY: 4,
+    markerWidth: 5,
+    markerHeight: 5,
     orient: 'auto-start-reverse',
   });
   const markerPath = svg('path', {
-    d: 'M 0 1.5 L 8 5 L 0 8.5 z',
+    d: 'M 1 2 L 6 4 L 1 6 z',
     fill: 'var(--iui-subtle)',
   });
   marker.appendChild(markerPath);
@@ -128,7 +128,7 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
     const iconBox = h(
       'div',
       { class: 'flow-node-iconbox' },
-      iconEl(node.icon, 18)
+      iconEl(node.icon, 16)
     );
     nodeEl.appendChild(iconBox);
 
@@ -136,7 +136,7 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
     const textCol = h('div', { class: 'flow-node-text' });
     const labelEl = h('span', { class: 'flow-node-label' });
     if (isDecision) {
-      labelEl.appendChild(h('span', { class: 'flow-diamond-glyph' }, '◆'));
+      labelEl.appendChild(h('span', { class: 'flow-diamond-glyph' }, '\u25C6'));
     }
     labelEl.appendChild(document.createTextNode(node.label));
     textCol.appendChild(labelEl);
@@ -329,6 +329,17 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
       allBoxesRight + (outerEdgeCount > 0 ? 50 + outerEdgeCount * 18 : 20),
     );
     const scrollH = Math.max(flowInner.scrollHeight, flowInner.clientHeight);
+
+    // Fit to chat width: scale down to min 0.8, then allow horizontal scroll with soft edge fade
+    const canvasWidth = canvas.clientWidth;
+    if (canvasWidth > 0 && scrollW > canvasWidth) {
+      const scale = Math.max(0.8, canvasWidth / scrollW);
+      flowInner.style.transformOrigin = 'top left';
+      flowInner.style.transform = scale < 0.999 ? `scale(${scale})` : '';
+    } else {
+      flowInner.style.transform = '';
+    }
+
     svgOverlay.setAttribute('width', String(scrollW));
     svgOverlay.setAttribute('height', String(scrollH));
     svgOverlay.style.width = `${scrollW}px`;
@@ -390,12 +401,13 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
         allBoxesRight,
         outerIdx,
         fanOffset,
+        Array.from(nodeBoxes.values()),
       );
 
       const pathEl = svg('path', {
         d: route.pathD,
         stroke: 'var(--iui-subtle)',
-        'stroke-width': '1',
+        'stroke-width': '1.5',
         fill: 'none',
         'marker-end': `url(#${markerId})`,
       });

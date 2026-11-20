@@ -254,6 +254,7 @@ export interface SetupResult {
   status: SetupStatus;
   version?: number;
   error?: string;
+  hasOldEntry?: boolean;
 }
 
 export const GEMINI_SETUP_SELECTORS = {
@@ -299,24 +300,84 @@ export function hasBetterViewMarker(text: string): boolean {
   return /\[betterview(?:\s+v\d+)?\]/i.test(text);
 }
 
+function findGeminiTextarea(root: ParentNode): HTMLTextAreaElement | null {
+  return (
+    root.querySelector<HTMLTextAreaElement>('edit-memory-dialog textarea') ??
+    root.querySelector<HTMLTextAreaElement>('.cdk-overlay-container edit-memory-dialog textarea') ??
+    root.querySelector<HTMLTextAreaElement>('.cdk-overlay-container textarea[aria-label]') ??
+    root.querySelector<HTMLTextAreaElement>('textarea[aria-label="Enter new memory"]') ??
+    root.querySelector<HTMLTextAreaElement>('textarea.edit-memory-input') ??
+    root.querySelector<HTMLTextAreaElement>('textarea[aria-label]')
+  );
+}
+
+function findGeminiSubmitButton(root: ParentNode): HTMLButtonElement | null {
+  return (
+    root.querySelector<HTMLButtonElement>('button[data-test-id="submit-button"]') ??
+    root.querySelector<HTMLButtonElement>('edit-memory-dialog button[data-test-id="submit-button"]')
+  );
+}
+
+function findGeminiDialog(root: ParentNode): HTMLElement | null {
+  return (
+    root.querySelector<HTMLElement>('edit-memory-dialog') ??
+    root.querySelector<HTMLElement>('.cdk-overlay-container edit-memory-dialog') ??
+    root.querySelector<HTMLElement>('mat-dialog-container')
+  );
+}
+
 export async function fillGeminiMemoryDialog(
   root: ParentNode = document,
-  options: { waitTimeoutMs?: number; pollIntervalMs?: number } = {},
+  options: { waitTimeoutMs?: number; pollIntervalMs?: number; waitForClose?: boolean } = {},
 ): Promise<void> {
   const timeoutMs = options.waitTimeoutMs ?? 10000;
-  const pollMs = options.pollIntervalMs ?? 200;
+  const pollMs = options.pollIntervalMs ?? 100;
 
-  // 1. Wait for textarea
-  let textarea: HTMLTextAreaElement | null = null;
-  const startTextarea = Date.now();
-  while (Date.now() - startTextarea < timeoutMs) {
-    textarea =
-      root.querySelector<HTMLTextAreaElement>('edit-memory-dialog textarea[aria-label="Enter new memory"]') ??
-      root.querySelector<HTMLTextAreaElement>('edit-memory-dialog textarea.edit-memory-input') ??
-      root.querySelector<HTMLTextAreaElement>('textarea[aria-label="Enter new memory"]') ??
-      root.querySelector<HTMLTextAreaElement>('textarea.edit-memory-input');
-    if (textarea) break;
-    await new Promise((r) => setTimeout(r, pollMs));
+  // 1. Wait (up to 10s, MutationObserver) for edit-memory-dialog textarea
+  let textarea: HTMLTextAreaElement | null = findGeminiTextarea(root);
+
+  if (!textarea) {
+    textarea = await new Promise<HTMLTextAreaElement | null>((resolve) => {
+      let resolved = false;
+      let observer: MutationObserver | null = null;
+      let timer: number | null = null;
+      let interval: number | null = null;
+
+      const cleanup = () => {
+        if (!resolved) {
+          resolved = true;
+          if (observer) observer.disconnect();
+          if (timer !== null) window.clearTimeout(timer);
+          if (interval !== null) window.clearInterval(interval);
+        }
+      };
+
+      if (typeof MutationObserver !== 'undefined') {
+        const obsTarget =
+          root instanceof Element || root instanceof Document ? root : document.body;
+        observer = new MutationObserver(() => {
+          const el = findGeminiTextarea(root);
+          if (el && !resolved) {
+            cleanup();
+            resolve(el);
+          }
+        });
+        observer.observe(obsTarget, { childList: true, subtree: true });
+      }
+
+      interval = window.setInterval(() => {
+        const el = findGeminiTextarea(root);
+        if (el && !resolved) {
+          cleanup();
+          resolve(el);
+        }
+      }, pollMs);
+
+      timer = window.setTimeout(() => {
+        cleanup();
+        resolve(findGeminiTextarea(root));
+      }, timeoutMs);
+    });
   }
 
   if (!textarea) {
@@ -325,57 +386,74 @@ export async function fillGeminiMemoryDialog(
     throw new Error(msg);
   }
 
-  // 2. Focus and fill
-  textarea.focus();
+  // 2. Focus it, set value via native setter, dispatch input, change, and keyup (Angular needs these)
   const instruction = getCompactInstruction();
-  let inserted = false;
-  try {
-    if (typeof document.execCommand === 'function') {
-      inserted = document.execCommand('insertText', false, instruction);
-    }
-  } catch {
-    inserted = false;
-  }
-  if (!inserted || !textarea.value) {
+
+  const applyNativeFill = (el: HTMLTextAreaElement, val: string) => {
+    el.focus();
     const desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
     if (desc?.set) {
-      desc.set.call(textarea, instruction);
+      desc.set.call(el, val);
     } else {
-      textarea.value = instruction;
+      el.value = val;
     }
-  }
-  textarea.dispatchEvent(new Event('input', { bubbles: true }));
-  textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: ' ' }));
+  };
 
-  // 3. Wait up to 5s for submit button to lose disabled
-  let submitBtn: HTMLButtonElement | null = null;
-  const startSubmit = Date.now();
-  const submitTimeout = Math.min(timeoutMs, 5000);
-  while (Date.now() - startSubmit < submitTimeout) {
-    const btn =
-      root.querySelector<HTMLButtonElement>('edit-memory-dialog button[data-test-id="submit-button"]') ??
-      root.querySelector<HTMLButtonElement>('button[data-test-id="submit-button"]');
-    if (btn) {
-      submitBtn = btn;
-      if (!btn.disabled && !btn.hasAttribute('disabled')) {
-        break;
-      }
+  applyNativeFill(textarea, instruction);
+
+  // 3. Wait until button[data-test-id="submit-button"] is enabled (poll up to 5s)
+  const isEnabled = (btn: HTMLButtonElement | null) =>
+    Boolean(btn && !btn.disabled && !btn.hasAttribute('disabled'));
+
+  const waitForSubmitButton = async (maxMs: number): Promise<HTMLButtonElement | null> => {
+    const start = Date.now();
+    while (Date.now() - start < maxMs) {
+      const btn = findGeminiSubmitButton(root);
+      if (isEnabled(btn)) return btn;
+      await new Promise((r) => setTimeout(r, pollMs));
     }
-    await new Promise((r) => setTimeout(r, pollMs));
+    return null;
+  };
+
+  let submitBtn = await waitForSubmitButton(Math.min(timeoutMs, 5000));
+
+  // Retry the fill once if the button is still disabled
+  if (!submitBtn) {
+    applyNativeFill(textarea, instruction);
+    submitBtn = await waitForSubmitButton(Math.min(timeoutMs, 5000));
   }
 
   if (!submitBtn) {
-    const msg = "Couldn't find submit button";
-    console.warn('[BetterView]', msg);
-    throw new Error(msg);
-  }
-  if (submitBtn.disabled || submitBtn.hasAttribute('disabled')) {
     const msg = "Submit button remained disabled";
     console.warn('[BetterView]', msg);
     throw new Error(msg);
   }
 
   submitBtn.click();
+
+  // Wait for the dialog to close (up to 8s) if requested or by default if close is observed
+  if (options.waitForClose) {
+    const startCloseWait = Date.now();
+    const maxCloseWait = Math.min(timeoutMs, 8000);
+    let dialogClosed = false;
+    while (Date.now() - startCloseWait < maxCloseWait) {
+      const dialog = findGeminiDialog(root);
+      if (!dialog || dialog.style.display === 'none' || !(root as any).contains(dialog)) {
+        dialogClosed = true;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, pollMs));
+    }
+
+    if (!dialogClosed) {
+      const msg = "Dialog didn't close";
+      console.warn('[BetterView]', msg);
+      throw new Error(msg);
+    }
+  }
 }
 
 export async function runGeminiSetup(): Promise<SetupResult> {
@@ -399,8 +477,14 @@ export async function runGeminiSetup(): Promise<SetupResult> {
       return { status: 'failed', error: msg };
     }
 
-    if (/\[betterview\s+v2\]/i.test(document.body.textContent ?? '')) {
-      return { status: 'already', version: CURRENT_INSTRUCTION_VERSION };
+    const bodyText = document.body.textContent ?? '';
+    const hasV2 = /\[betterview\s+v2\]/i.test(bodyText);
+    const hasOldEntry = /\[betterview\]/i.test(bodyText) && !hasV2;
+
+    if (hasV2) {
+      const res: SetupResult = { status: 'already', version: CURRENT_INSTRUCTION_VERSION, hasOldEntry };
+      recordSetupResult('gemini', res);
+      return res;
     }
 
     const buttons = document.querySelectorAll(GEMINI_SETUP_SELECTORS.addButton);
@@ -420,46 +504,42 @@ export async function runGeminiSetup(): Promise<SetupResult> {
     addBtn.click();
 
     try {
-      await fillGeminiMemoryDialog(document, { waitTimeoutMs: 10000, pollIntervalMs: 200 });
+      await fillGeminiMemoryDialog(document, { waitTimeoutMs: 10000, pollIntervalMs: 200, waitForClose: true });
     } catch (fillErr: unknown) {
       const msg = fillErr instanceof Error ? fillErr.message : String(fillErr);
-      return { status: 'failed', error: msg };
+      const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
+      recordSetupResult('gemini', res);
+      return res;
     }
 
-    // Confirm success: dialog closes AND entry containing [BetterView] appears within 10s
-    let dialogClosed = false;
+    // Confirm success: entry containing [BetterView v2] appears within 10s
     let entryAppeared = false;
     const startConfirm = Date.now();
     while (Date.now() - startConfirm < 10000) {
-      const dialog = document.querySelector<HTMLElement>('edit-memory-dialog');
-      if (!dialog || dialog.style.display === 'none' || !document.contains(dialog)) {
-        dialogClosed = true;
-      }
-      if (/\[betterview\]/i.test(document.body.textContent ?? '')) {
+      if (/\[betterview(?:\s+v2)?\]/i.test(document.body.textContent ?? '')) {
         entryAppeared = true;
-      }
-      if (dialogClosed && entryAppeared) {
         break;
       }
       await new Promise((r) => setTimeout(r, 200));
     }
 
-    if (!dialogClosed) {
-      const msg = "Dialog didn't close";
-      console.warn('[BetterView]', msg);
-      return { status: 'failed', error: msg };
-    }
     if (!entryAppeared) {
       const msg = "Saved entry didn't appear";
       console.warn('[BetterView]', msg);
-      return { status: 'failed', error: msg };
+      const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
+      recordSetupResult('gemini', res);
+      return res;
     }
 
-    return { status: 'added', version: CURRENT_INSTRUCTION_VERSION };
+    const res: SetupResult = { status: 'added', version: CURRENT_INSTRUCTION_VERSION, hasOldEntry };
+    recordSetupResult('gemini', res);
+    return res;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn('[BetterView]', 'Gemini setup error:', msg);
-    return { status: 'failed', error: msg };
+    const res: SetupResult = { status: 'failed', error: msg };
+    recordSetupResult('gemini', res);
+    return res;
   }
 }
 
@@ -611,9 +691,10 @@ export function recordSetupResult(
     typeof result === 'object' && result.version !== undefined
       ? result.version
       : CURRENT_INSTRUCTION_VERSION;
+  const hasOldEntry = typeof result === 'object' ? result.hasOldEntry : undefined;
   if (typeof chrome !== 'undefined' && chrome.storage?.local) {
     chrome.storage.local.set({
-      [`${site}_setup_status`]: { status, version, error: err, timestamp: Date.now() },
+      [`${site}_setup_status`]: { status, version, error: err, hasOldEntry, timestamp: Date.now() },
     });
   }
 }

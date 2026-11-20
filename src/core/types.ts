@@ -104,6 +104,7 @@ export interface TableSpec {
   title?: string;
   columns: string[];
   rows: string[][];
+  highlight?: 'min' | 'max' | 'best' | boolean;
 }
 
 export interface CompareSpec {

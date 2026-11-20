@@ -32,7 +32,6 @@ export function layoutFlow(
   }
 
   // Break cycles: DFS from nodes in input order.
-  // An edge to a node already on the DFS stack is a back edge.
   const visited = new Set<string>();
   const onStack = new Set<string>();
   const backEdges = new Set<string>();
@@ -79,8 +78,7 @@ export function layoutFlow(
     }
   }
 
-  // Ranking: longest path from any source (node with no incoming non-back edges).
-  // Isolated nodes get rank 0.
+  // Ranking: longest path from any source
   const rankOf: Record<string, number> = {};
   const queue: string[] = [];
 
@@ -105,7 +103,7 @@ export function layoutFlow(
     }
   }
 
-  // Fallback for any unreachable nodes (e.g. isolated or odd components)
+  // Fallback for any unreachable nodes
   for (const n of nodes) {
     if (rankOf[n.id] === undefined) {
       rankOf[n.id] = 0;
@@ -126,11 +124,7 @@ export function layoutFlow(
     ranks[rankOf[n.id]].push(n.id);
   }
 
-  // Order within a rank:
-  // First by the barycenter (average order index of predecessors in the previous rank),
-  // ties by input order. Do 2 sweeps (down, then up using successors).
-
-  // Sweep 1: Down sweep (from rank 1 up to maxRank)
+  // Order within a rank
   for (let r = 1; r <= maxRank; r++) {
     const prevRank = ranks[r - 1];
     const prevPos = new Map<string, number>();
@@ -157,7 +151,6 @@ export function layoutFlow(
     });
   }
 
-  // Sweep 2: Up sweep (from rank maxRank - 1 down to 0)
   for (let r = maxRank - 1; r >= 0; r--) {
     const nextRank = ranks[r + 1];
     const nextPos = new Map<string, number>();
@@ -202,6 +195,346 @@ export interface EdgeRoute {
   isOuter: boolean;
   pathD: string;
   labelPoint: { x: number; y: number };
+  points?: { x: number; y: number }[];
+}
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/**
+ * Checks if a 2D line segment between p1 and p2 intersects a rectangle box (with optional padding).
+ */
+export function segmentIntersectsBox(
+  p1: Point,
+  p2: Point,
+  box: BoxRect,
+  padding = 0,
+): boolean {
+  const minX = box.x - padding;
+  const maxX = box.x + box.width + padding;
+  const minY = box.y - padding;
+  const maxY = box.y + box.height + padding;
+
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+
+  // Horizontal segment
+  if (Math.abs(dy) < 1e-6) {
+    const y = p1.y;
+    if (y < minY || y > maxY) return false;
+    const segMinX = Math.min(p1.x, p2.x);
+    const segMaxX = Math.max(p1.x, p2.x);
+    return Math.max(segMinX, minX) < Math.min(segMaxX, maxX);
+  }
+
+  // Vertical segment
+  if (Math.abs(dx) < 1e-6) {
+    const x = p1.x;
+    if (x < minX || x > maxX) return false;
+    const segMinY = Math.min(p1.y, p2.y);
+    const segMaxY = Math.max(p1.y, p2.y);
+    return Math.max(segMinY, minY) < Math.min(segMaxY, maxY);
+  }
+
+  // General segment via Liang-Barsky line clipping
+  const p = [-dx, dx, -dy, dy];
+  const q = [p1.x - minX, maxX - p1.x, p1.y - minY, maxY - p1.y];
+  let u1 = 0;
+  let u2 = 1;
+
+  for (let i = 0; i < 4; i++) {
+    if (p[i] === 0) {
+      if (q[i] < 0) return false;
+    } else {
+      const t = q[i] / p[i];
+      if (p[i] < 0) {
+        if (t > u2) return false;
+        if (t > u1) u1 = t;
+      } else {
+        if (t < u1) return false;
+        if (t < u2) u2 = t;
+      }
+    }
+  }
+
+  return u1 < u2 && u2 > 1e-6 && u1 < 1 - 1e-6;
+}
+
+/**
+ * Simplifies a sequence of orthogonal points by eliminating redundant collinear points.
+ */
+export function simplifyCollinear(points: Point[]): Point[] {
+  if (points.length <= 2) return [...points];
+  const result: Point[] = [points[0]];
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = result[result.length - 1];
+    const curr = points[i];
+    const next = points[i + 1];
+
+    const isCollinearX = Math.abs(prev.x - curr.x) < 1e-4 && Math.abs(curr.x - next.x) < 1e-4;
+    const isCollinearY = Math.abs(prev.y - curr.y) < 1e-4 && Math.abs(curr.y - next.y) < 1e-4;
+
+    if (!isCollinearX && !isCollinearY) {
+      result.push(curr);
+    }
+  }
+
+  result.push(points[points.length - 1]);
+  return result;
+}
+
+/**
+ * Constructs an SVG path from a list of orthogonal points, rounding corners with radius r.
+ */
+export function renderRoundedPath(points: Point[], radius = 8): string {
+  if (points.length <= 1) return '';
+  if (points.length === 2) {
+    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+  }
+
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const pPrev = points[i - 1];
+    const pCurr = points[i];
+    const pNext = points[i + 1];
+
+    const d1x = pCurr.x - pPrev.x;
+    const d1y = pCurr.y - pPrev.y;
+    const len1 = Math.hypot(d1x, d1y);
+
+    const d2x = pNext.x - pCurr.x;
+    const d2y = pNext.y - pCurr.y;
+    const len2 = Math.hypot(d2x, d2y);
+
+    if (len1 < 1e-4 || len2 < 1e-4) {
+      continue;
+    }
+
+    const cr = Math.min(radius, len1 / 2, len2 / 2);
+    const startX = pCurr.x - (d1x / len1) * cr;
+    const startY = pCurr.y - (d1y / len1) * cr;
+    const endX = pCurr.x + (d2x / len2) * cr;
+    const endY = pCurr.y + (d2y / len2) * cr;
+
+    d += ` L ${startX} ${startY} Q ${pCurr.x} ${pCurr.y} ${endX} ${endY}`;
+  }
+
+  const last = points[points.length - 1];
+  d += ` L ${last.x} ${last.y}`;
+  return d;
+}
+
+/**
+ * Locates the midpoint of the longest segment in a polyline.
+ */
+export function findLongestSegmentMidpoint(points: Point[]): Point {
+  if (points.length === 0) return { x: 0, y: 0 };
+  if (points.length === 1) return { ...points[0] };
+
+  let maxLen = -1;
+  let bestIdx = 0;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const len = Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
+    if (len > maxLen) {
+      maxLen = len;
+      bestIdx = i;
+    }
+  }
+
+  const p1 = points[bestIdx];
+  const p2 = points[bestIdx + 1];
+  return {
+    x: (p1.x + p2.x) / 2,
+    y: (p1.y + p2.y) / 2,
+  };
+}
+
+/**
+ * A* Orthogonal grid router with obstacle avoidance and bend penalty.
+ */
+function routeAStar(
+  start: Point,
+  goal: Point,
+  obstacles: BoxRect[],
+  allBoxes: BoxRect[],
+  gutterX: number,
+  padding = 16,
+): Point[] {
+  // Build coarse grid coordinates
+  const xSet = new Set<number>([start.x, goal.x, gutterX]);
+  const ySet = new Set<number>([start.y, goal.y]);
+
+  for (const b of allBoxes) {
+    xSet.add(b.x - padding);
+    xSet.add(b.x + b.width + padding);
+    xSet.add(b.x + b.width / 2);
+
+    ySet.add(b.y - padding);
+    ySet.add(b.y + b.height + padding);
+    ySet.add(b.y + b.height / 2);
+  }
+
+  // Add intermediate channels between sorted boxes
+  const sortedBoxesByY = [...allBoxes].sort((a, b) => a.y - b.y);
+  for (let i = 0; i < sortedBoxesByY.length - 1; i++) {
+    const b1 = sortedBoxesByY[i];
+    const b2 = sortedBoxesByY[i + 1];
+    if (b2.y > b1.y + b1.height) {
+      ySet.add((b1.y + b1.height + b2.y) / 2);
+    }
+  }
+
+  const sortedBoxesByX = [...allBoxes].sort((a, b) => a.x - b.x);
+  for (let i = 0; i < sortedBoxesByX.length - 1; i++) {
+    const b1 = sortedBoxesByX[i];
+    const b2 = sortedBoxesByX[i + 1];
+    if (b2.x > b1.x + b1.width) {
+      xSet.add((b1.x + b1.width + b2.x) / 2);
+    }
+  }
+
+  const xCoords = Array.from(xSet).sort((a, b) => a - b);
+  const yCoords = Array.from(ySet).sort((a, b) => a - b);
+
+  const numX = xCoords.length;
+  const numY = yCoords.length;
+
+  const startXi = xCoords.indexOf(start.x);
+  const startYi = yCoords.indexOf(start.y);
+  const goalXi = xCoords.indexOf(goal.x);
+  const goalYi = yCoords.indexOf(goal.y);
+
+  if (startXi === -1 || startYi === -1 || goalXi === -1 || goalYi === -1) {
+    return [start, goal];
+  }
+
+  // Direction: 0 = none, 1 = horizontal, 2 = vertical
+  const BEND_PENALTY = 50;
+
+  // Segment collision check against non-endpoint obstacles
+  function isSegmentBlocked(pA: Point, pB: Point, isNearEnd: boolean): boolean {
+    const pad = isNearEnd ? 0 : Math.max(4, padding - 4);
+    for (const obs of obstacles) {
+      if (segmentIntersectsBox(pA, pB, obs, pad)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Key: `${xi},${yi},${dir}`
+  const dist = new Map<string, number>();
+  const parent = new Map<string, string>();
+  const startKey = `${startXi},${startYi},0`;
+  dist.set(startKey, 0);
+
+  // Priority queue: elements are [fScore, key]
+  interface QItem {
+    f: number;
+    g: number;
+    xi: number;
+    yi: number;
+    dir: number;
+    key: string;
+  }
+  const open: QItem[] = [
+    {
+      f: Math.abs(goal.x - start.x) + Math.abs(goal.y - start.y),
+      g: 0,
+      xi: startXi,
+      yi: startYi,
+      dir: 0,
+      key: startKey,
+    },
+  ];
+
+  let foundEndKey: string | null = null;
+
+  while (open.length > 0) {
+    // Pop minimum f
+    let bestIdx = 0;
+    for (let i = 1; i < open.length; i++) {
+      if (open[i].f < open[bestIdx].f) {
+        bestIdx = i;
+      }
+    }
+    const current = open.splice(bestIdx, 1)[0];
+
+    if (current.xi === goalXi && current.yi === goalYi) {
+      foundEndKey = current.key;
+      break;
+    }
+
+    const currentG = dist.get(current.key) ?? Infinity;
+    if (current.g > currentG) continue;
+
+    const curPt: Point = { x: xCoords[current.xi], y: yCoords[current.yi] };
+
+    // Explore 4 orthogonal neighbors
+    const neighbors = [
+      { nXi: current.xi + 1, nYi: current.yi, nDir: 1 },
+      { nXi: current.xi - 1, nYi: current.yi, nDir: 1 },
+      { nXi: current.xi, nYi: current.yi + 1, nDir: 2 },
+      { nXi: current.xi, nYi: current.yi - 1, nDir: 2 },
+    ];
+
+    for (const n of neighbors) {
+      if (n.nXi < 0 || n.nXi >= numX || n.nYi < 0 || n.nYi >= numY) continue;
+
+      const nPt: Point = { x: xCoords[n.nXi], y: yCoords[n.nYi] };
+      const isEndpointNeighbor =
+        (current.xi === startXi && current.yi === startYi) ||
+        (n.nXi === goalXi && n.nYi === goalYi);
+
+      if (isSegmentBlocked(curPt, nPt, isEndpointNeighbor)) {
+        continue;
+      }
+
+      const stepLen = Math.abs(nPt.x - curPt.x) + Math.abs(nPt.y - curPt.y);
+      const bendCost = current.dir !== 0 && current.dir !== n.nDir ? BEND_PENALTY : 0;
+      const tentG = current.g + stepLen + bendCost;
+
+      const nKey = `${n.nXi},${n.nYi},${n.nDir}`;
+      const prevG = dist.get(nKey) ?? Infinity;
+
+      if (tentG < prevG) {
+        dist.set(nKey, tentG);
+        parent.set(nKey, current.key);
+        const h = Math.abs(goal.x - nPt.x) + Math.abs(goal.y - nPt.y);
+        open.push({
+          f: tentG + h,
+          g: tentG,
+          xi: n.nXi,
+          yi: n.nYi,
+          dir: n.nDir,
+          key: nKey,
+        });
+      }
+    }
+  }
+
+  if (!foundEndKey) {
+    // Direct step fallback if grid is over-constrained
+    const midY = (start.y + goal.y) / 2;
+    const fallbackPts = [start, { x: start.x, y: midY }, { x: goal.x, y: midY }, goal];
+    return simplifyCollinear(fallbackPts);
+  }
+
+  // Reconstruct path
+  const path: Point[] = [];
+  let currKey: string | undefined = foundEndKey;
+  while (currKey) {
+    const parts = currKey.split(',').map(Number);
+    path.push({ x: xCoords[parts[0]], y: yCoords[parts[1]] });
+    currKey = parent.get(currKey);
+  }
+
+  path.reverse();
+  return simplifyCollinear(path);
 }
 
 export function computeEdgeRoute(
@@ -212,54 +545,84 @@ export function computeEdgeRoute(
   allBoxesRight: number,
   outerIndex = 0,
   fanOffset = 0,
+  allBoxes: BoxRect[] = [],
 ): EdgeRoute {
-  if (!isBackEdge && !isRankSkip) {
-    const sx = sourceBox.x + sourceBox.width / 2 + fanOffset;
-    const sy = sourceBox.y + sourceBox.height;
-    const tx = targetBox.x + targetBox.width / 2;
-    const ty = targetBox.y;
+  // Ensure obstacle set does not include source or target node
+  const obstacleBoxes = allBoxes.filter(
+    (b) =>
+      b !== sourceBox &&
+      b !== targetBox &&
+      (b.x !== sourceBox.x || b.y !== sourceBox.y || b.width !== sourceBox.width || b.height !== sourceBox.height) &&
+      (b.x !== targetBox.x || b.y !== targetBox.y || b.width !== targetBox.width || b.height !== targetBox.height),
+  );
 
-    const dy = Math.max(Math.abs(ty - sy) * 0.5, 20);
-    const cp1x = sx;
-    const cp1y = sy + dy;
-    const cp2x = tx;
-    const cp2y = ty - dy;
-
-    const pathD = `M ${sx} ${sy} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${tx} ${ty}`;
-    const labelPoint = {
-      x: 0.125 * sx + 0.375 * cp1x + 0.375 * cp2x + 0.125 * tx,
-      y: 0.125 * sy + 0.375 * cp1y + 0.375 * cp2y + 0.125 * ty,
-    };
-    return { isOuter: false, pathD, labelPoint };
-  }
-
-  // Orthogonal route around nodes via right side gutter
   const gutterX =
     Math.max(allBoxesRight, sourceBox.x + sourceBox.width, targetBox.x + targetBox.width) +
     24 +
     outerIndex * 18;
-  const sx = sourceBox.x + sourceBox.width;
-  const sy = sourceBox.y + sourceBox.height / 2;
-  const tx = targetBox.x + targetBox.width;
-  const ty = targetBox.y + targetBox.height / 2;
-  const r = 8;
 
-  let pathD = '';
-  if (ty < sy) {
-    // Back-edge going up
-    pathD = `M ${sx} ${sy} L ${gutterX - r} ${sy} Q ${gutterX} ${sy} ${gutterX} ${sy - r} L ${gutterX} ${ty + r} Q ${gutterX} ${ty} ${gutterX - r} ${ty} L ${tx} ${ty}`;
-  } else if (ty > sy) {
-    // Forward edge skipping ranks going down
-    pathD = `M ${sx} ${sy} L ${gutterX - r} ${sy} Q ${gutterX} ${sy} ${gutterX} ${sy + r} L ${gutterX} ${ty - r} Q ${gutterX} ${ty} ${gutterX - r} ${ty} L ${tx} ${ty}`;
-  } else {
-    // Lateral edge
-    pathD = `M ${sx} ${sy} L ${gutterX - r} ${sy} Q ${gutterX} ${sy} ${gutterX} ${sy - 20} L ${gutterX - r} ${sy - 20} L ${tx} ${ty}`;
+  // 1. Back-edges and rank-skipping edges go through the outer gutter
+  if (isBackEdge || isRankSkip) {
+    const sx = sourceBox.x + sourceBox.width;
+    const sy = sourceBox.y + sourceBox.height / 2;
+    const tx = targetBox.x + targetBox.width;
+    const ty = targetBox.y + targetBox.height / 2;
+
+    const p0: Point = { x: sx, y: sy };
+    const p1: Point = { x: gutterX, y: sy };
+    const p2: Point = { x: gutterX, y: ty };
+    const p3: Point = { x: tx, y: ty };
+
+    // Verify whether direct gutter waypoints intersect any non-endpoint obstacles
+    const p0p1Blocked = obstacleBoxes.some((obs) => segmentIntersectsBox(p0, p1, obs, 0));
+    const p2p3Blocked = obstacleBoxes.some((obs) => segmentIntersectsBox(p2, p3, obs, 0));
+
+    let points: Point[];
+    if (!p0p1Blocked && !p2p3Blocked) {
+      points = simplifyCollinear([p0, p1, p2, p3]);
+    } else {
+      points = routeAStar(p0, p3, obstacleBoxes, [sourceBox, targetBox, ...obstacleBoxes], gutterX, 16);
+    }
+
+    const pathD = renderRoundedPath(points, 8);
+    // Outer gutter label sits on the vertical segment in the gutter
+    const labelPoint: Point = {
+      x: gutterX,
+      y: (sy + ty) / 2,
+    };
+
+    return { isOuter: true, pathD, labelPoint, points };
   }
 
-  const labelPoint = {
-    x: gutterX,
-    y: (sy + ty) / 2,
-  };
+  // 2. Same-lane adjacent edges stay straight
+  const sx = sourceBox.x + sourceBox.width / 2 + fanOffset;
+  const sy = sourceBox.y + sourceBox.height;
+  const tx = targetBox.x + targetBox.width / 2;
+  const ty = targetBox.y;
 
-  return { isOuter: true, pathD, labelPoint };
+  const isSameLane = Math.abs(sx - tx) < 5 && ty >= sy;
+  if (isSameLane) {
+    const straightBlocked = obstacleBoxes.some((obs) =>
+      segmentIntersectsBox({ x: sx, y: sy }, { x: tx, y: ty }, obs, 0),
+    );
+
+    if (!straightBlocked) {
+      const points = [{ x: sx, y: sy }, { x: tx, y: ty }];
+      const pathD = `M ${sx} ${sy} L ${tx} ${ty}`;
+      const labelPoint = { x: sx, y: (sy + ty) / 2 };
+      return { isOuter: false, pathD, labelPoint, points };
+    }
+  }
+
+  // 3. Other forward edges (branching, lateral, rank offset):
+  // Route on coarse grid built from node bounds plus 16px padding using A* with bend penalty
+  const startPt: Point = { x: sx, y: sy };
+  const goalPt: Point = { x: tx, y: ty };
+
+  const allBoxesList = [sourceBox, targetBox, ...obstacleBoxes];
+  const routedPoints = routeAStar(startPt, goalPt, obstacleBoxes, allBoxesList, gutterX, 16);
+  const pathD = renderRoundedPath(routedPoints, 8);
+  const labelPoint = findLongestSegmentMidpoint(routedPoints);
+
+  return { isOuter: false, pathD, labelPoint, points: routedPoints };
 }

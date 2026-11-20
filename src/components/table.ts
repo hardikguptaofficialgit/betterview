@@ -63,13 +63,42 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
     for (const item of entries) {
       const tr = h('tr', { class: 'iui-table-tr' });
       tr.style.setProperty('--row-idx', String(item.idx));
+
+      // Calculate best value column per row when spec.highlight is set
+      let bestColIdx: number | null = null;
+      if (spec.highlight) {
+        const isMin = spec.highlight === 'min';
+        let bestVal = isMin ? Infinity : -Infinity;
+        let numCount = 0;
+        for (let c = 0; c < columns.length; c++) {
+          const val = parseNumericValue(item.row[c] ?? '');
+          if (val !== null) {
+            numCount++;
+            if (isMin ? val < bestVal : val > bestVal) {
+              bestVal = val;
+              bestColIdx = c;
+            }
+          }
+        }
+        if (numCount < 2) {
+          bestColIdx = null;
+        }
+      }
+
       for (let c = 0; c < columns.length; c++) {
         const cellText = item.row[c] ?? '';
         const tdClasses = ['iui-table-td'];
         if (isNumericCol[c]) {
           tdClasses.push('is-numeric');
         }
-        const td = h('td', { class: tdClasses.join(' ') }, cellText);
+        const isBest = spec.highlight && c === bestColIdx;
+        if (isBest) {
+          tdClasses.push('is-highlighted');
+        }
+        const cellContent = isBest
+          ? h('span', { class: 'iui-table-highlight-pill c-mint' }, cellText)
+          : cellText;
+        const td = h('td', { class: tdClasses.join(' ') }, cellContent);
         tr.appendChild(td);
       }
       tbody.appendChild(tr);

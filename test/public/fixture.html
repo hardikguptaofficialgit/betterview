@@ -7,8 +7,8 @@
   <style>
     body {
       margin: 0;
-      padding: 32px;
-      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      padding: 32px 24px;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
       background: #F5F5F4;
       color: #0A0A0A;
     }
@@ -19,8 +19,8 @@
     .fixture-container {
       display: flex;
       flex-direction: column;
-      gap: 32px;
-      max-width: 860px;
+      gap: 36px;
+      max-width: 1400px;
       margin: 0 auto;
     }
     .fixture-header {
@@ -41,10 +41,10 @@
     .fixture-section {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 12px;
     }
     .fixture-section h2 {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       color: #6B6B6B;
       margin: 0;
@@ -53,6 +53,45 @@
     }
     body[data-theme="dark"] .fixture-section h2 {
       color: #A3A3A3;
+    }
+    .fixture-side-by-side {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 1024px) {
+      .fixture-side-by-side {
+        grid-template-columns: 1fr;
+      }
+    }
+    .fixture-pane {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 20px;
+      border-radius: 16px;
+      box-sizing: border-box;
+      min-width: 0;
+      overflow-x: auto;
+    }
+    .fixture-pane-light {
+      background: #FAFAFA;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      color: #0A0A0A;
+    }
+    .fixture-pane-dark {
+      background: #000000;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #FAFAFA;
+    }
+    .fixture-pane-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.6;
+      margin-bottom: 4px;
     }
     .theme-btn {
       padding: 9px 18px;

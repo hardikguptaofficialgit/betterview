@@ -1,5 +1,39 @@
 import { describe, it, expect } from 'vitest';
-import { layoutFlow, computeEdgeRoute } from '../src/components/flowLayout';
+import {
+  layoutFlow,
+  computeEdgeRoute,
+  segmentIntersectsBox,
+  BoxRect,
+  EdgeRoute,
+} from '../src/components/flowLayout';
+
+function assertNoIntersectionWithNonEndpoints(
+  route: EdgeRoute,
+  sourceBox: BoxRect,
+  targetBox: BoxRect,
+  allBoxes: BoxRect[],
+) {
+  const obstacles = allBoxes.filter(
+    (b) =>
+      b !== sourceBox &&
+      b !== targetBox &&
+      (b.x !== sourceBox.x || b.y !== sourceBox.y) &&
+      (b.x !== targetBox.x || b.y !== targetBox.y),
+  );
+
+  const points = route.points;
+  expect(points).toBeDefined();
+  expect(points!.length).toBeGreaterThanOrEqual(2);
+
+  for (let i = 0; i < points!.length - 1; i++) {
+    const p1 = points![i];
+    const p2 = points![i + 1];
+    for (const obs of obstacles) {
+      const intersects = segmentIntersectsBox(p1, p2, obs, 0);
+      expect(intersects).toBe(false);
+    }
+  }
+}
 
 describe('computeEdgeRoute', () => {
   it('routes back-edge orthogonally through right side gutter around nodes', () => {
@@ -29,15 +63,96 @@ describe('computeEdgeRoute', () => {
     expect(route.pathD).toContain('L 170 270');
   });
 
-  it('routes direct adjacent edge using standard cubic Bezier', () => {
+  it('routes same-lane adjacent edge as straight orthogonal line', () => {
     const sourceBox = { x: 50, y: 50, width: 120, height: 40 };
     const targetBox = { x: 50, y: 150, width: 120, height: 40 };
 
     const route = computeEdgeRoute(sourceBox, targetBox, false, false, 200);
 
     expect(route.isOuter).toBe(false);
-    expect(route.pathD.startsWith('M 110 90 C ')).toBe(true);
-    expect(route.pathD.endsWith(' 110 150')).toBe(true);
+    expect(route.pathD).toBe('M 110 90 L 110 150');
+    expect(route.labelPoint).toEqual({ x: 110, y: 120 });
+  });
+
+  it('linear fixture: assert no routed segment intersects any non-endpoint node rect', () => {
+    const nodeA: BoxRect = { x: 100, y: 50, width: 140, height: 50 };
+    const nodeB: BoxRect = { x: 100, y: 160, width: 140, height: 50 };
+    const nodeC: BoxRect = { x: 100, y: 270, width: 140, height: 50 };
+    const allBoxes = [nodeA, nodeB, nodeC];
+
+    const routeAB = computeEdgeRoute(nodeA, nodeB, false, false, 240, 0, 0, allBoxes);
+    const routeBC = computeEdgeRoute(nodeB, nodeC, false, false, 240, 0, 0, allBoxes);
+
+    assertNoIntersectionWithNonEndpoints(routeAB, nodeA, nodeB, allBoxes);
+    assertNoIntersectionWithNonEndpoints(routeBC, nodeB, nodeC, allBoxes);
+  });
+
+  it('branching fixture: assert no routed segment intersects any non-endpoint node rect', () => {
+    // Node A branches to Node B (left) and Node C (right)
+    const nodeA: BoxRect = { x: 150, y: 50, width: 140, height: 50 };
+    const nodeB: BoxRect = { x: 50, y: 170, width: 140, height: 50 };
+    const nodeC: BoxRect = { x: 250, y: 170, width: 140, height: 50 };
+    const allBoxes = [nodeA, nodeB, nodeC];
+
+    const routeAB = computeEdgeRoute(nodeA, nodeB, false, false, 390, 0, -10, allBoxes);
+    const routeAC = computeEdgeRoute(nodeA, nodeC, false, false, 390, 0, 10, allBoxes);
+
+    assertNoIntersectionWithNonEndpoints(routeAB, nodeA, nodeB, allBoxes);
+    assertNoIntersectionWithNonEndpoints(routeAC, nodeA, nodeC, allBoxes);
+  });
+
+  it('back-edge fixture: assert no routed segment intersects any non-endpoint node rect', () => {
+    const nodeA: BoxRect = { x: 100, y: 50, width: 140, height: 50 };
+    const nodeB: BoxRect = { x: 100, y: 160, width: 140, height: 50 };
+    const allBoxes = [nodeA, nodeB];
+
+    const routeBA = computeEdgeRoute(nodeB, nodeA, true, false, 240, 0, 0, allBoxes);
+
+    assertNoIntersectionWithNonEndpoints(routeBA, nodeB, nodeA, allBoxes);
+    expect(routeBA.isOuter).toBe(true);
+    expect(routeBA.labelPoint.x).toBeGreaterThan(240);
+  });
+
+  it('rank-skip fixture: A connects to C straight across B, edge routes around B without intersecting it', () => {
+    // Node A is at top, Node B is directly underneath, Node C is below B
+    const nodeA: BoxRect = { x: 100, y: 50, width: 140, height: 50 };
+    const nodeB: BoxRect = { x: 100, y: 160, width: 140, height: 50 };
+    const nodeC: BoxRect = { x: 100, y: 270, width: 140, height: 50 };
+    const allBoxes = [nodeA, nodeB, nodeC];
+
+    const routeAC = computeEdgeRoute(nodeA, nodeC, false, true, 240, 0, 0, allBoxes);
+
+    assertNoIntersectionWithNonEndpoints(routeAC, nodeA, nodeC, allBoxes);
+    expect(routeAC.isOuter).toBe(true);
+  });
+
+  it('3 groups/lanes fixture: complex cross-lane edges never intersect intermediate node rects', () => {
+    // Lane 1: [L1_1, L1_2]
+    // Lane 2: [L2_1, L2_2]
+    // Lane 3: [L3_1, L3_2]
+    const l1_1: BoxRect = { x: 50, y: 50, width: 140, height: 50 };
+    const l1_2: BoxRect = { x: 50, y: 180, width: 140, height: 50 };
+
+    const l2_1: BoxRect = { x: 230, y: 50, width: 140, height: 50 };
+    const l2_2: BoxRect = { x: 230, y: 180, width: 140, height: 50 };
+
+    const l3_1: BoxRect = { x: 410, y: 50, width: 140, height: 50 };
+    const l3_2: BoxRect = { x: 410, y: 180, width: 140, height: 50 };
+
+    const allBoxes = [l1_1, l1_2, l2_1, l2_2, l3_1, l3_2];
+    const right = 550;
+
+    // Edge from Lane 1 Node 1 to Lane 3 Node 2 (skips across Lane 2!)
+    const routeCross = computeEdgeRoute(l1_1, l3_2, false, false, right, 0, 0, allBoxes);
+    assertNoIntersectionWithNonEndpoints(routeCross, l1_1, l3_2, allBoxes);
+
+    // Edge from Lane 2 Node 2 back to Lane 1 Node 1
+    const routeBack = computeEdgeRoute(l2_2, l1_1, true, false, right, 1, 0, allBoxes);
+    assertNoIntersectionWithNonEndpoints(routeBack, l2_2, l1_1, allBoxes);
+
+    // Edge from Lane 3 Node 1 to Lane 2 Node 2
+    const route3to2 = computeEdgeRoute(l3_1, l2_2, false, false, right, 0, 0, allBoxes);
+    assertNoIntersectionWithNonEndpoints(route3to2, l3_1, l2_2, allBoxes);
   });
 });
 

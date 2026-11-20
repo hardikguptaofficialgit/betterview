@@ -35,15 +35,12 @@ export function renderTimeline(spec: TimelineSpec, _ctx: RenderContext): HTMLEle
 
     // Right event content
     const content = h('div', { class: `iui-timeline-content${isLast ? ' is-last' : ''}` });
-    const header = h('div', { class: 'iui-timeline-header' });
-    const title = h('span', { class: 'iui-timeline-title' }, ev.title);
-    header.appendChild(title);
-
     if (ev.time) {
-      const timeBadge = h('span', { class: 'iui-chip c-stone iui-timeline-time' }, ev.time);
-      header.appendChild(timeBadge);
+      const timeBadge = h('div', { class: 'iui-timeline-time' }, ev.time);
+      content.appendChild(timeBadge);
     }
-    content.appendChild(header);
+    const title = h('div', { class: 'iui-timeline-title' }, ev.title);
+    content.appendChild(title);
 
     const text = h('div', { class: 'iui-timeline-text' }, ev.text);
     content.appendChild(text);

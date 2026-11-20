@@ -255,6 +255,66 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
     overlay.remove();
   });
 
+  it('dispatches input, change, and keyup events and retries fill if disabled', async () => {
+    const overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    overlay.innerHTML = `
+      <edit-memory-dialog class="mat-mdc-dialog-component-host">
+        <textarea aria-label="Enter new memory"></textarea>
+        <button data-test-id="submit-button" disabled="true">Submit</button>
+      </edit-memory-dialog>
+    `;
+    document.body.appendChild(overlay);
+
+    const textarea = overlay.querySelector('textarea')!;
+    const submitBtn = overlay.querySelector<HTMLButtonElement>('button')!;
+
+    let keyupCount = 0;
+    let changeCount = 0;
+    let inputCount = 0;
+
+    textarea.addEventListener('keyup', () => { keyupCount++; });
+    textarea.addEventListener('change', () => { changeCount++; });
+    textarea.addEventListener('input', () => {
+      inputCount++;
+      // Enable on second attempt (retry)
+      if (inputCount >= 2) {
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('disabled');
+      }
+    });
+
+    submitBtn.addEventListener('click', () => {
+      overlay.querySelector('edit-memory-dialog')?.remove();
+    });
+
+    await fillGeminiMemoryDialog(overlay, { waitTimeoutMs: 1000, pollIntervalMs: 30, waitForClose: true });
+
+    expect(inputCount).toBeGreaterThanOrEqual(2);
+    expect(changeCount).toBeGreaterThanOrEqual(2);
+    expect(keyupCount).toBeGreaterThanOrEqual(2);
+
+    overlay.remove();
+  });
+
+  it('throws "Dialog didn\'t close" when waitForClose is true and dialog remains open', async () => {
+    const overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    overlay.innerHTML = `
+      <edit-memory-dialog class="mat-mdc-dialog-component-host">
+        <textarea aria-label="Enter new memory"></textarea>
+        <button data-test-id="submit-button">Submit</button>
+      </edit-memory-dialog>
+    `;
+    document.body.appendChild(overlay);
+
+    await expect(
+      fillGeminiMemoryDialog(overlay, { waitTimeoutMs: 150, pollIntervalMs: 30, waitForClose: true })
+    ).rejects.toThrow("Dialog didn't close");
+
+    overlay.remove();
+  });
+
   it('fails with precise error if textarea cannot be found', async () => {
     const overlay = document.createElement('div');
     overlay.className = 'cdk-overlay-container';
