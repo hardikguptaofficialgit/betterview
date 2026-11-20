@@ -5,6 +5,7 @@ import { renderTable } from './table';
 import { renderCompare } from './compare';
 import { renderStepper } from './stepper';
 import { renderQuiz } from './quiz';
+import { renderFlow } from './flow';
 
 export interface RenderContext {
   theme: ThemeMode;
@@ -24,7 +25,7 @@ function renderDebug(spec: UISpec, _ctx: RenderContext): HTMLElement {
 }
 
 export const RENDERERS: { [K in UIType]: RenderFn<Extract<UISpec, { type: K }>> } = {
-  flow: renderDebug as RenderFn<Extract<UISpec, { type: 'flow' }>>,
+  flow: renderFlow,
   stepper: renderStepper,
   table: renderTable,
   compare: renderCompare,

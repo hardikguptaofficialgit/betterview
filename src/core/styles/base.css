@@ -188,7 +188,7 @@
 .iui-card {
   background-color: var(--iui-bg);
   border: 1px solid var(--iui-border);
-  border-radius: 12px;
+  border-radius: 18px;
   padding: 20px;
 }
 
@@ -225,13 +225,13 @@
   font-weight: 500;
 }
 
-/* Buttons */
+/* Buttons: pills */
 .iui-btn {
   background-color: var(--iui-text);
   color: var(--iui-bg);
   border: 1px solid var(--iui-text);
-  border-radius: 8px;
-  padding: 8px 14px;
+  border-radius: 999px;
+  padding: 9px 18px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -246,6 +246,7 @@
   background-color: transparent;
   border: 1px solid var(--iui-border);
   color: var(--iui-text);
+  border-radius: 999px;
 }
 
 .iui-btn.secondary:hover {
@@ -262,24 +263,24 @@
   outline-offset: 2px;
 }
 
-/* Iconbox */
+/* Iconbox: 32px radius-10 square */
 .iui-iconbox {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 10px;
   background-color: var(--c-bg, var(--iui-surface));
   color: var(--c-ink, var(--iui-text));
   flex-shrink: 0;
 }
 
-/* Skeleton */
+/* Skeleton: radius 12px */
 .iui-skel {
   background-color: var(--iui-surface);
   border: 1px solid var(--iui-border);
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
 .iui-skel-line {
@@ -323,10 +324,10 @@
   margin-bottom: 0;
 }
 
-/* Fallback */
+/* Fallback: radius 12px */
 .iui-fallback {
   border: 1px dashed var(--iui-border);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 12px;
   background-color: var(--iui-bg);
 }
@@ -343,7 +344,7 @@
   font-size: 12px;
   background-color: var(--iui-surface);
   border: 1px solid var(--iui-border);
-  border-radius: 6px;
+  border-radius: 12px;
   padding: 8px;
   overflow-x: auto;
   white-space: pre-wrap;
@@ -377,11 +378,24 @@
   font-size: 12px;
   background-color: var(--iui-surface);
   border: 1px solid var(--iui-border);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 10px;
   overflow-x: auto;
   margin-top: 8px;
   color: var(--iui-text);
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+/* Visually hidden screen reader utility */
+.iui-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

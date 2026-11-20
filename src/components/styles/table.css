@@ -1,9 +1,13 @@
 .iui-table-wrap {
-  max-height: 420px;
-  overflow: auto;
-  border-radius: 8px;
+  border-radius: 12px;
+  overflow: hidden;
   border: 1px solid var(--iui-border);
   background-color: var(--iui-bg);
+}
+
+.iui-table-scroll {
+  max-height: 420px;
+  overflow: auto;
 }
 
 .iui-table {
@@ -16,17 +20,25 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background-color: var(--iui-surface);
+  background-color: var(--c-bg, #F5F5F4);
 }
 
 .iui-table-th {
   padding: 0;
-  background-color: var(--iui-surface);
+  background-color: inherit;
   border-bottom: 1px solid var(--iui-border);
   font-size: 12.5px;
   font-weight: 600;
   color: var(--iui-muted);
   user-select: none;
+}
+
+.iui-table-th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.iui-table-th:last-child {
+  border-top-right-radius: 12px;
 }
 
 .iui-table-th.is-numeric {

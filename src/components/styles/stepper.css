@@ -1,3 +1,7 @@
+.iui-stepper-card {
+  border-radius: 18px;
+}
+
 .iui-stepper-list {
   display: flex;
   flex-direction: column;
@@ -20,8 +24,9 @@
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  background-color: var(--iui-text);
-  color: var(--iui-bg);
+  background-color: var(--c-bg);
+  border: 1px solid var(--c-line);
+  color: var(--c-ink);
   font-size: 13px;
   font-weight: 600;
   display: flex;

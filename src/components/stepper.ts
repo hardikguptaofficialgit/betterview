@@ -19,9 +19,9 @@ export function renderStepper(spec: StepperSpec, _ctx: RenderContext): HTMLEleme
 
     const stepEl = h('div', { class: 'iui-stepper-step' });
 
-    // Left track: circle + connecting line
+    // Left track: circle in sky pastel + connecting line
     const track = h('div', { class: 'iui-stepper-track' });
-    const circle = h('div', { class: 'iui-stepper-circle' }, String(i + 1));
+    const circle = h('div', { class: 'iui-stepper-circle c-sky' }, String(i + 1));
     track.appendChild(circle);
 
     if (!isLast) {

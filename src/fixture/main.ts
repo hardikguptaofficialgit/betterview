@@ -17,6 +17,25 @@ function initFixture(): void {
     handles.push(handle);
   });
 
+  // Streaming demo: sample 1 (skeleton -> flow)
+  const streamingMount = document.getElementById('streaming-mount');
+  if (streamingMount) {
+    const sample1El = document.getElementById('flow-spec-grouped');
+    const sample1Json = sample1El?.textContent?.trim() || '';
+
+    const streamHandle = mountBlock(streamingMount, { theme: currentTheme, insert: 'inside' });
+    handles.push(streamHandle);
+
+    // Initial partial input produces skeleton
+    streamHandle.update('{"type":"flow","title":"URL shortener architecture"');
+
+    // After 500ms, stream completes and transitions skeleton -> flow
+    window.setTimeout(() => {
+      streamHandle.update(sample1Json);
+      streamHandle.finalize();
+    }, 500);
+  }
+
   const toggleBtn = document.getElementById('theme-toggle');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {

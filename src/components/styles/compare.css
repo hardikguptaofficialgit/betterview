@@ -1,3 +1,7 @@
+.iui-compare-card {
+  border-radius: 18px;
+}
+
 .iui-compare-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -5,7 +9,7 @@
 }
 
 .iui-compare-panel {
-  border-radius: 12px;
+  border-radius: 18px;
   padding: 16px;
   background-color: var(--c-bg);
   border: 1px solid var(--c-line);

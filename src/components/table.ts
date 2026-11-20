@@ -41,8 +41,9 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
   });
 
   const scrollWrap = h('div', { class: 'iui-table-wrap' });
+  const innerScroll = h('div', { class: 'iui-table-scroll' });
   const table = h('table', { class: 'iui-table' });
-  const thead = h('thead', { class: 'iui-table-header' });
+  const thead = h('thead', { class: 'iui-table-header c-stone' });
   const headerTr = h('tr', { class: 'iui-table-header-tr' });
 
   type SortDir = 'none' | 'asc' | 'desc';
@@ -168,7 +169,8 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
   thead.appendChild(headerTr);
   table.appendChild(thead);
   table.appendChild(tbody);
-  scrollWrap.appendChild(table);
+  innerScroll.appendChild(table);
+  scrollWrap.appendChild(innerScroll);
   card.appendChild(scrollWrap);
 
   renderRows(originalRows);

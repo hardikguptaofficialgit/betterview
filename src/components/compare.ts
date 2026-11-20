@@ -14,14 +14,14 @@ export function renderCompare(spec: CompareSpec, _ctx: RenderContext): HTMLEleme
 
   for (const item of items) {
     const tone = item.tone || 'neutral';
-    let colorClass = 'c-gray';
+    let colorClass = 'c-stone';
     let headerIconName = 'info';
 
     if (tone === 'good') {
-      colorClass = 'c-green';
+      colorClass = 'c-mint';
       headerIconName = 'check-circle';
     } else if (tone === 'bad') {
-      colorClass = 'c-red';
+      colorClass = 'c-rose';
       headerIconName = 'x-circle';
     }
 

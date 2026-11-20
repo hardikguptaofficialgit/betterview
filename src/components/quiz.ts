@@ -98,10 +98,10 @@ export function renderQuiz(spec: QuizSpec, _ctx: RenderContext): HTMLElement {
               // Highlight correct option
               const correctBtn = qButtons[qObj.answer];
               if (correctBtn) {
-                correctBtn.classList.add('is-correct', 'c-green');
+                correctBtn.classList.add('is-correct', 'c-mint');
                 const correctChip = h(
                   'span',
-                  { class: 'iui-chip c-green iui-quiz-chip' },
+                  { class: 'iui-chip c-mint iui-quiz-chip' },
                   iconEl('check', 13),
                   h('span', {}, 'Correct'),
                 );
@@ -110,10 +110,10 @@ export function renderQuiz(spec: QuizSpec, _ctx: RenderContext): HTMLElement {
 
               // Highlight incorrect option if pick was wrong
               if (!isPickCorrect) {
-                optBtn.classList.add('is-incorrect', 'c-red');
+                optBtn.classList.add('is-incorrect', 'c-rose');
                 const incorrectChip = h(
                   'span',
-                  { class: 'iui-chip c-red iui-quiz-chip' },
+                  { class: 'iui-chip c-rose iui-quiz-chip' },
                   iconEl('x', 13),
                   h('span', {}, 'Incorrect'),
                 );
@@ -134,9 +134,9 @@ export function renderQuiz(spec: QuizSpec, _ctx: RenderContext): HTMLElement {
               // If all questions are answered, show result banner
               if (answeredCount === questions.length) {
                 const fraction = correctCount / questions.length;
-                let toneClass = 'c-red';
+                let toneClass = 'c-rose';
                 if (correctCount === questions.length) {
-                  toneClass = 'c-green';
+                  toneClass = 'c-mint';
                 } else if (fraction >= 0.5) {
                   toneClass = 'c-butter';
                 }

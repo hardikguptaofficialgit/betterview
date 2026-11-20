@@ -55,19 +55,23 @@
       color: #A3A3A3;
     }
     .theme-btn {
-      padding: 8px 14px;
-      border-radius: 8px;
+      padding: 9px 18px;
+      border-radius: 999px;
       border: 1px solid #E7E7E7;
       background: #FFFFFF;
       color: #0A0A0A;
       cursor: pointer;
       font-weight: 600;
       font-size: 13px;
+      user-select: none;
     }
     body[data-theme="dark"] .theme-btn {
       background: #141414;
       color: #FAFAFA;
       border-color: #262626;
+    }
+    .theme-btn:hover {
+      opacity: 0.85;
     }
   </style>
 </head>
@@ -241,32 +245,81 @@
       </script>
     </section>
 
-    <!-- 6. Flow (Debug renderer) -->
-    <section class="fixture-section" id="section-flow">
-      <h2>6. Flow (Debug renderer)</h2>
-      <div class="fixture-mount" data-spec-id="flow-spec"></div>
-      <script type="application/json" id="flow-spec">
+    <!-- 6. Flow Sample 1: URL shortener architecture (WITH groups) -->
+    <section class="fixture-section" id="section-flow-grouped">
+      <h2>6. Flow: URL shortener architecture (with groups)</h2>
+      <div class="fixture-mount" data-spec-id="flow-spec-grouped"></div>
+      <script type="application/json" id="flow-spec-grouped">
+      {"type":"flow","title":"URL shortener architecture","groups":[{"id":"c","label":"Client layer","color":"blue"},{"id":"a","label":"API layer","color":"purple"},{"id":"d","label":"Data layer","color":"green"}],"nodes":[{"id":"u","label":"User","sub":"Pastes a long URL","icon":"user","color":"blue","group":"c"},{"id":"api","label":"Shorten API","sub":"POST /shorten","icon":"server","color":"purple","group":"a"},{"id":"chk","label":"URL seen before?","icon":"search","color":"amber","group":"a"},{"id":"gen","label":"Generate code","sub":"Base62 of a unique ID","icon":"key","color":"purple","group":"a"},{"id":"db","label":"Database","sub":"code → long URL","icon":"database","color":"green","group":"d"},{"id":"cache","label":"Cache","sub":"Hot redirects","icon":"zap","color":"teal","group":"d"}],"edges":[{"from":"u","to":"api"},{"from":"api","to":"chk"},{"from":"chk","to":"db","label":"Yes"},{"from":"chk","to":"gen","label":"No"},{"from":"gen","to":"db"},{"from":"db","to":"cache"}]}
+      </script>
+    </section>
+
+    <!-- 7. Flow Sample 2: Redirect request flow (WITHOUT groups) -->
+    <section class="fixture-section" id="section-flow-ungrouped">
+      <h2>7. Flow: Redirect request flow (without groups)</h2>
+      <div class="fixture-mount" data-spec-id="flow-spec-ungrouped"></div>
+      <script type="application/json" id="flow-spec-ungrouped">
       {
         "type": "flow",
-        "title": "Architecture Overview",
+        "title": "Redirect request flow",
         "nodes": [
-          { "id": "client", "label": "Client Application" },
-          { "id": "lb", "label": "Load Balancer" },
-          { "id": "service", "label": "Shortener API" },
-          { "id": "db", "label": "SQL Database" }
+          { "id": "client", "label": "Web Browser", "sub": "Requests short link", "icon": "globe", "color": "blue" },
+          { "id": "dns", "label": "DNS Lookup", "sub": "Resolves hostname", "icon": "arrow-right", "color": "stone" },
+          { "id": "check_cache", "label": "In cache?", "sub": "Check memory store", "icon": "zap", "color": "amber" },
+          { "id": "cache_hit", "label": "Read from Cache", "sub": "Instant lookup", "icon": "zap", "color": "teal" },
+          { "id": "db_query", "label": "Query Database", "sub": "Disk lookup", "icon": "database", "color": "purple" },
+          { "id": "redirect", "label": "HTTP 301 Redirect", "sub": "Sends Location header", "icon": "arrow-right", "color": "orange" },
+          { "id": "done", "label": "Destination Loaded", "sub": "User reaches site", "icon": "check-circle", "color": "green" }
         ],
         "edges": [
-          { "from": "client", "to": "lb" },
-          { "from": "lb", "to": "service" },
-          { "from": "service", "to": "db" }
+          { "from": "client", "to": "dns" },
+          { "from": "dns", "to": "check_cache" },
+          { "from": "check_cache", "to": "cache_hit", "label": "Yes" },
+          { "from": "check_cache", "to": "db_query", "label": "No" },
+          { "from": "cache_hit", "to": "redirect" },
+          { "from": "db_query", "to": "redirect" },
+          { "from": "redirect", "to": "done" }
         ]
       }
       </script>
     </section>
 
-    <!-- 7. Chart (Debug renderer) -->
+    <!-- 8. Flow Sample 3: Wide flow (horizontal scrolling) -->
+    <section class="fixture-section" id="section-flow-wide">
+      <h2>8. Flow: Wide flow (horizontal scrolling)</h2>
+      <div class="fixture-mount" data-spec-id="flow-spec-wide"></div>
+      <script type="application/json" id="flow-spec-wide">
+      {
+        "type": "flow",
+        "title": "Event fan-out pipeline",
+        "nodes": [
+          { "id": "ingest", "label": "Event Ingest", "sub": "Incoming webhook", "icon": "inbox", "color": "blue" },
+          { "id": "svc1", "label": "Email Worker", "sub": "Sends notification", "icon": "mail", "color": "sky" },
+          { "id": "svc2", "label": "Analytics Worker", "sub": "Aggregates metrics", "icon": "chart", "color": "mint" },
+          { "id": "svc3", "label": "Audit Log", "sub": "Stores audit trail", "icon": "file", "color": "peach" },
+          { "id": "svc4", "label": "Webhook Dispatch", "sub": "Calls 3rd party APIs", "icon": "globe", "color": "lavender" },
+          { "id": "svc5", "label": "Search Indexer", "sub": "Updates Elastic index", "icon": "search", "color": "rose" }
+        ],
+        "edges": [
+          { "from": "ingest", "to": "svc1" },
+          { "from": "ingest", "to": "svc2" },
+          { "from": "ingest", "to": "svc3" },
+          { "from": "ingest", "to": "svc4" },
+          { "from": "ingest", "to": "svc5" }
+        ]
+      }
+      </script>
+    </section>
+
+    <!-- 9. Streaming Demo (Skeleton to Flow) -->
+    <section class="fixture-section" id="section-streaming">
+      <h2>9. Streaming Demo: Skeleton to Flow</h2>
+      <div id="streaming-mount"></div>
+    </section>
+
+    <!-- 10. Chart (Debug renderer) -->
     <section class="fixture-section" id="section-chart">
-      <h2>7. Chart (Debug renderer)</h2>
+      <h2>10. Chart (Debug renderer)</h2>
       <div class="fixture-mount" data-spec-id="chart-spec"></div>
       <script type="application/json" id="chart-spec">
       {
@@ -281,9 +334,9 @@
       </script>
     </section>
 
-    <!-- 8. Mermaid (Debug renderer) -->
+    <!-- 11. Mermaid (Debug renderer) -->
     <section class="fixture-section" id="section-mermaid">
-      <h2>8. Mermaid (Debug renderer)</h2>
+      <h2>11. Mermaid (Debug renderer)</h2>
       <div class="fixture-mount" data-spec-id="mermaid-spec"></div>
       <script type="application/json" id="mermaid-spec">
       {
