@@ -399,12 +399,15 @@ function validateCallout(raw: Record<string, unknown>, warnings: string[]): { ok
     toneStr = 'info';
   }
 
+  const icon = cleanString(raw.icon);
+
   return {
     ok: true,
     spec: {
       type: 'callout',
       tone: toneStr as CalloutSpec['tone'],
       text,
+      ...(icon ? { icon } : {}),
     },
   };
 }
@@ -437,12 +440,14 @@ function validateStats(raw: Record<string, unknown>, warnings: string[]): { ok: 
 
     const delta = cleanString(rec.delta ?? rec.change);
     const hint = cleanString(rec.hint ?? rec.sub ?? rec.detail);
+    const icon = cleanString(rec.icon);
 
     items.push({
       label,
       value,
       ...(delta ? { delta } : {}),
       ...(hint ? { hint } : {}),
+      ...(icon ? { icon } : {}),
     });
   }
 
@@ -505,11 +510,13 @@ function validateTimeline(raw: Record<string, unknown>, warnings: string[]): { o
     }
     const text = cleanString(rec.text ?? rec.detail ?? rec.description);
     const time = cleanString(rec.time ?? rec.date ?? rec.timestamp);
+    const icon = cleanString(rec.icon);
 
     events.push({
       title,
       text,
       ...(time ? { time } : {}),
+      ...(icon ? { icon } : {}),
     });
   }
 

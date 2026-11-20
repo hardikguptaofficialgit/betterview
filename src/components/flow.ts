@@ -2,7 +2,7 @@ import { FlowSpec, FlowNode, FlowEdge, FlowGroup } from '../core/types';
 import { RenderContext } from './index';
 import { clear, h, svg } from '../core/dom';
 import { iconEl } from '../core/icons';
-import { layoutFlow } from './flowLayout';
+import { layoutFlow, computeEdgeRoute } from './flowLayout';
 
 function isDecisionNode(node: FlowNode, outgoingEdges: FlowEdge[]): boolean {
   if (node.label.trim().endsWith('?')) {
@@ -287,7 +287,47 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
       return;
     }
 
-    const scrollW = Math.max(flowInner.scrollWidth, flowInner.clientWidth);
+    // Measure card rects relative to flowInner
+    const nodeBoxes = new Map<
+      string,
+      { x: number; y: number; width: number; height: number }
+    >();
+    let allBoxesRight = 0;
+    for (const n of nodes) {
+      const nodeEl = flowInner.querySelector(
+        `[data-node-id="${n.id}"]`
+      ) as HTMLElement | null;
+      if (nodeEl) {
+        const rect = nodeEl.getBoundingClientRect();
+        const box = {
+          x: rect.left - innerRect.left,
+          y: rect.top - innerRect.top,
+          width: rect.width,
+          height: rect.height,
+        };
+        nodeBoxes.set(n.id, box);
+        allBoxesRight = Math.max(allBoxesRight, box.x + box.width);
+      }
+    }
+
+    // Count outer edges for gutter sizing
+    let outerEdgeCount = 0;
+    for (const e of edges) {
+      const isBackEdge =
+        layout.backEdges.has(`${e.from}->${e.to}`) ||
+        (layout.rankOf[e.to] ?? 0) <= (layout.rankOf[e.from] ?? 0);
+      const isRankSkip =
+        (layout.rankOf[e.to] ?? 0) > (layout.rankOf[e.from] ?? 0) + 1;
+      if (isBackEdge || isRankSkip) {
+        outerEdgeCount++;
+      }
+    }
+
+    const scrollW = Math.max(
+      flowInner.scrollWidth,
+      flowInner.clientWidth,
+      allBoxesRight + (outerEdgeCount > 0 ? 50 + outerEdgeCount * 18 : 20),
+    );
     const scrollH = Math.max(flowInner.scrollHeight, flowInner.clientHeight);
     svgOverlay.setAttribute('width', String(scrollW));
     svgOverlay.setAttribute('height', String(scrollH));
@@ -296,33 +336,15 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
     labelsLayer.style.width = `${scrollW}px`;
     labelsLayer.style.height = `${scrollH}px`;
 
-    // Measure card rects relative to flowInner
-    const nodeBoxes = new Map<
-      string,
-      { x: number; y: number; width: number; height: number }
-    >();
-    for (const n of nodes) {
-      const nodeEl = flowInner.querySelector(
-        `[data-node-id="${n.id}"]`
-      ) as HTMLElement | null;
-      if (nodeEl) {
-        const rect = nodeEl.getBoundingClientRect();
-        nodeBoxes.set(n.id, {
-          x: rect.left - innerRect.left,
-          y: rect.top - innerRect.top,
-          width: rect.width,
-          height: rect.height,
-        });
-      }
-    }
-
     // Group forward outgoing edges for fan-out calculation
     const forwardOutByFrom = new Map<string, FlowEdge[]>();
     for (const e of edges) {
       const isBackEdge =
         layout.backEdges.has(`${e.from}->${e.to}`) ||
         (layout.rankOf[e.to] ?? 0) <= (layout.rankOf[e.from] ?? 0);
-      if (!isBackEdge) {
+      const isRankSkip =
+        (layout.rankOf[e.to] ?? 0) > (layout.rankOf[e.from] ?? 0) + 1;
+      if (!isBackEdge && !isRankSkip) {
         if (!forwardOutByFrom.has(e.from)) {
           forwardOutByFrom.set(e.from, []);
         }
@@ -336,6 +358,7 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // Draw edges
+    let currentOuterIdx = 0;
     for (let edgeIdx = 0; edgeIdx < edges.length; edgeIdx++) {
       const e = edges[edgeIdx];
       const sourceBox = nodeBoxes.get(e.from);
@@ -345,52 +368,32 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
       const isBackEdge =
         layout.backEdges.has(`${e.from}->${e.to}`) ||
         (layout.rankOf[e.to] ?? 0) <= (layout.rankOf[e.from] ?? 0);
+      const isRankSkip =
+        (layout.rankOf[e.to] ?? 0) > (layout.rankOf[e.from] ?? 0) + 1;
 
-      let sx: number;
-      let sy: number;
-      let tx: number;
-      let ty: number;
-      let cp1x: number;
-      let cp1y: number;
-      let cp2x: number;
-      let cp2y: number;
-
-      if (!isBackEdge) {
+      let fanOffset = 0;
+      if (!isBackEdge && !isRankSkip) {
         const siblings = forwardOutByFrom.get(e.from) || [e];
         const k = siblings.length;
         const idx = siblings.indexOf(e);
-        let fanOffset = 0;
         if (k > 1) {
           fanOffset = -12 + (idx / (k - 1)) * 24;
         }
-
-        sx = sourceBox.x + sourceBox.width / 2 + fanOffset;
-        sy = sourceBox.y + sourceBox.height;
-        tx = targetBox.x + targetBox.width / 2;
-        ty = targetBox.y;
-
-        const dy = Math.max(Math.abs(ty - sy) * 0.5, 20);
-        cp1x = sx;
-        cp1y = sy + dy;
-        cp2x = tx;
-        cp2y = ty - dy;
-      } else {
-        // Back edge: curve out of the right side
-        sx = sourceBox.x + sourceBox.width;
-        sy = sourceBox.y + sourceBox.height / 2;
-        tx = targetBox.x + targetBox.width / 2;
-        ty = targetBox.y;
-
-        const maxRight = Math.max(sx, targetBox.x + targetBox.width) + 40;
-        cp1x = maxRight;
-        cp1y = sy;
-        cp2x = tx;
-        cp2y = ty - 25;
       }
 
-      const pathD = `M ${sx} ${sy} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${tx} ${ty}`;
+      const outerIdx = (isBackEdge || isRankSkip) ? currentOuterIdx++ : 0;
+      const route = computeEdgeRoute(
+        sourceBox,
+        targetBox,
+        isBackEdge,
+        isRankSkip,
+        allBoxesRight,
+        outerIdx,
+        fanOffset,
+      );
+
       const pathEl = svg('path', {
-        d: pathD,
+        d: route.pathD,
         stroke: 'var(--iui-subtle)',
         'stroke-width': '1',
         fill: 'none',
@@ -414,11 +417,8 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
 
       svgOverlay.appendChild(pathEl);
 
-      // Edge label at curve midpoint (t = 0.5 on cubic Bézier)
+      // Edge label at route.labelPoint
       if (e.label && e.label.trim()) {
-        const mx = 0.125 * sx + 0.375 * cp1x + 0.375 * cp2x + 0.125 * tx;
-        const my = 0.125 * sy + 0.375 * cp1y + 0.375 * cp2y + 0.125 * ty;
-
         const labelText = e.label.trim();
         let chipClass = 'c-stone';
         if (/^(yes|true)$/i.test(labelText)) {
@@ -432,8 +432,8 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
           { class: `flow-edge-label iui-chip ${chipClass}` },
           labelText
         );
-        pill.style.left = `${mx}px`;
-        pill.style.top = `${my}px`;
+        pill.style.left = `${route.labelPoint.x}px`;
+        pill.style.top = `${route.labelPoint.y}px`;
 
         if (!prefersReduced && typeof requestAnimationFrame !== 'undefined') {
           pill.style.opacity = '0';

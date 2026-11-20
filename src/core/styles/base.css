@@ -220,7 +220,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 24px;
+  min-height: 28px;
 }
 
 .iui-header-left {
@@ -232,21 +232,27 @@
 }
 
 .iui-type-iconbox {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
   background-color: var(--c-bg, var(--iui-surface));
-  border: 1px solid var(--c-line, var(--iui-border));
   color: var(--c-ink, var(--iui-text));
+  border: none;
+  box-shadow: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
+.iui-root[data-theme="dark"] .iui-type-iconbox {
+  background-color: color-mix(in srgb, var(--c-ink) 14%, transparent);
+}
+
 .iui-title-group {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   min-width: 0;
 }
 
@@ -310,13 +316,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   color: var(--iui-muted);
   cursor: pointer;
   box-sizing: border-box;
+  background: transparent;
   transition: background-color 160ms cubic-bezier(.2,.8,.2,1), color 160ms cubic-bezier(.2,.8,.2,1);
+}
+
+.iui-tool-btn:hover {
+  background-color: var(--iui-surface-hover, rgba(125, 125, 125, 0.12));
+  color: var(--iui-text);
 }
 
 .iui-tool-btn:hover {

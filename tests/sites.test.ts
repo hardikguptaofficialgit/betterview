@@ -15,7 +15,7 @@ import { getCompactInstruction, SYSTEM_INSTRUCTION } from '../src/shared/systemI
 describe('System Instruction', () => {
   it('getCompactInstruction starts with marker and is under 2900 characters', () => {
     const compact = getCompactInstruction();
-    expect(compact.startsWith('[BetterView] ')).toBe(true);
+    expect(compact.startsWith('[BetterView v2] ')).toBe(true);
     expect(compact.length).toBeLessThanOrEqual(2900);
     expect(compact).toContain(SYSTEM_INSTRUCTION);
   });
@@ -199,6 +199,13 @@ describe('Auto-setup append & marker logic', () => {
     expect(result).toBe(existing);
   });
 
+  it('updates instruction if new instruction has a higher version', () => {
+    const existing = 'Existing text\n\n[BetterView] instructions already here';
+    const instruction = '[BetterView v2] new instructions';
+    const result = appendInstruction(existing, instruction);
+    expect(result).toBe('Existing text\n\n[BetterView v2] new instructions');
+  });
+
   it('detects BetterView marker case-insensitively', () => {
     expect(hasBetterViewMarker('[BetterView] instructions')).toBe(true);
     expect(hasBetterViewMarker('[betterview] instructions')).toBe(true);
@@ -241,7 +248,7 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
 
     await fillGeminiMemoryDialog(overlay, { waitTimeoutMs: 2000, pollIntervalMs: 50 });
 
-    expect(textarea.value.startsWith('[BetterView] ')).toBe(true);
+    expect(textarea.value.startsWith('[BetterView v2] ')).toBe(true);
     expect(textarea.value).toBe(getCompactInstruction());
     expect(submitClicked).toBe(true);
 

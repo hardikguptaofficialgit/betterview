@@ -4,7 +4,7 @@ import { tryParse, sniffType } from './parse';
 import { parsePartialJson } from './partialJson';
 import { validateSpec } from './validate';
 import { clear, h } from './dom';
-import { iconEl } from './icons';
+import { iconEl, typeIconEl } from './icons';
 import { TYPE_META, createTypeSkeleton, diffChildren } from './incremental';
 import { RENDERERS, RenderContext } from '../components/index';
 import baseCss from './styles/base.css?inline';
@@ -138,19 +138,28 @@ export function mountBlock(
     sourcePre: HTMLElement;
   } {
     const meta = (lastRenderedSpec && TYPE_META[lastRenderedSpec.type]) || {
-      icon: 'sparkles',
+      icon: 'sparkle',
       color: 'stone',
       label: 'UI',
     };
 
+    let iconColor = meta.color;
+    if (lastRenderedSpec && lastRenderedSpec.type === 'callout') {
+      const tone = (lastRenderedSpec as any).tone;
+      if (tone === 'success') iconColor = 'mint';
+      else if (tone === 'warning') iconColor = 'amber';
+      else if (tone === 'tip') iconColor = 'purple';
+      else iconColor = 'blue';
+    }
+
     const header = h('div', { class: 'iui-card-header' });
 
-    // Left: 22px pastel rounded square with Lucide icon + title group
+    // Left: 28px rounded-square with Phosphor duotone icon + title group
     const headerLeft = h('div', { class: 'iui-header-left' });
     const iconBox = h(
       'div',
-      { class: `iui-type-iconbox c-${meta.color}` },
-      iconEl(meta.icon, 13),
+      { class: `iui-type-iconbox c-${iconColor}` },
+      lastRenderedSpec ? typeIconEl(lastRenderedSpec.type, 16) : iconEl(meta.icon, 16),
     );
     headerLeft.appendChild(iconBox);
 
@@ -182,11 +191,11 @@ export function mountBlock(
           try {
             await navigator.clipboard.writeText(lastRawText);
             clear(copyBtn);
-            copyBtn.appendChild(iconEl('check', 13));
+            copyBtn.appendChild(iconEl('check', 15));
             copyBtn.setAttribute('title', 'Copied!');
             setTimeout(() => {
               clear(copyBtn);
-              copyBtn.appendChild(iconEl('copy', 13));
+              copyBtn.appendChild(iconEl('copy', 15));
               copyBtn.setAttribute('title', 'Copy data');
             }, 1500);
           } catch {
@@ -194,7 +203,7 @@ export function mountBlock(
           }
         },
       },
-      iconEl('copy', 13),
+      iconEl('copy', 15),
     );
 
     // 2. View source button
@@ -217,7 +226,7 @@ export function mountBlock(
           }
         },
       },
-      iconEl('code', 13),
+      iconEl('code', 15),
     );
 
     // 3. Expand modal button
@@ -233,7 +242,7 @@ export function mountBlock(
           openExpandModal(expandBtn, getSpec);
         },
       },
-      iconEl('maximize', 13),
+      iconEl('corners-out', 15),
     );
 
     toolbar.appendChild(copyBtn);

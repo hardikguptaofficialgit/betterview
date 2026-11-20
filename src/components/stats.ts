@@ -1,6 +1,7 @@
 import { StatsSpec, StatItem } from '../core/types';
 import { RenderContext } from './index';
 import { h } from '../core/dom';
+import { iconEl } from '../core/icons';
 
 function parseNumberParts(raw: string | number): { prefix: string; value: number; suffix: string; decimals: number } | null {
   if (typeof raw === 'number') {
@@ -35,9 +36,15 @@ export function renderStats(spec: StatsSpec, ctx: RenderContext): HTMLElement {
     const item = items[i];
     const itemCard = h('div', { class: 'iui-stat-item' });
 
-    // Label
+    // Label row with optional icon
+    const labelRow = h('div', { class: 'iui-stat-label-row' });
     const label = h('div', { class: 'iui-stat-label' }, item.label);
-    itemCard.appendChild(label);
+    labelRow.appendChild(label);
+    if (item.icon) {
+      const iconWrap = h('span', { class: 'iui-stat-item-icon' }, iconEl(item.icon, 15));
+      labelRow.appendChild(iconWrap);
+    }
+    itemCard.appendChild(labelRow);
 
     // Value container with optional delta
     const valRow = h('div', { class: 'iui-stat-val-row' });

@@ -9,18 +9,18 @@ export interface TypeMeta {
 }
 
 export const TYPE_META: Record<UIType, TypeMeta> = {
-  flow: { icon: 'workflow', color: 'sky', label: 'Flow' },
-  stepper: { icon: 'list', color: 'sky', label: 'Stepper' },
+  flow: { icon: 'tree-structure', color: 'blue', label: 'Flow' },
+  stepper: { icon: 'steps', color: 'blue', label: 'Steps' },
   table: { icon: 'table', color: 'stone', label: 'Table' },
-  compare: { icon: 'scale', color: 'mint', label: 'Compare' },
-  quiz: { icon: 'help-circle', color: 'lavender', label: 'Quiz' },
-  chart: { icon: 'bar-chart', color: 'peach', label: 'Chart' },
-  mermaid: { icon: 'network', color: 'rose', label: 'Diagram' },
-  callout: { icon: 'info', color: 'sky', label: 'Callout' },
-  stats: { icon: 'trending-up', color: 'mint', label: 'Stats' },
-  tabs: { icon: 'layers', color: 'stone', label: 'Tabs' },
-  timeline: { icon: 'clock', color: 'butter', label: 'Timeline' },
-  followups: { icon: 'sparkles', color: 'lavender', label: 'Suggestions' },
+  compare: { icon: 'scales', color: 'amber', label: 'Compare' },
+  quiz: { icon: 'question', color: 'green', label: 'Quiz' },
+  chart: { icon: 'chart-bar', color: 'purple', label: 'Chart' },
+  mermaid: { icon: 'graph', color: 'purple', label: 'Diagram' },
+  callout: { icon: 'info', color: 'blue', label: 'Callout' },
+  stats: { icon: 'trend-up', color: 'teal', label: 'Stats' },
+  tabs: { icon: 'tabs', color: 'stone', label: 'Tabs' },
+  timeline: { icon: 'hourglass', color: 'rose', label: 'Timeline' },
+  followups: { icon: 'sparkle', color: 'mint', label: 'Suggestions' },
 };
 
 export interface DiffResult<T> {

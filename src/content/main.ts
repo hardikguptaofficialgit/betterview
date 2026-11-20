@@ -4,6 +4,8 @@ import { detectHostTheme, watchHostTheme, ThemeMode } from '../core/theme';
 import { startScanner } from './scanner';
 import { startAutoInject } from './inject';
 import { SYSTEM_INSTRUCTION_SHORT } from '../shared/systemInstruction';
+import { showWelcomeTourModal, showWhatsNewModal } from '../welcome/tourModal';
+import { shouldShowTour, shouldShowUpdateModal } from '../welcome/tourState';
 
 async function init(): Promise<void> {
   const matched = pickAdapter(window.location);
@@ -64,6 +66,36 @@ async function init(): Promise<void> {
 
   applyScanner();
   applyInject();
+
+  // Welcome tour and Update modal check
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    chrome.storage.local.get(
+      ['pendingTour', 'tourSeen', 'pendingUpdateModal', 'updateModalSeen'],
+      (items) => {
+        if (shouldShowTour(items)) {
+          showWelcomeTourModal({ site: adapter.id, theme: currentTheme });
+        } else if (shouldShowUpdateModal(items)) {
+          showWhatsNewModal({ theme: currentTheme });
+        }
+      },
+    );
+  }
+
+  // Runtime message listener (from popup or background)
+  if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      if (msg?.type === 'OPEN_TOUR') {
+        showWelcomeTourModal({ site: adapter.id, theme: currentTheme });
+        sendResponse?.({ ok: true });
+        return true;
+      }
+      if (msg?.type === 'OPEN_WHATS_NEW') {
+        showWhatsNewModal({ theme: currentTheme });
+        sendResponse?.({ ok: true });
+        return true;
+      }
+    });
+  }
 
   watchHostTheme((newTheme) => {
     if (settings.theme === 'auto') {

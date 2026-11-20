@@ -39,7 +39,7 @@ export function renderStepper(spec: StepperSpec, _ctx: RenderContext): HTMLEleme
       const chevronSpan = h(
         'span',
         { class: 'iui-stepper-chevron' },
-        iconEl(isExpanded ? 'chevron-up' : 'chevron-down', 16),
+        iconEl(isExpanded ? 'caret-up' : 'caret-down', 16),
       );
       const titleSpan = h('span', { class: 'iui-stepper-title' }, step.title);
 
@@ -59,7 +59,7 @@ export function renderStepper(spec: StepperSpec, _ctx: RenderContext): HTMLEleme
             isExpanded = !isExpanded;
             btn.setAttribute('aria-expanded', String(isExpanded));
             clear(chevronSpan);
-            chevronSpan.appendChild(iconEl(isExpanded ? 'chevron-up' : 'chevron-down', 16));
+            chevronSpan.appendChild(iconEl(isExpanded ? 'caret-up' : 'caret-down', 16));
             if (isExpanded) {
               detailEl.classList.remove('is-collapsed');
             } else {

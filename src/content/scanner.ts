@@ -30,6 +30,14 @@ export function startScanner(
   let isStopped = false;
 
   function restoreFallbackWrapper(block: HTMLElement, item: TrackedItem): void {
+    item.wrapper.style.visibility = '';
+    item.wrapper.style.height = '';
+    item.wrapper.style.minHeight = '';
+    item.wrapper.style.maxHeight = '';
+    item.wrapper.style.overflow = '';
+    item.wrapper.style.margin = '';
+    item.wrapper.style.padding = '';
+    item.wrapper.style.border = '';
     item.wrapper.style.display = '';
     item.wrapper.removeAttribute('data-iui-hidden');
     item.wrapper.removeAttribute('data-betterview-handled');
@@ -130,6 +138,14 @@ export function startScanner(
           },
         });
 
+        wrapper.style.visibility = 'hidden';
+        wrapper.style.height = '0';
+        wrapper.style.minHeight = '0';
+        wrapper.style.maxHeight = '0';
+        wrapper.style.overflow = 'hidden';
+        wrapper.style.margin = '0';
+        wrapper.style.padding = '0';
+        wrapper.style.border = '0';
         wrapper.style.display = 'none';
         wrapper.setAttribute('data-iui-hidden', '1');
         wrapper.setAttribute('data-betterview-handled', '1');
@@ -177,6 +193,7 @@ export function startScanner(
   const observer =
     typeof MutationObserver !== 'undefined'
       ? new MutationObserver(() => {
+          scan();
           scheduleScan();
         })
       : null;

@@ -1,16 +1,101 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { initWelcomePage } from '../src/welcome/welcome';
-import { FEATURE_CARDS, DEMO_ITEMS } from '../src/welcome/demoData';
+import {
+  getNextStep,
+  getPrevStep,
+  clampStep,
+  shouldShowTour,
+  shouldShowUpdateModal,
+  canOpenTourOnTab,
+  TOTAL_TOUR_STEPS,
+} from '../src/welcome/tourState';
+import { showTourModal, showWhatsNewModal, closeAnyActiveModal } from '../src/welcome/tourModal';
+import * as fs from 'fs';
+import * as path from 'path';
 
-describe('Welcome page UI', () => {
+describe('Tour State Machine', () => {
+  it('shouldShowTour returns true only when pendingTour is true and tourSeen is false/absent', () => {
+    expect(shouldShowTour({ pendingTour: true, tourSeen: false })).toBe(true);
+    expect(shouldShowTour({ pendingTour: true })).toBe(true);
+    expect(shouldShowTour({ pendingTour: true, tourSeen: true })).toBe(false);
+    expect(shouldShowTour({ pendingTour: false, tourSeen: false })).toBe(false);
+    expect(shouldShowTour({})).toBe(false);
+  });
+
+  it('shouldShowUpdateModal returns true only when pendingUpdateModal is true and updateModalSeen is false/absent', () => {
+    expect(shouldShowUpdateModal({ pendingUpdateModal: true, updateModalSeen: false })).toBe(true);
+    expect(shouldShowUpdateModal({ pendingUpdateModal: true })).toBe(true);
+    expect(shouldShowUpdateModal({ pendingUpdateModal: true, updateModalSeen: true })).toBe(false);
+    expect(shouldShowUpdateModal({ pendingUpdateModal: false, updateModalSeen: false })).toBe(false);
+    expect(shouldShowUpdateModal({})).toBe(false);
+  });
+
+  it('canOpenTourOnTab permits Gemini and Grok tabs and rejects other URLs', () => {
+    expect(canOpenTourOnTab('https://gemini.google.com/app')).toBe(true);
+    expect(canOpenTourOnTab('https://sub.gemini.google.com/test')).toBe(true);
+    expect(canOpenTourOnTab('https://grok.com/chat')).toBe(true);
+    expect(canOpenTourOnTab('https://grok.com')).toBe(true);
+    expect(canOpenTourOnTab('https://google.com')).toBe(false);
+    expect(canOpenTourOnTab('https://example.com')).toBe(false);
+    expect(canOpenTourOnTab('')).toBe(false);
+    expect(canOpenTourOnTab(undefined)).toBe(false);
+  });
+});
+
+describe('Carousel Navigation', () => {
+  it('has exactly 4 total tour steps', () => {
+    expect(TOTAL_TOUR_STEPS).toBe(4);
+  });
+
+  it('getNextStep increments step and clamps at total - 1', () => {
+    expect(getNextStep(0)).toBe(1);
+    expect(getNextStep(1)).toBe(2);
+    expect(getNextStep(2)).toBe(3);
+    expect(getNextStep(3)).toBe(3);
+    expect(getNextStep(10)).toBe(3);
+  });
+
+  it('getPrevStep decrements step and clamps at 0', () => {
+    expect(getPrevStep(3)).toBe(2);
+    expect(getPrevStep(2)).toBe(1);
+    expect(getPrevStep(1)).toBe(0);
+    expect(getPrevStep(0)).toBe(0);
+    expect(getPrevStep(-5)).toBe(0);
+  });
+
+  it('clampStep bounds index between 0 and total - 1', () => {
+    expect(clampStep(-1)).toBe(0);
+    expect(clampStep(0)).toBe(0);
+    expect(clampStep(2)).toBe(2);
+    expect(clampStep(3)).toBe(3);
+    expect(clampStep(4)).toBe(3);
+  });
+});
+
+describe('Store Readiness & Package Script', () => {
+  it('package.json defines a package script that runs scripts/package.mjs', () => {
+    const pkgPath = path.resolve(__dirname, '../package.json');
+    const pkgJson = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+
+    expect(pkgJson.scripts).toBeDefined();
+    expect(pkgJson.scripts.package).toBe('node scripts/package.mjs');
+  });
+
+  it('scripts/package.mjs creates zip matching release/betterview-ai-v<version>.zip', () => {
+    const scriptPath = path.resolve(__dirname, '../scripts/package.mjs');
+    const scriptContent = fs.readFileSync(scriptPath, 'utf-8');
+
+    expect(scriptContent).toContain('betterview-ai-v${version}.zip');
+    expect(scriptContent).toContain('release');
+  });
+});
+
+describe('Welcome Tour Modal Component', () => {
   let localStore: Record<string, unknown> = {};
-  let syncStore: Record<string, unknown> = {};
-  let cleanupWelcome: (() => void) | null = null;
 
   beforeEach(() => {
     localStore = {};
-    syncStore = { theme: 'auto' };
+    closeAnyActiveModal();
 
     (globalThis as unknown as { chrome: unknown }).chrome = {
       storage: {
@@ -27,15 +112,6 @@ describe('Welcome page UI', () => {
             cb?.();
           }),
         },
-        sync: {
-          get: vi.fn((defaults: Record<string, unknown>, cb: (res: Record<string, unknown>) => void) => {
-            cb({ ...defaults, ...syncStore });
-          }),
-        },
-        onChanged: {
-          addListener: vi.fn(),
-          removeListener: vi.fn(),
-        },
       },
       tabs: {
         create: vi.fn(),
@@ -44,6 +120,9 @@ describe('Welcome page UI', () => {
         sendMessage: vi.fn(),
         getManifest: vi.fn(() => ({ version: '0.1.0' })),
         getURL: vi.fn((p: string) => p),
+      },
+      action: {
+        setBadgeText: vi.fn(),
       },
     };
 
@@ -54,102 +133,99 @@ describe('Welcome page UI', () => {
       configurable: true,
       writable: true,
     });
-
-    document.body.innerHTML = '<div id="welcome-app"></div>';
   });
 
   afterEach(() => {
-    cleanupWelcome?.();
-    cleanupWelcome = null;
+    closeAnyActiveModal();
   });
 
-  it('renders Hero section with logo, title, version pill, tagline and CTA', () => {
-    cleanupWelcome = initWelcomePage();
+  it('mounts centered modal in Shadow DOM with 4 carousel dots and step navigation', () => {
+    const close = showTourModal();
 
-    const title = document.querySelector('.hero-title');
-    expect(title?.textContent).toBe('BetterView');
+    const host = document.getElementById('betterview-tour-host');
+    expect(host).not.toBeNull();
+    const shadow = host?.shadowRoot;
+    expect(shadow).not.toBeNull();
 
-    const versionPill = document.querySelector('.version-pill');
-    expect(versionPill?.textContent).toBe('v0.1.0');
+    const card = shadow?.querySelector('.modal-card');
+    expect(card).not.toBeNull();
 
-    const tagline = document.querySelector('.hero-tagline');
-    expect(tagline?.textContent).toBe('Intelligent UI for Gemini and Grok');
+    const dots = shadow?.querySelectorAll('.carousel-dot');
+    expect(dots?.length).toBe(4);
+    expect(dots?.[0].classList.contains('is-active')).toBe(true);
 
-    const cta = document.getElementById('hero-setup-cta');
-    expect(cta?.textContent).toBe('Set up in 2 clicks');
+    const nextBtn = shadow?.querySelector<HTMLButtonElement>('.next-btn');
+    const backBtn = shadow?.querySelector<HTMLButtonElement>('.back-btn');
+    expect(nextBtn?.textContent).toBe('Next');
+    expect(backBtn?.hasAttribute('disabled')).toBe(true);
+
+    // Advance to slide 2
+    nextBtn?.click();
+    expect(dots?.[1].classList.contains('is-active')).toBe(true);
+    expect(backBtn?.hasAttribute('disabled')).toBe(false);
+
+    // Advance to slide 3
+    nextBtn?.click();
+    expect(dots?.[2].classList.contains('is-active')).toBe(true);
+
+    // Advance to slide 4 (last step)
+    nextBtn?.click();
+    expect(dots?.[3].classList.contains('is-active')).toBe(true);
+    expect(nextBtn?.textContent).toBe('Got it');
+
+    // Clicking Back
+    backBtn?.click();
+    expect(dots?.[2].classList.contains('is-active')).toBe(true);
+
+    close();
   });
 
-  it('renders Live demo card with chat bubble and component switcher dots', () => {
-    cleanupWelcome = initWelcomePage();
+  it('closes on Skip and records tourSeen: true in storage', () => {
+    let completed = false;
+    showTourModal({ onComplete: () => { completed = true; } });
 
-    const chatBubble = document.querySelector('.demo-chat-bubble');
-    expect(chatBubble).not.toBeNull();
+    const host = document.getElementById('betterview-tour-host');
+    const shadow = host?.shadowRoot;
+    const skipBtn = shadow?.querySelector<HTMLButtonElement>('.skip-btn');
+    expect(skipBtn).not.toBeNull();
 
-    const dots = document.querySelectorAll('.demo-dot');
-    expect(dots.length).toBe(DEMO_ITEMS.length);
-    expect(dots[0].getAttribute('aria-selected')).toBe('true');
+    skipBtn?.click();
+
+    expect(localStore.pendingTour).toBe(false);
+    expect(localStore.tourSeen).toBe(true);
+    expect(completed).toBe(true);
+    expect(document.getElementById('betterview-tour-host')).toBeNull();
   });
 
-  it('renders exactly 7 feature cards with distinct pastels', () => {
-    cleanupWelcome = initWelcomePage();
+  it('closes on Escape key press', () => {
+    showTourModal();
 
-    const cards = document.querySelectorAll('.feature-card');
-    expect(cards.length).toBe(7);
-    expect(FEATURE_CARDS.length).toBe(7);
+    const host = document.getElementById('betterview-tour-host');
+    expect(host).not.toBeNull();
 
-    const pastels = FEATURE_CARDS.map((c) => c.pastel);
-    const uniquePastels = new Set(pastels);
-    expect(uniquePastels.size).toBe(7);
+    const escEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    document.dispatchEvent(escEvent);
+
+    expect(localStore.tourSeen).toBe(true);
+    expect(document.getElementById('betterview-tour-host')).toBeNull();
   });
 
-  it('renders guided setup steps and disclosure', () => {
-    cleanupWelcome = initWelcomePage();
+  it('showWhatsNewModal renders modal and sets updateModalSeen: true on close', () => {
+    let completed = false;
+    showWhatsNewModal({ onComplete: () => { completed = true; } });
 
-    const geminiBtn = document.getElementById('welcome-setup-gemini-btn');
-    const grokBtn = document.getElementById('welcome-setup-grok-btn');
-    expect(geminiBtn).not.toBeNull();
-    expect(grokBtn).not.toBeNull();
+    const host = document.getElementById('betterview-whatsnew-host');
+    expect(host).not.toBeNull();
+    const shadow = host?.shadowRoot;
 
-    geminiBtn?.click();
-    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
-      type: 'START_AUTO_SETUP',
-      site: 'gemini',
-    });
+    const closeBtn = shadow?.querySelector<HTMLButtonElement>('.modal-close-btn');
+    expect(closeBtn).not.toBeNull();
 
-    const manualToggle = document.getElementById('welcome-manual-toggle');
-    const manualContent = document.getElementById('welcome-manual-content');
-    expect(manualToggle?.getAttribute('aria-expanded')).toBe('false');
+    closeBtn?.click();
 
-    manualToggle?.click();
-    expect(manualToggle?.getAttribute('aria-expanded')).toBe('true');
-    expect(manualContent?.classList.contains('is-open')).toBe(true);
-  });
-
-  it('copies sample prompt and updates label in Step 2', async () => {
-    cleanupWelcome = initWelcomePage();
-
-    const copyBtn = document.getElementById('welcome-copy-prompt-btn')!;
-    copyBtn.click();
-    await Promise.resolve();
-
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('Design a URL shortener like bit.ly'),
-    );
-
-    const label = document.getElementById('welcome-copy-prompt-label');
-    expect(label?.textContent).toBe('Copied \u2713');
-  });
-
-  it('renders privacy strip and footer with GitHub link', () => {
-    cleanupWelcome = initWelcomePage();
-
-    const privacyItems = document.querySelectorAll('.privacy-item');
-    expect(privacyItems.length).toBe(3);
-
-    const ghLink = document.querySelector<HTMLAnchorElement>('.footer-link');
-    expect(ghLink?.href).toBe('https://github.com/hardikguptaofficialgit/betterview');
-
-    const author = document.querySelector('.footer-author');
-    expect(author?.textContent).toBe('Made by Hardik Gupta');
+    expect(localStore.pendingUpdateModal).toBe(false);
+    expect(localStore.updateModalSeen).toBe(true);
+    expect(completed).toBe(true);
+    expect(document.getElementById('betterview-whatsnew-host')).toBeNull();
   });
 });

@@ -8,6 +8,7 @@
     "build:content": "vite build -c vite.content.config.ts",
     "build:background": "vite build -c vite.background.config.ts",
     "build": "npm run typecheck && npm run build:popup && npm run build:content && npm run build:background && node scripts/check-ascii.mjs && node scripts/check-content.mjs",
+    "package": "node scripts/package.mjs",
     "fixture": "vite build -c vite.fixture.config.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -16,13 +17,14 @@
     "@types/chrome": "^0.3.7",
     "esbuild": "^0.28.2",
     "happy-dom": "^21.0.4",
+    "simple-icons": "16.38.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.1"
   },
   "dependencies": {
+    "@phosphor-icons/core": "2.1.1",
     "chart.js": "^4.6.1",
-    "lucide": "^1.76.0",
     "mermaid": "^12.3.0"
   }
 }

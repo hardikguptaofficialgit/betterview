@@ -8,17 +8,23 @@ export function renderCallout(spec: CalloutSpec, _ctx: RenderContext): HTMLEleme
 
   const tone = spec.tone || 'info';
   let colorClass = 'c-sky';
-  let iconName = 'info';
+  let iconName = spec.icon || 'info';
 
-  if (tone === 'success') {
-    colorClass = 'c-mint';
-    iconName = 'check-circle';
-  } else if (tone === 'warning') {
-    colorClass = 'c-butter';
-    iconName = 'alert-triangle';
-  } else if (tone === 'tip') {
-    colorClass = 'c-lavender';
-    iconName = 'lightbulb';
+  if (!spec.icon) {
+    if (tone === 'success') {
+      colorClass = 'c-mint';
+      iconName = 'check-circle';
+    } else if (tone === 'warning') {
+      colorClass = 'c-butter';
+      iconName = 'warning-circle';
+    } else if (tone === 'tip') {
+      colorClass = 'c-lavender';
+      iconName = 'sparkle';
+    }
+  } else {
+    if (tone === 'success') colorClass = 'c-mint';
+    else if (tone === 'warning') colorClass = 'c-butter';
+    else if (tone === 'tip') colorClass = 'c-lavender';
   }
 
   const box = h('div', { class: `iui-callout-box tinted ${colorClass}` });

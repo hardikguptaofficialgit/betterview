@@ -3,45 +3,87 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BetterView</title>
+  <title>BetterView AI</title>
   <link rel="stylesheet" href="/src/popup/popup.css" />
 </head>
 <body>
   <div class="popup-container">
     <!-- Top row -->
-    <header class="header-row">
+    <header class="header-row section-stagger-1">
       <div class="header-brand">
         <picture id="header-logo" class="logo-picture">
           <source id="logo-source" media="(prefers-color-scheme: dark)" srcset="/brand/mark-white.png" />
-          <img id="logo-img" src="/brand/mark-black.png" alt="BetterView" width="20" height="20" />
+          <img id="logo-img" src="/brand/mark-black.png" alt="BetterView AI" width="20" height="20" />
         </picture>
-        <span class="brand-title">BetterView</span>
+        <span class="brand-title">BetterView AI</span>
+        <span class="version-chip">v0.1.0</span>
       </div>
       <div id="status-line" class="status-pill status-muted">Open Gemini or Grok</div>
     </header>
 
-    <!-- Card 1: Setup -->
-    <section class="card setup-card" id="setup-card">
+    <!-- Card 1: Setup (Two Rows) -->
+    <section class="card setup-card section-stagger-2" id="setup-card">
       <div class="card-title">Setup</div>
-      <div class="setup-buttons">
-        <button id="setup-gemini-btn" class="pill-btn setup-btn" type="button" aria-label="Set up Gemini">
-          <span class="btn-site-icon" id="icon-gemini"></span>
-          <span class="btn-label">Gemini</span>
-          <span class="btn-check" id="check-gemini"></span>
-        </button>
-        <button id="setup-grok-btn" class="pill-btn setup-btn" type="button" aria-label="Set up Grok">
-          <span class="btn-site-icon" id="icon-grok"></span>
-          <span class="btn-label">Grok</span>
-          <span class="btn-check" id="check-grok"></span>
-        </button>
+      <div class="setup-rows">
+        <!-- Gemini Row -->
+        <div class="setup-row" id="row-gemini">
+          <div class="site-row-left">
+            <div id="logo-gemini" class="site-row-logo">
+              <span class="btn-site-icon" id="icon-gemini"></span>
+            </div>
+            <div class="site-text-col">
+              <span class="site-row-name">Gemini</span>
+              <span id="setup-gemini-status" class="site-status-text">Not set up</span>
+              <div id="gemini-update-hint" class="gemini-update-hint hidden">Delete the old BetterView entry in Gemini Saved info</div>
+            </div>
+          </div>
+          <div class="site-row-action">
+            <button id="setup-gemini-btn" class="pill-btn action-pill-btn setup-btn" type="button" aria-label="Set up Gemini">
+              <span class="btn-spinner hidden" id="spinner-gemini"></span>
+              <span class="btn-label" id="label-gemini">Set up</span>
+              <span class="btn-check" id="check-gemini"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Grok Row -->
+        <div class="setup-row" id="row-grok">
+          <div class="site-row-left">
+            <div id="logo-grok" class="site-row-logo">
+              <span class="btn-site-icon" id="icon-grok"></span>
+            </div>
+            <div class="site-text-col">
+              <span class="site-row-name">Grok</span>
+              <span id="setup-grok-status" class="site-status-text">Not set up</span>
+            </div>
+          </div>
+          <div class="site-row-action">
+            <button id="setup-grok-btn" class="pill-btn action-pill-btn setup-btn" type="button" aria-label="Set up Grok">
+              <span class="btn-spinner hidden" id="spinner-grok"></span>
+              <span class="btn-label" id="label-grok">Set up</span>
+              <span class="btn-check" id="check-grok"></span>
+            </button>
+          </div>
+        </div>
       </div>
-      <div id="setup-status" class="setup-status-line"></div>
-      <span id="setup-gemini-status" class="visually-hidden"></span>
-      <span id="setup-grok-status" class="visually-hidden"></span>
+      <div id="setup-status" class="setup-status-line hidden"></div>
     </section>
 
-    <!-- Card 2: Appearance -->
-    <section class="card appearance-card" id="appearance-card">
+    <!-- Card 2: Try It (Compact Prompt Row) -->
+    <section class="card try-it-card section-stagger-3" id="try-it-card">
+      <div class="try-it-inner">
+        <div class="try-it-info">
+          <span class="try-it-title">Try it</span>
+          <span class="try-it-hint">Flow diagram of OAuth 2.0</span>
+        </div>
+        <button id="try-it-btn" class="pill-btn try-it-action-btn" type="button">
+          <span id="try-it-label">Copy sample</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Card 3: Appearance -->
+    <section class="card appearance-card section-stagger-4" id="appearance-card">
       <div class="card-title">Appearance</div>
       <div class="segmented-control" id="theme-segmented" role="radiogroup" aria-label="Appearance theme" data-value="auto">
         <div class="segmented-thumb" aria-hidden="true"></div>
@@ -57,7 +99,7 @@
     </section>
 
     <!-- Manual setup row -->
-    <section class="manual-setup-section" id="manual-setup-section">
+    <section class="manual-setup-section section-stagger-5" id="manual-setup-section">
       <button id="manual-setup-toggle" class="manual-setup-toggle" type="button" aria-expanded="false" aria-controls="manual-setup-content">
         <span class="manual-setup-title">Manual setup</span>
         <span class="manual-setup-chevron" id="manual-setup-chevron"></span>
@@ -76,7 +118,7 @@
     </section>
 
     <!-- Footer -->
-    <footer class="popup-footer">
+    <footer class="popup-footer section-stagger-6">
       <a id="welcome-tour-link" class="footer-link" href="#" role="button">Welcome tour</a>
       <span class="footer-dot" aria-hidden="true">&middot;</span>
       <span class="version-tag">v0.1.0</span>

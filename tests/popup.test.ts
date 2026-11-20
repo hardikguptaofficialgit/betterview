@@ -100,21 +100,46 @@ describe('BetterView Popup', () => {
 
         <section class="card setup-card" id="setup-card">
           <div class="card-title">Setup</div>
-          <div class="setup-buttons">
-            <button id="setup-gemini-btn" class="pill-btn setup-btn" type="button" aria-label="Set up Gemini">
-              <span class="btn-site-icon" id="icon-gemini"></span>
-              <span class="btn-label">Gemini</span>
-              <span class="btn-check" id="check-gemini"></span>
-            </button>
-            <button id="setup-grok-btn" class="pill-btn setup-btn" type="button" aria-label="Set up Grok">
-              <span class="btn-site-icon" id="icon-grok"></span>
-              <span class="btn-label">Grok</span>
-              <span class="btn-check" id="check-grok"></span>
-            </button>
+          <div class="setup-rows">
+            <div class="setup-row" id="row-gemini">
+              <div class="site-row-left">
+                <div id="logo-gemini" class="site-row-logo">
+                  <span class="btn-site-icon" id="icon-gemini"></span>
+                </div>
+                <div class="site-text-col">
+                  <span class="site-row-name">Gemini</span>
+                  <span id="setup-gemini-status" class="site-status-text">Not set up</span>
+                  <div id="gemini-update-hint" class="gemini-update-hint hidden">Delete the old BetterView entry in Gemini Saved info</div>
+                </div>
+              </div>
+              <div class="site-row-action">
+                <button id="setup-gemini-btn" class="pill-btn action-pill-btn setup-btn" type="button" aria-label="Set up Gemini">
+                  <span class="btn-spinner hidden" id="spinner-gemini"></span>
+                  <span class="btn-label" id="label-gemini">Set up</span>
+                  <span class="btn-check" id="check-gemini"></span>
+                </button>
+              </div>
+            </div>
+            <div class="setup-row" id="row-grok">
+              <div class="site-row-left">
+                <div id="logo-grok" class="site-row-logo">
+                  <span class="btn-site-icon" id="icon-grok"></span>
+                </div>
+                <div class="site-text-col">
+                  <span class="site-row-name">Grok</span>
+                  <span id="setup-grok-status" class="site-status-text">Not set up</span>
+                </div>
+              </div>
+              <div class="site-row-action">
+                <button id="setup-grok-btn" class="pill-btn action-pill-btn setup-btn" type="button" aria-label="Set up Grok">
+                  <span class="btn-spinner hidden" id="spinner-grok"></span>
+                  <span class="btn-label" id="label-grok">Set up</span>
+                  <span class="btn-check" id="check-grok"></span>
+                </button>
+              </div>
+            </div>
           </div>
           <div id="setup-status" class="setup-status-line"></div>
-          <span id="setup-gemini-status" class="visually-hidden"></span>
-          <span id="setup-grok-status" class="visually-hidden"></span>
         </section>
 
         <section class="card appearance-card" id="appearance-card">
@@ -326,7 +351,7 @@ describe('BetterView Popup', () => {
 
       // Simulate Gemini setup success
       for (const listener of storageListeners) {
-        listener({ gemini_setup_status: { newValue: { status: 'added' } } }, 'local');
+        listener({ gemini_setup_status: { newValue: { status: 'added', version: 2 } } }, 'local');
       }
 
       expect(statusEl.textContent).toBe('Added \u2713');
@@ -335,7 +360,7 @@ describe('BetterView Popup', () => {
 
       // Simulate Grok setup already
       for (const listener of storageListeners) {
-        listener({ grok_setup_status: { newValue: { status: 'already' } } }, 'local');
+        listener({ grok_setup_status: { newValue: { status: 'already', version: 2 } } }, 'local');
       }
 
       expect(statusEl.textContent).toBe('Already set up \u2713');
@@ -350,6 +375,24 @@ describe('BetterView Popup', () => {
       }
       expect(statusEl.textContent).toBe('Network error');
       expect(geminiBtn.classList.contains('is-done')).toBe(false);
+    });
+
+    it('shows Update available and hint when site was set up with an older version', () => {
+      cleanupPopup = initPopup();
+
+      const geminiBtn = document.getElementById('setup-gemini-btn')!;
+      const geminiStatus = document.getElementById('setup-gemini-status')!;
+      const geminiUpdateHint = document.getElementById('gemini-update-hint')!;
+
+      // Simulate older v1 setup
+      for (const listener of storageListeners) {
+        listener({ gemini_setup_status: { newValue: { status: 'added', version: 1 } } }, 'local');
+      }
+
+      expect(geminiStatus.textContent).toBe('Update available');
+      expect(geminiBtn.textContent).toContain('Update');
+      expect(geminiBtn.classList.contains('is-done')).toBe(false);
+      expect(geminiUpdateHint.classList.contains('hidden')).toBe(false);
     });
   });
 

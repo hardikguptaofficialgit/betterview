@@ -42,21 +42,23 @@ describe('Background onInstalled handler', () => {
     };
   });
 
-  it('opens welcome.html in a new tab when reason is install', () => {
+  it('sets pendingTour and opens Gemini app in a new tab when reason is install and no tab open', () => {
     handleInstalled({ reason: 'install' });
 
     expect(chrome.tabs.create).toHaveBeenCalledWith({
-      url: 'chrome-extension://dummy-id/welcome.html',
+      url: 'https://gemini.google.com/app',
     });
+    expect(localStore.pendingTour).toBe(true);
     expect(localStore.hasUpdateDot).toBeUndefined();
     expect(badgeText).toBe('');
   });
 
-  it('stores lastSeenVersion and sets badge dot when reason is update', () => {
+  it('stores lastSeenVersion, sets pendingUpdateModal and sets badge dot when reason is update', () => {
     handleInstalled({ reason: 'update', previousVersion: '0.0.9' });
 
     expect(chrome.tabs.create).not.toHaveBeenCalled();
     expect(localStore.lastSeenVersion).toBe('0.0.9');
+    expect(localStore.pendingUpdateModal).toBe(true);
     expect(localStore.hasUpdateDot).toBe(true);
     expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '\u2022' });
     expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({ color: '#1E6B48' });
@@ -66,6 +68,7 @@ describe('Background onInstalled handler', () => {
     handleInstalled({ reason: 'update' });
 
     expect(localStore.lastSeenVersion).toBe('0.1.0');
+    expect(localStore.pendingUpdateModal).toBe(true);
     expect(localStore.hasUpdateDot).toBe(true);
     expect(badgeText).toBe('\u2022');
   });

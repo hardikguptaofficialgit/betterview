@@ -1,17 +1,28 @@
 export function handleInstalled(details: { reason: string; previousVersion?: string }): void {
   if (details.reason === 'install') {
-    const welcomeUrl =
-      typeof chrome !== 'undefined' && chrome.runtime?.getURL
-        ? chrome.runtime.getURL('welcome.html')
-        : 'welcome.html';
-    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
-      chrome.tabs.create({ url: welcomeUrl });
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      chrome.storage.local.set({ pendingTour: true });
+    }
+    if (typeof chrome !== 'undefined' && chrome.tabs?.query) {
+      chrome.tabs.query({}, (tabs) => {
+        const hasSiteTab = tabs.some(
+          (t) =>
+            t.url &&
+            (t.url.includes('gemini.google.com') || t.url.includes('grok.com')),
+        );
+        if (!hasSiteTab && chrome.tabs.create) {
+          chrome.tabs.create({ url: 'https://gemini.google.com/app' });
+        }
+      });
+    } else if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+      chrome.tabs.create({ url: 'https://gemini.google.com/app' });
     }
   } else if (details.reason === 'update') {
     const version =
       (typeof chrome !== 'undefined' && chrome.runtime?.getManifest?.()?.version) || '0.1.0';
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
       chrome.storage.local.set({
+        pendingUpdateModal: true,
         lastSeenVersion: details.previousVersion || version,
         hasUpdateDot: true,
       });

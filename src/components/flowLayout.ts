@@ -190,3 +190,76 @@ export function layoutFlow(
     backEdges,
   };
 }
+
+export interface BoxRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface EdgeRoute {
+  isOuter: boolean;
+  pathD: string;
+  labelPoint: { x: number; y: number };
+}
+
+export function computeEdgeRoute(
+  sourceBox: BoxRect,
+  targetBox: BoxRect,
+  isBackEdge: boolean,
+  isRankSkip: boolean,
+  allBoxesRight: number,
+  outerIndex = 0,
+  fanOffset = 0,
+): EdgeRoute {
+  if (!isBackEdge && !isRankSkip) {
+    const sx = sourceBox.x + sourceBox.width / 2 + fanOffset;
+    const sy = sourceBox.y + sourceBox.height;
+    const tx = targetBox.x + targetBox.width / 2;
+    const ty = targetBox.y;
+
+    const dy = Math.max(Math.abs(ty - sy) * 0.5, 20);
+    const cp1x = sx;
+    const cp1y = sy + dy;
+    const cp2x = tx;
+    const cp2y = ty - dy;
+
+    const pathD = `M ${sx} ${sy} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${tx} ${ty}`;
+    const labelPoint = {
+      x: 0.125 * sx + 0.375 * cp1x + 0.375 * cp2x + 0.125 * tx,
+      y: 0.125 * sy + 0.375 * cp1y + 0.375 * cp2y + 0.125 * ty,
+    };
+    return { isOuter: false, pathD, labelPoint };
+  }
+
+  // Orthogonal route around nodes via right side gutter
+  const gutterX =
+    Math.max(allBoxesRight, sourceBox.x + sourceBox.width, targetBox.x + targetBox.width) +
+    24 +
+    outerIndex * 18;
+  const sx = sourceBox.x + sourceBox.width;
+  const sy = sourceBox.y + sourceBox.height / 2;
+  const tx = targetBox.x + targetBox.width;
+  const ty = targetBox.y + targetBox.height / 2;
+  const r = 8;
+
+  let pathD = '';
+  if (ty < sy) {
+    // Back-edge going up
+    pathD = `M ${sx} ${sy} L ${gutterX - r} ${sy} Q ${gutterX} ${sy} ${gutterX} ${sy - r} L ${gutterX} ${ty + r} Q ${gutterX} ${ty} ${gutterX - r} ${ty} L ${tx} ${ty}`;
+  } else if (ty > sy) {
+    // Forward edge skipping ranks going down
+    pathD = `M ${sx} ${sy} L ${gutterX - r} ${sy} Q ${gutterX} ${sy} ${gutterX} ${sy + r} L ${gutterX} ${ty - r} Q ${gutterX} ${ty} ${gutterX - r} ${ty} L ${tx} ${ty}`;
+  } else {
+    // Lateral edge
+    pathD = `M ${sx} ${sy} L ${gutterX - r} ${sy} Q ${gutterX} ${sy} ${gutterX} ${sy - 20} L ${gutterX - r} ${sy - 20} L ${tx} ${ty}`;
+  }
+
+  const labelPoint = {
+    x: gutterX,
+    y: (sy + ty) / 2,
+  };
+
+  return { isOuter: true, pathD, labelPoint };
+}

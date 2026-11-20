@@ -1,6 +1,7 @@
 import { TimelineSpec } from '../core/types';
 import { RenderContext } from './index';
 import { h } from '../core/dom';
+import { iconEl } from '../core/icons';
 
 export function renderTimeline(spec: TimelineSpec, _ctx: RenderContext): HTMLElement {
   const card = h('div', { class: 'iui-card iui-timeline-card' });
@@ -20,6 +21,10 @@ export function renderTimeline(spec: TimelineSpec, _ctx: RenderContext): HTMLEle
     // Left track
     const track = h('div', { class: 'iui-timeline-track' });
     const dot = h('div', { class: 'iui-timeline-dot c-butter' });
+    if (ev.icon) {
+      dot.classList.add('has-icon');
+      dot.appendChild(iconEl(ev.icon, 12));
+    }
     track.appendChild(dot);
 
     if (!isLast) {

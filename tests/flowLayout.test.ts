@@ -1,5 +1,45 @@
 import { describe, it, expect } from 'vitest';
-import { layoutFlow } from '../src/components/flowLayout';
+import { layoutFlow, computeEdgeRoute } from '../src/components/flowLayout';
+
+describe('computeEdgeRoute', () => {
+  it('routes back-edge orthogonally through right side gutter around nodes', () => {
+    const sourceBox = { x: 50, y: 200, width: 120, height: 40 };
+    const targetBox = { x: 50, y: 50, width: 120, height: 40 };
+    const allBoxesRight = 200;
+
+    const route = computeEdgeRoute(sourceBox, targetBox, true, false, allBoxesRight);
+
+    expect(route.isOuter).toBe(true);
+    expect(route.labelPoint.x).toBeGreaterThanOrEqual(allBoxesRight + 24);
+    expect(route.pathD).toContain('M 170 220');
+    expect(route.pathD).toContain('L 170 70');
+    expect(route.labelPoint.y).toBe((220 + 70) / 2);
+  });
+
+  it('routes rank-skipping edge orthogonally through right side gutter', () => {
+    const sourceBox = { x: 50, y: 50, width: 120, height: 40 };
+    const targetBox = { x: 50, y: 250, width: 120, height: 40 };
+    const allBoxesRight = 200;
+
+    const route = computeEdgeRoute(sourceBox, targetBox, false, true, allBoxesRight);
+
+    expect(route.isOuter).toBe(true);
+    expect(route.labelPoint.x).toBeGreaterThanOrEqual(allBoxesRight + 24);
+    expect(route.pathD).toContain('M 170 70');
+    expect(route.pathD).toContain('L 170 270');
+  });
+
+  it('routes direct adjacent edge using standard cubic Bezier', () => {
+    const sourceBox = { x: 50, y: 50, width: 120, height: 40 };
+    const targetBox = { x: 50, y: 150, width: 120, height: 40 };
+
+    const route = computeEdgeRoute(sourceBox, targetBox, false, false, 200);
+
+    expect(route.isOuter).toBe(false);
+    expect(route.pathD.startsWith('M 110 90 C ')).toBe(true);
+    expect(route.pathD.endsWith(' 110 150')).toBe(true);
+  });
+});
 
 describe('layoutFlow', () => {
   it('a linear chain gives ranks [[a],[b],[c]]', () => {

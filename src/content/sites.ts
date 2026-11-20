@@ -1,7 +1,7 @@
 // Selectors are best guesses; if rendering doesn't trigger on a site, inspect a code block there and update only this file.
 
 import { tryParse } from '../core/parse';
-import { getCompactInstruction } from '../shared/systemInstruction';
+import { getCompactInstruction, CURRENT_INSTRUCTION_VERSION } from '../shared/systemInstruction';
 
 export interface SiteAdapter {
   id: 'gemini' | 'grok';
@@ -228,11 +228,8 @@ export function isUiBlock(adapter: SiteAdapter, block: HTMLElement): boolean {
 
   const codeText = getBlockCodeText(adapter, block);
   const trimmed = codeText.trim();
-  if (!trimmed.startsWith('{')) {
-    return false;
-  }
 
-  const head = trimmed.slice(0, 100).replace(/[“”]/g, '"');
+  const head = trimmed.slice(0, 120).replace(/[“”]/g, '"');
   if (BETTERVIEW_STREAMING_TYPE_RE.test(head)) {
     return true;
   }
@@ -255,6 +252,7 @@ export function isUiBlock(adapter: SiteAdapter, block: HTMLElement): boolean {
 export type SetupStatus = 'added' | 'already' | 'failed';
 export interface SetupResult {
   status: SetupStatus;
+  version?: number;
   error?: string;
 }
 
@@ -276,16 +274,29 @@ export const GROK_SETUP_SELECTORS = {
   saveButton: 'button',
 };
 
+export function extractInstructionVersion(text: string): number | null {
+  const match = text.match(/\[betterview\s+v(\d+)\]/i);
+  if (match) return parseInt(match[1], 10);
+  if (/\[betterview\]/i.test(text)) return 1;
+  return null;
+}
+
 export function appendInstruction(existing: string, instruction: string): string {
   const trimmed = existing.trim();
-  if (/\[betterview\]/i.test(trimmed)) {
+  const existingVer = extractInstructionVersion(trimmed);
+  const newVer = extractInstructionVersion(instruction);
+
+  if (existingVer !== null) {
+    if (newVer !== null && newVer > existingVer) {
+      return trimmed.replace(/\[betterview[\s\S]*$/i, instruction);
+    }
     return existing;
   }
   return trimmed ? `${trimmed}\n\n${instruction}` : instruction;
 }
 
 export function hasBetterViewMarker(text: string): boolean {
-  return /\[betterview\]/i.test(text);
+  return /\[betterview(?:\s+v\d+)?\]/i.test(text);
 }
 
 export async function fillGeminiMemoryDialog(
@@ -388,8 +399,8 @@ export async function runGeminiSetup(): Promise<SetupResult> {
       return { status: 'failed', error: msg };
     }
 
-    if (/\[betterview\]/i.test(document.body.textContent ?? '')) {
-      return { status: 'already' };
+    if (/\[betterview\s+v2\]/i.test(document.body.textContent ?? '')) {
+      return { status: 'already', version: CURRENT_INSTRUCTION_VERSION };
     }
 
     const buttons = document.querySelectorAll(GEMINI_SETUP_SELECTORS.addButton);
@@ -444,7 +455,7 @@ export async function runGeminiSetup(): Promise<SetupResult> {
       return { status: 'failed', error: msg };
     }
 
-    return { status: 'added' };
+    return { status: 'added', version: CURRENT_INSTRUCTION_VERSION };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn('[BetterView]', 'Gemini setup error:', msg);
@@ -538,8 +549,8 @@ export async function runGrokSetup(): Promise<SetupResult> {
       return { status: 'failed', error: msg };
     }
 
-    if (textarea.value.includes('[BetterView]')) {
-      return { status: 'already' };
+    if (textarea.value.includes('[BetterView v2]')) {
+      return { status: 'already', version: CURRENT_INSTRUCTION_VERSION };
     }
 
     const nextVal = appendInstruction(textarea.value, getCompactInstruction());
@@ -580,7 +591,7 @@ export async function runGrokSetup(): Promise<SetupResult> {
     saveBtn.click();
 
     await new Promise((r) => setTimeout(r, 800));
-    return { status: 'added' };
+    return { status: 'added', version: CURRENT_INSTRUCTION_VERSION };
   } catch (err: unknown) {
     showGrokFallbackToast();
     const msg = err instanceof Error ? err.message : String(err);
@@ -596,9 +607,13 @@ export function recordSetupResult(
 ): void {
   const status = typeof result === 'string' ? result : result.status;
   const err = typeof result === 'string' ? error : (result.error ?? error);
+  const version =
+    typeof result === 'object' && result.version !== undefined
+      ? result.version
+      : CURRENT_INSTRUCTION_VERSION;
   if (typeof chrome !== 'undefined' && chrome.storage?.local) {
     chrome.storage.local.set({
-      [`${site}_setup_status`]: { status, error: err, timestamp: Date.now() },
+      [`${site}_setup_status`]: { status, version, error: err, timestamp: Date.now() },
     });
   }
 }

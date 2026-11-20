@@ -138,6 +138,7 @@ export interface CalloutSpec {
   title?: string;
   tone: 'info' | 'success' | 'warning' | 'tip';
   text: string;
+  icon?: string;
 }
 
 export interface StatItem {
@@ -145,6 +146,7 @@ export interface StatItem {
   value: string | number;
   delta?: string;
   hint?: string;
+  icon?: string;
 }
 
 export interface StatsSpec {
@@ -168,6 +170,7 @@ export interface TimelineEvent {
   title: string;
   time?: string;
   text: string;
+  icon?: string;
 }
 
 export interface TimelineSpec {

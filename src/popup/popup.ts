@@ -1,8 +1,9 @@
 import './popup.css';
 import { loadSettings, saveSettings, onSettingsChange, Settings } from '../shared/settings';
-import { SYSTEM_INSTRUCTION } from '../shared/systemInstruction';
+import { SYSTEM_INSTRUCTION, CURRENT_INSTRUCTION_VERSION } from '../shared/systemInstruction';
 import { h, clear } from '../core/dom';
 import { iconEl } from '../core/icons';
+import { geminiIconSvg, grokIconSvg } from '../core/brandIcons';
 
 export function initPopup(): () => void {
   const statusLine = document.getElementById('status-line');
@@ -15,28 +16,50 @@ export function initPopup(): () => void {
 
   const setupGeminiBtn = document.getElementById('setup-gemini-btn') as HTMLButtonElement | null;
   const setupGrokBtn = document.getElementById('setup-grok-btn') as HTMLButtonElement | null;
+  const labelGemini = document.getElementById('label-gemini');
+  const labelGrok = document.getElementById('label-grok');
+  const spinnerGemini = document.getElementById('spinner-gemini');
+  const spinnerGrok = document.getElementById('spinner-grok');
   const setupStatusEl = document.getElementById('setup-status');
   const setupGeminiStatus = document.getElementById('setup-gemini-status');
   const setupGrokStatus = document.getElementById('setup-grok-status');
+  const geminiUpdateHint = document.getElementById('gemini-update-hint');
 
   const manualToggle = document.getElementById('manual-setup-toggle') as HTMLButtonElement | null;
   const manualContent = document.getElementById('manual-setup-content');
   const manualChevron = document.getElementById('manual-setup-chevron');
 
+  const logoGemini = document.getElementById('logo-gemini');
+  const logoGrok = document.getElementById('logo-grok');
   const iconGemini = document.getElementById('icon-gemini');
   const iconGrok = document.getElementById('icon-grok');
   const checkGemini = document.getElementById('check-gemini');
   const checkGrok = document.getElementById('check-grok');
 
+  const tryItBtn = document.getElementById('try-it-btn') as HTMLButtonElement | null;
+  const tryItLabel = document.getElementById('try-it-label');
+
   const welcomeTourLink = document.getElementById('welcome-tour-link') as HTMLAnchorElement | null;
   const whatsNewLink = document.getElementById('whats-new-link') as HTMLAnchorElement | null;
 
-  // Insert Lucide icons
+  // Render real brand marks into 28px logo containers
+  if (logoGemini && !logoGemini.querySelector('svg.bvi-gemini-logo')) {
+    const gSvg = geminiIconSvg(28);
+    gSvg.classList.add('bvi-gemini-logo');
+    logoGemini.prepend(gSvg);
+  }
+  if (logoGrok && !logoGrok.querySelector('svg.bvi-grok-logo')) {
+    const grkSvg = grokIconSvg(28);
+    grkSvg.classList.add('bvi-grok-logo');
+    logoGrok.prepend(grkSvg);
+  }
+
+  // Backwards compatibility with tests looking inside icon-gemini / icon-grok
   if (iconGemini && !iconGemini.hasChildNodes()) {
-    iconGemini.appendChild(iconEl('sparkles', 14));
+    iconGemini.appendChild(geminiIconSvg(14));
   }
   if (iconGrok && !iconGrok.hasChildNodes()) {
-    iconGrok.appendChild(iconEl('bot', 14));
+    iconGrok.appendChild(grokIconSvg(14));
   }
   if (checkGemini && !checkGemini.hasChildNodes()) {
     checkGemini.appendChild(iconEl('check', 13));
@@ -45,7 +68,7 @@ export function initPopup(): () => void {
     checkGrok.appendChild(iconEl('check', 13));
   }
   if (manualChevron && !manualChevron.hasChildNodes()) {
-    manualChevron.appendChild(iconEl('chevron-down', 14));
+    manualChevron.appendChild(iconEl('caret-down', 14));
   }
 
   // Populate system instruction preview
@@ -62,27 +85,63 @@ export function initPopup(): () => void {
       setupStatusEl.textContent = text;
       setupStatusEl.className = `setup-status-line status-${type}`;
       setupStatusEl.classList.remove('crossfade');
-      // Trigger reflow to restart CSS crossfade animation
       void setupStatusEl.offsetWidth;
       setupStatusEl.classList.add('crossfade');
     }
-    if (setupGeminiStatus) setupGeminiStatus.textContent = text;
-    if (setupGrokStatus) setupGrokStatus.textContent = text;
   }
 
   // Render setup status for a site
-  function renderSetupStatus(site: 'gemini' | 'grok', data?: { status: string; error?: string }): void {
+  function renderSetupStatus(
+    site: 'gemini' | 'grok',
+    data?: { status: string; version?: number; error?: string },
+  ): void {
     const btn = site === 'gemini' ? setupGeminiBtn : setupGrokBtn;
-    if (!data) return;
+    const label = site === 'gemini' ? labelGemini : labelGrok;
+    const statusLine = site === 'gemini' ? setupGeminiStatus : setupGrokStatus;
+    const spinner = site === 'gemini' ? spinnerGemini : spinnerGrok;
 
-    if (data.status === 'added') {
-      btn?.classList.add('is-done');
-      setStatusText('Added \u2713', 'success');
-    } else if (data.status === 'already') {
-      btn?.classList.add('is-done');
-      setStatusText('Already set up \u2713', 'success');
+    if (!data) {
+      if (statusLine) statusLine.textContent = 'Not set up';
+      if (label) label.textContent = 'Set up';
+      btn?.classList.remove('is-done');
+      return;
+    }
+
+    spinner?.classList.add('hidden');
+    label?.classList.remove('hidden');
+
+    if (data.status === 'added' || data.status === 'already') {
+      const isOlder = (data.version || 1) < CURRENT_INSTRUCTION_VERSION;
+      if (isOlder) {
+        if (statusLine) {
+          statusLine.textContent = 'Update available';
+          statusLine.className = 'site-status-text status-warning';
+        }
+        if (label) label.textContent = 'Update';
+        btn?.classList.remove('is-done');
+        if (site === 'gemini' && geminiUpdateHint) {
+          geminiUpdateHint.classList.remove('hidden');
+        }
+        setStatusText(data.status === 'added' ? 'Added \u2713' : 'Already set up \u2713', 'success');
+      } else {
+        btn?.classList.add('is-done');
+        if (statusLine) {
+          statusLine.textContent = 'Set up \u2713';
+          statusLine.className = 'site-status-text status-success';
+        }
+        if (label) label.textContent = 'Redo';
+        if (site === 'gemini' && geminiUpdateHint) {
+          geminiUpdateHint.classList.add('hidden');
+        }
+        setStatusText(data.status === 'added' ? 'Added \u2713' : 'Already set up \u2713', 'success');
+      }
     } else if (data.status === 'failed') {
       btn?.classList.remove('is-done');
+      if (statusLine) {
+        statusLine.textContent = 'Failed';
+        statusLine.className = 'site-status-text status-error';
+      }
+      if (label) label.textContent = 'Set up';
       setStatusText(data.error || "Couldn't do it, use Copy", 'error');
     }
   }
@@ -92,25 +151,32 @@ export function initPopup(): () => void {
     chrome.storage.local.get(
       ['gemini_setup_status', 'grok_setup_status', 'hasUpdateDot', 'lastSeenVersion'],
       (items) => {
-        const gemini = items.gemini_setup_status as { status: string; error?: string; timestamp?: number } | undefined;
-        const grok = items.grok_setup_status as { status: string; error?: string; timestamp?: number } | undefined;
+        const gemini = items.gemini_setup_status as
+          | { status: string; version?: number; error?: string; timestamp?: number }
+          | undefined;
+        const grok = items.grok_setup_status as
+          | { status: string; version?: number; error?: string; timestamp?: number }
+          | undefined;
 
-        if (gemini?.status === 'added' || gemini?.status === 'already') {
-          setupGeminiBtn?.classList.add('is-done');
-        }
-        if (grok?.status === 'added' || grok?.status === 'already') {
-          setupGrokBtn?.classList.add('is-done');
-        }
+        if (gemini) renderSetupStatus('gemini', gemini);
+        if (grok) renderSetupStatus('grok', grok);
 
         if (gemini && grok) {
           const geminiTime = gemini.timestamp || 0;
           const grokTime = grok.timestamp || 0;
           const recent = geminiTime >= grokTime ? gemini : grok;
-          renderSetupStatus(geminiTime >= grokTime ? 'gemini' : 'grok', recent);
+          setStatusText(
+            recent.status === 'added'
+              ? 'Added \u2713'
+              : recent.status === 'already'
+                ? 'Already set up \u2713'
+                : (recent.error || 'Failed'),
+            recent.status === 'failed' ? 'error' : 'success',
+          );
         } else if (gemini) {
-          renderSetupStatus('gemini', gemini);
+          setStatusText(gemini.status === 'added' ? 'Added \u2713' : 'Already set up \u2713', 'success');
         } else if (grok) {
-          renderSetupStatus('grok', grok);
+          setStatusText(grok.status === 'added' ? 'Added \u2713' : 'Already set up \u2713', 'success');
         }
 
         if (items.hasUpdateDot || items.lastSeenVersion) {
@@ -124,13 +190,17 @@ export function initPopup(): () => void {
         if (changes.gemini_setup_status) {
           renderSetupStatus(
             'gemini',
-            changes.gemini_setup_status.newValue as { status: string; error?: string } | undefined,
+            changes.gemini_setup_status.newValue as
+              | { status: string; version?: number; error?: string }
+              | undefined,
           );
         }
         if (changes.grok_setup_status) {
           renderSetupStatus(
             'grok',
-            changes.grok_setup_status.newValue as { status: string; error?: string } | undefined,
+            changes.grok_setup_status.newValue as
+              | { status: string; version?: number; error?: string }
+              | undefined,
           );
         }
         if (changes.hasUpdateDot) {
@@ -144,18 +214,133 @@ export function initPopup(): () => void {
     });
   }
 
+  // Setup buttons click handlers
+  if (setupGeminiBtn) {
+    setupGeminiBtn.addEventListener('click', () => {
+      setStatusText('Setting up\u2026', 'muted');
+      spinnerGemini?.classList.remove('hidden');
+      if (setupGeminiStatus) setupGeminiStatus.textContent = 'Setting up...';
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'gemini' });
+      }
+    });
+  }
+
+  if (setupGrokBtn) {
+    setupGrokBtn.addEventListener('click', () => {
+      setStatusText('Setting up\u2026', 'muted');
+      spinnerGrok?.classList.remove('hidden');
+      if (setupGrokStatus) setupGrokStatus.textContent = 'Setting up...';
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'grok' });
+      }
+    });
+  }
+
+  // Try it prompt button handler
+  let tryItTimeoutId: number | null = null;
+  if (tryItBtn) {
+    tryItBtn.addEventListener('click', async () => {
+      try {
+        const samplePrompt = 'Create a flow diagram of OAuth 2.0 authorization code grant with token refresh';
+        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(samplePrompt);
+        }
+        if (tryItLabel) {
+          tryItLabel.textContent = 'Copied \u2713';
+        }
+        tryItBtn.classList.add('is-copied');
+        if (tryItTimeoutId !== null) window.clearTimeout(tryItTimeoutId);
+        tryItTimeoutId = window.setTimeout(() => {
+          if (tryItLabel) tryItLabel.textContent = 'Copy sample';
+          tryItBtn.classList.remove('is-copied');
+          tryItTimeoutId = null;
+        }, 1500);
+      } catch (err) {
+        console.error('Failed to copy sample prompt:', err);
+      }
+    });
+  }
+
+  // Active tab detection & Welcome tour enablement
+  let activeTabSite: 'gemini' | 'grok' | null = null;
+  let activeTabId: number | undefined;
+
+  function renderTabStatus(site: 'gemini' | 'grok' | null): void {
+    if (!statusLine) return;
+    clear(statusLine);
+    if (site === 'gemini') {
+      statusLine.className = 'status-pill status-active';
+      const miniLogo = geminiIconSvg(13);
+      statusLine.appendChild(miniLogo);
+      statusLine.appendChild(document.createTextNode('Active on Gemini'));
+      const dot = h('span', { class: 'status-dot' });
+      statusLine.appendChild(dot);
+      enableTourLink(true);
+    } else if (site === 'grok') {
+      statusLine.className = 'status-pill status-active';
+      const miniLogo = grokIconSvg(13);
+      statusLine.appendChild(miniLogo);
+      statusLine.appendChild(document.createTextNode('Active on Grok'));
+      const dot = h('span', { class: 'status-dot' });
+      statusLine.appendChild(dot);
+      enableTourLink(true);
+    } else {
+      statusLine.className = 'status-pill status-muted';
+      statusLine.appendChild(document.createTextNode('Open Gemini or Grok'));
+      enableTourLink(false);
+    }
+  }
+
+  function enableTourLink(enabled: boolean): void {
+    if (!welcomeTourLink) return;
+    if (enabled) {
+      welcomeTourLink.classList.remove('is-disabled');
+      welcomeTourLink.removeAttribute('aria-disabled');
+      welcomeTourLink.removeAttribute('title');
+    } else {
+      welcomeTourLink.classList.add('is-disabled');
+      welcomeTourLink.setAttribute('aria-disabled', 'true');
+      welcomeTourLink.setAttribute('title', 'Open on a Gemini or Grok tab');
+    }
+  }
+
+  if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
+    try {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tab = tabs && tabs[0];
+        activeTabId = tab?.id;
+        const url = tab?.url || '';
+        if (url.includes('gemini.google.com')) {
+          activeTabSite = 'gemini';
+          renderTabStatus('gemini');
+        } else if (url.includes('grok.com')) {
+          activeTabSite = 'grok';
+          renderTabStatus('grok');
+        } else {
+          activeTabSite = null;
+          renderTabStatus(null);
+        }
+      });
+    } catch {
+      renderTabStatus(null);
+    }
+  } else {
+    renderTabStatus(null);
+  }
+
   // Welcome tour and What's new links
   if (welcomeTourLink) {
     welcomeTourLink.addEventListener('click', (e) => {
       e.preventDefault();
-      const url =
-        typeof chrome !== 'undefined' && chrome.runtime?.getURL
-          ? chrome.runtime.getURL('welcome.html')
-          : 'welcome.html';
-      if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
-        chrome.tabs.create({ url });
-      } else if (typeof window !== 'undefined') {
-        window.open(url, '_blank');
+      if (!activeTabSite) {
+        // Disabled on other sites with tooltip
+        return;
+      }
+      if (typeof chrome !== 'undefined' && chrome.tabs?.sendMessage && activeTabId !== undefined) {
+        chrome.tabs.sendMessage(activeTabId, { type: 'OPEN_TOUR' });
+      } else if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+        chrome.tabs.create({ url: 'welcome.html' });
       }
     });
   }
@@ -163,14 +348,10 @@ export function initPopup(): () => void {
   if (whatsNewLink) {
     whatsNewLink.addEventListener('click', (e) => {
       e.preventDefault();
-      const url =
-        typeof chrome !== 'undefined' && chrome.runtime?.getURL
-          ? chrome.runtime.getURL('welcome.html#whats-new')
-          : 'welcome.html#whats-new';
-      if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
-        chrome.tabs.create({ url });
-      } else if (typeof window !== 'undefined') {
-        window.open(url, '_blank');
+      if (activeTabSite && typeof chrome !== 'undefined' && chrome.tabs?.sendMessage && activeTabId !== undefined) {
+        chrome.tabs.sendMessage(activeTabId, { type: 'OPEN_WHATS_NEW' });
+      } else if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+        chrome.tabs.create({ url: 'welcome.html#whats-new' });
       }
 
       if (typeof chrome !== 'undefined' && chrome.action?.setBadgeText) {
@@ -183,26 +364,7 @@ export function initPopup(): () => void {
     });
   }
 
-  // Setup buttons click handlers
-  if (setupGeminiBtn) {
-    setupGeminiBtn.addEventListener('click', () => {
-      setStatusText('Setting up\u2026', 'muted');
-      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-        chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'gemini' });
-      }
-    });
-  }
-
-  if (setupGrokBtn) {
-    setupGrokBtn.addEventListener('click', () => {
-      setStatusText('Setting up\u2026', 'muted');
-      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-        chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'grok' });
-      }
-    });
-  }
-
-  // Copy button handler
+  // Copy instruction button handler
   let copyTimeoutId: number | null = null;
   if (copyBtn) {
     copyBtn.addEventListener('click', async () => {
@@ -214,9 +376,6 @@ export function initPopup(): () => void {
         const copyLabel = copyBtn.querySelector('.copy-label') as HTMLElement | null;
         if (copyLabel) {
           copyLabel.textContent = 'Copied \u2713';
-          copyLabel.classList.remove('fade-in');
-          void copyLabel.offsetWidth;
-          copyLabel.classList.add('fade-in');
         } else {
           copyBtn.textContent = 'Copied \u2713';
         }
@@ -228,9 +387,6 @@ export function initPopup(): () => void {
           copyBtn.classList.remove('is-copied');
           if (copyLabel) {
             copyLabel.textContent = 'Copy';
-            copyLabel.classList.remove('fade-in');
-            void copyLabel.offsetWidth;
-            copyLabel.classList.add('fade-in');
           } else {
             copyBtn.textContent = 'Copy';
           }
@@ -240,41 +396,6 @@ export function initPopup(): () => void {
         console.error('Failed to copy system instruction:', err);
       }
     });
-  }
-
-  // Active tab detection
-  function renderTabStatus(isActive: boolean): void {
-    if (!statusLine) return;
-    clear(statusLine);
-    if (isActive) {
-      statusLine.className = 'status-pill status-active';
-      const dot = h('span', { class: 'status-dot' });
-      statusLine.appendChild(dot);
-      statusLine.appendChild(document.createTextNode('Active'));
-    } else {
-      statusLine.className = 'status-pill status-muted';
-      statusLine.appendChild(document.createTextNode('Open Gemini or Grok'));
-    }
-  }
-
-  if (statusLine) {
-    if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
-      try {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          const tab = tabs && tabs[0];
-          const url = tab?.url || '';
-          if (url.includes('gemini.google.com') || url.includes('grok.com')) {
-            renderTabStatus(true);
-          } else {
-            renderTabStatus(false);
-          }
-        });
-      } catch {
-        renderTabStatus(false);
-      }
-    } else {
-      renderTabStatus(false);
-    }
   }
 
   // Manual setup expand/collapse
@@ -357,9 +478,8 @@ export function initPopup(): () => void {
 
   return () => {
     unsubscribeSettings();
-    if (copyTimeoutId !== null) {
-      window.clearTimeout(copyTimeoutId);
-    }
+    if (copyTimeoutId !== null) window.clearTimeout(copyTimeoutId);
+    if (tryItTimeoutId !== null) window.clearTimeout(tryItTimeoutId);
   };
 }
 
