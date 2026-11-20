@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   GEMINI_ADAPTER,
   GROK_ADAPTER,
@@ -7,6 +7,8 @@ import {
   isUiBlock,
   appendInstruction,
   hasBetterViewMarker,
+  fillGeminiMemoryDialog,
+  runGeminiSetup,
 } from '../src/content/sites';
 import { getCompactInstruction, SYSTEM_INSTRUCTION } from '../src/shared/systemInstruction';
 
@@ -33,41 +35,44 @@ describe('SiteAdapter: Gemini', () => {
     expect(GEMINI_ADAPTER.isNewChat({ pathname: '/app/c/123456' } as Location)).toBe(false);
   });
 
-  it('finds code blocks and dedupes them', () => {
+  it('finds code blocks as code-block elements and dedupes them', () => {
     const container = document.createElement('div');
     container.innerHTML = `
-      <code-block><pre id="pre1"><code>one</code></pre></code-block>
-      <div class="code-block"><pre id="pre2"><code>two</code></pre></div>
+      <code-block id="cb1"><pre id="pre1"><code data-test-id="code-content">one</code></pre></code-block>
+      <div class="code-block" id="cb2"><pre id="pre2"><code>two</code></pre></div>
     `;
     const blocks = GEMINI_ADAPTER.findCodeBlocks(container);
     expect(blocks.length).toBe(2);
-    expect(blocks[0].id).toBe('pre1');
-    expect(blocks[1].id).toBe('pre2');
+    expect(blocks[0].id).toBe('cb1');
+    expect(blocks[1].id).toBe('cb2');
   });
 
   it('detects language from code class or code-block-decoration', () => {
     const wrap1 = document.createElement('code-block');
     wrap1.innerHTML = '<pre><code class="language-ui">{"type":"flow"}</code></pre>';
-    const pre1 = wrap1.querySelector('pre')!;
-    expect(GEMINI_ADAPTER.languageOf(pre1)).toBe('ui');
+    expect(GEMINI_ADAPTER.languageOf(wrap1)).toBe('ui');
 
     const wrap2 = document.createElement('code-block');
     wrap2.innerHTML = '<div class="code-block-decoration">ui</div><pre><code>{"type":"quiz"}</code></pre>';
-    const pre2 = wrap2.querySelector('pre')!;
-    expect(GEMINI_ADAPTER.languageOf(pre2)).toBe('ui');
+    expect(GEMINI_ADAPTER.languageOf(wrap2)).toBe('ui');
 
     const wrap3 = document.createElement('code-block');
     wrap3.innerHTML = '<span>json</span><pre><code>{"type":"quiz"}</code></pre>';
-    const pre3 = wrap3.querySelector('pre')!;
-    expect(GEMINI_ADAPTER.languageOf(pre3)).toBe('json');
+    expect(GEMINI_ADAPTER.languageOf(wrap3)).toBe('json');
+
+    // "Code snippet" should not be treated as a language label
+    const wrap4 = document.createElement('code-block');
+    wrap4.innerHTML = '<div class="code-block-decoration"><span>Code snippet</span></div><pre><code>{"type":"flow"}</code></pre>';
+    expect(GEMINI_ADAPTER.languageOf(wrap4)).toBeNull();
   });
 
-  it('returns wrapperOf for pre', () => {
+  it('returns wrapperOf for block or pre', () => {
     const wrapper = document.createElement('code-block');
     const pre = document.createElement('pre');
     wrapper.appendChild(pre);
     document.body.appendChild(wrapper);
     expect(GEMINI_ADAPTER.wrapperOf(pre)).toBe(wrapper);
+    expect(GEMINI_ADAPTER.wrapperOf(wrapper)).toBe(wrapper);
     wrapper.remove();
   });
 });
@@ -116,23 +121,66 @@ describe('pickAdapter', () => {
   });
 });
 
-describe('isUiBlock helper', () => {
+describe('isUiBlock detection without language label', () => {
   it('recognizes explicit ui language blocks', () => {
     const el = document.createElement('pre');
     el.innerHTML = '<code class="language-ui">{}</code>';
     expect(isUiBlock(GEMINI_ADAPTER, el)).toBe(true);
   });
 
-  it('recognizes json/plaintext blocks if content looks like UI block', () => {
-    const el = document.createElement('pre');
-    el.innerHTML = '<code class="language-json">{"type":"flow","title":"test"}</code>';
+  it('recognizes Gemini code-block with "Code snippet" decoration by JSON type', () => {
+    const types = ['flow', 'stepper', 'table', 'compare', 'quiz', 'chart', 'mermaid'];
+    for (const t of types) {
+      const el = document.createElement('code-block');
+      el.innerHTML = `
+        <div class="code-block">
+          <div class="formatted-code-block-internal-container">
+            <div class="code-block-decoration"><span>Code snippet</span></div>
+            <pre><code role="text" data-test-id="code-content">{"type":"${t}","title":"Test ${t}"}</code></pre>
+          </div>
+        </div>
+      `;
+      expect(isUiBlock(GEMINI_ADAPTER, el)).toBe(true);
+    }
+  });
+
+  it('recognizes streaming incomplete JSON by regex', () => {
+    const el = document.createElement('code-block');
+    el.innerHTML = `
+      <div class="code-block">
+        <pre><code data-test-id="code-content">{"type": "flow", "title": "In-flight</code></pre>
+      </div>
+    `;
     expect(isUiBlock(GEMINI_ADAPTER, el)).toBe(true);
   });
 
-  it('rejects non-UI blocks', () => {
+  it('leaves ordinary JSON without a matching type untouched', () => {
+    const nonMatching = [
+      '{"type":"user","name":"Alice"}',
+      '{"items":[1,2,3]}',
+      '{"status":"ok"}',
+      '[1, 2, 3]',
+      'const x = 1;',
+    ];
+    for (const json of nonMatching) {
+      const el = document.createElement('code-block');
+      el.innerHTML = `
+        <div class="code-block">
+          <pre><code data-test-id="code-content">${json}</code></pre>
+        </div>
+      `;
+      expect(isUiBlock(GEMINI_ADAPTER, el)).toBe(false);
+    }
+  });
+
+  it('applies JSON type detection to Grok adapter without ui label', () => {
     const el = document.createElement('pre');
-    el.innerHTML = '<code class="language-python">print("hello")</code>';
-    expect(isUiBlock(GEMINI_ADAPTER, el)).toBe(false);
+    el.innerHTML = '<code>{"type":"flow","title":"Grok flow"}</code>';
+    expect(isUiBlock(GROK_ADAPTER, el)).toBe(true);
+
+    const normal = document.createElement('pre');
+    normal.innerHTML = '<code>{"type":"settings","dark":true}</code>';
+    expect(isUiBlock(GROK_ADAPTER, normal)).toBe(false);
   });
 });
 
@@ -151,13 +199,69 @@ describe('Auto-setup append & marker logic', () => {
     expect(result).toBe(existing);
   });
 
-  it('appends cleanly when existing text is empty', () => {
-    const result = appendInstruction('', '[BetterView] instruction');
-    expect(result).toBe('[BetterView] instruction');
+  it('detects BetterView marker case-insensitively', () => {
+    expect(hasBetterViewMarker('[BetterView] instructions')).toBe(true);
+    expect(hasBetterViewMarker('[betterview] instructions')).toBe(true);
+    expect(hasBetterViewMarker('Gemini remembers: [BETTERVIEW] show visuals')).toBe(true);
+    expect(hasBetterViewMarker('Hello world')).toBe(false);
+  });
+});
+
+describe('fillGeminiMemoryDialog in fake overlay container', () => {
+  it('fills memory dialog and clicks submit when button is enabled', async () => {
+    const overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    overlay.innerHTML = `
+      <edit-memory-dialog class="mat-mdc-dialog-component-host">
+        <h2 mat-dialog-title>What do you want Gemini to remember?</h2>
+        <mat-dialog-content><mat-form-field class="edit-memory-form-field">
+          <textarea rows="1" matinput cdktextareaautosize aria-label="Enter new memory" class="edit-memory-input" maxlength="3000"></textarea>
+        </mat-form-field></mat-dialog-content>
+        <mat-dialog-actions align="end">
+          <button mat-button mat-dialog-close type="button">Cancel</button>
+          <button mat-flat-button data-test-id="submit-button" disabled="true" class="edit-memory-submit-button">Submit</button>
+        </mat-dialog-actions>
+      </edit-memory-dialog>
+    `;
+    document.body.appendChild(overlay);
+
+    const textarea = overlay.querySelector('textarea')!;
+    const submitBtn = overlay.querySelector<HTMLButtonElement>('button[data-test-id="submit-button"]')!;
+
+    let submitClicked = false;
+    submitBtn.addEventListener('click', () => {
+      submitClicked = true;
+    });
+
+    textarea.addEventListener('input', () => {
+      // Simulate Gemini enabling the submit button after input
+      submitBtn.disabled = false;
+      submitBtn.removeAttribute('disabled');
+    });
+
+    await fillGeminiMemoryDialog(overlay, { waitTimeoutMs: 2000, pollIntervalMs: 50 });
+
+    expect(textarea.value.startsWith('[BetterView] ')).toBe(true);
+    expect(textarea.value).toBe(getCompactInstruction());
+    expect(submitClicked).toBe(true);
+
+    overlay.remove();
   });
 
-  it('detects BetterView marker correctly', () => {
-    expect(hasBetterViewMarker('[BetterView] instructions')).toBe(true);
-    expect(hasBetterViewMarker('Hello world')).toBe(false);
+  it('fails with precise error if textarea cannot be found', async () => {
+    const overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    overlay.innerHTML = `
+      <edit-memory-dialog class="mat-mdc-dialog-component-host">
+        <h2>What do you want Gemini to remember?</h2>
+      </edit-memory-dialog>
+    `;
+    document.body.appendChild(overlay);
+
+    await expect(fillGeminiMemoryDialog(overlay, { waitTimeoutMs: 200, pollIntervalMs: 50 })).rejects.toThrow(
+      "Couldn't find the text box",
+    );
+
+    overlay.remove();
   });
 });

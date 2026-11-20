@@ -1,4 +1,4 @@
-import { SiteAdapter, isUiBlock } from './sites';
+import { SiteAdapter, isUiBlock, getBlockCodeText } from './sites';
 import { ThemeMode } from '../core/theme';
 import { mountBlock, BlockHandle } from '../core/mount';
 
@@ -22,16 +22,18 @@ export function startScanner(
   let currentRoot: Element | null = rootOverride ?? adapter.chatRoot();
   const tracked = new WeakMap<HTMLElement, TrackedItem>();
   const liveHandles = new Set<BlockHandle>();
-  const trackedPres = new Set<HTMLElement>();
+  const trackedBlocks = new Set<HTMLElement>();
 
   let debounceTimer: number | null = null;
   let rafId: number | null = null;
   let scanPending = false;
   let isStopped = false;
 
-  function restoreFallbackWrapper(pre: HTMLElement, item: TrackedItem): void {
+  function restoreFallbackWrapper(block: HTMLElement, item: TrackedItem): void {
     item.wrapper.style.display = '';
     item.wrapper.removeAttribute('data-iui-hidden');
+    item.wrapper.removeAttribute('data-betterview-handled');
+    block.removeAttribute('data-betterview-handled');
     item.handle.destroy();
     liveHandles.delete(item.handle);
 
@@ -64,9 +66,9 @@ export function startScanner(
     }
 
     // Detached check
-    for (const pre of Array.from(trackedPres)) {
-      if (!document.contains(pre)) {
-        const item = tracked.get(pre);
+    for (const block of Array.from(trackedBlocks)) {
+      if (!document.contains(block)) {
+        const item = tracked.get(block);
         if (item) {
           if (item.finalizeTimer !== undefined) {
             window.clearTimeout(item.finalizeTimer);
@@ -75,25 +77,25 @@ export function startScanner(
           item.noteHost?.remove();
           liveHandles.delete(item.handle);
         }
-        tracked.delete(pre);
-        trackedPres.delete(pre);
+        tracked.delete(block);
+        trackedBlocks.delete(block);
       }
     }
 
     // Find candidate code blocks
-    const pres = adapter.findCodeBlocks(currentRoot);
-    for (const pre of pres) {
-      if (pre.closest('.iui-host') || pre.closest('[data-iui]')) {
+    const blocks = adapter.findCodeBlocks(currentRoot);
+    for (const block of blocks) {
+      if (block.closest('.iui-host') || block.closest('[data-iui]')) {
         continue;
       }
-      if (!isUiBlock(adapter, pre)) {
+      if (!isUiBlock(adapter, block)) {
         continue;
       }
 
-      const text = pre.textContent ?? '';
+      const text = getBlockCodeText(adapter, block);
 
-      if (tracked.has(pre)) {
-        const item = tracked.get(pre)!;
+      if (tracked.has(block)) {
+        const item = tracked.get(block)!;
         if (text !== item.lastText) {
           item.lastText = text;
           item.handle.update(text);
@@ -103,26 +105,35 @@ export function startScanner(
           }
           item.finalizeTimer = window.setTimeout(() => {
             if (item.handle.state === 'fallback') {
-              restoreFallbackWrapper(pre, item);
+              restoreFallbackWrapper(block, item);
             }
           }, 1600);
         }
       } else {
-        const wrapper = adapter.wrapperOf(pre);
+        if (
+          block.getAttribute('data-betterview-handled') === '1' ||
+          adapter.wrapperOf(block).getAttribute('data-betterview-handled') === '1'
+        ) {
+          continue;
+        }
+
+        const wrapper = adapter.wrapperOf(block);
         let item: TrackedItem;
 
         const handle = mountBlock(wrapper, {
           theme: getTheme(),
-          insert: 'after',
+          insert: 'before',
           onStateChange: (state) => {
             if (state === 'fallback' && !isStopped) {
-              restoreFallbackWrapper(pre, item);
+              restoreFallbackWrapper(block, item);
             }
           },
         });
 
         wrapper.style.display = 'none';
         wrapper.setAttribute('data-iui-hidden', '1');
+        wrapper.setAttribute('data-betterview-handled', '1');
+        block.setAttribute('data-betterview-handled', '1');
 
         item = {
           handle,
@@ -132,13 +143,13 @@ export function startScanner(
 
         item.finalizeTimer = window.setTimeout(() => {
           if (handle.state === 'fallback') {
-            restoreFallbackWrapper(pre, item);
+            restoreFallbackWrapper(block, item);
           }
         }, 1600);
 
-        tracked.set(pre, item);
+        tracked.set(block, item);
         liveHandles.add(handle);
-        trackedPres.add(pre);
+        trackedBlocks.add(block);
 
         handle.update(text);
       }
@@ -189,18 +200,20 @@ export function startScanner(
         } catch {}
       }
       liveHandles.clear();
-      for (const pre of Array.from(trackedPres)) {
-        const item = tracked.get(pre);
+      for (const block of Array.from(trackedBlocks)) {
+        const item = tracked.get(block);
         if (item) {
           if (item.finalizeTimer !== undefined) {
             window.clearTimeout(item.finalizeTimer);
           }
           item.wrapper.style.display = '';
           item.wrapper.removeAttribute('data-iui-hidden');
+          item.wrapper.removeAttribute('data-betterview-handled');
+          block.removeAttribute('data-betterview-handled');
           item.noteHost?.remove();
         }
       }
-      trackedPres.clear();
+      trackedBlocks.clear();
 
       if (observer) {
         observer.disconnect();
@@ -234,18 +247,20 @@ export function startScanner(
         } catch {}
       }
       liveHandles.clear();
-      for (const pre of Array.from(trackedPres)) {
-        const item = tracked.get(pre);
+      for (const block of Array.from(trackedBlocks)) {
+        const item = tracked.get(block);
         if (item) {
           if (item.finalizeTimer !== undefined) {
             window.clearTimeout(item.finalizeTimer);
           }
           item.wrapper.style.display = '';
           item.wrapper.removeAttribute('data-iui-hidden');
+          item.wrapper.removeAttribute('data-betterview-handled');
+          block.removeAttribute('data-betterview-handled');
           item.noteHost?.remove();
         }
       }
-      trackedPres.clear();
+      trackedBlocks.clear();
     },
     rescan(): void {
       scan();
@@ -254,8 +269,8 @@ export function startScanner(
       for (const h of liveHandles) {
         h.setTheme(t);
       }
-      for (const pre of Array.from(trackedPres)) {
-        const item = tracked.get(pre);
+      for (const block of Array.from(trackedBlocks)) {
+        const item = tracked.get(block);
         if (item?.noteHost?.shadowRoot) {
           const root = item.noteHost.shadowRoot.querySelector('.iui-root');
           if (root) {

@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const setupGrokBtn = document.getElementById('setup-grok-btn') as HTMLButtonElement | null;
   const setupGrokStatus = document.getElementById('setup-grok-status');
 
-  function renderSetupStatus(el: HTMLElement | null, data?: { status: string }): void {
+  function renderSetupStatus(el: HTMLElement | null, data?: { status: string; error?: string }): void {
     if (!el) return;
     if (!data) {
       el.textContent = '';
@@ -35,24 +35,24 @@ document.addEventListener('DOMContentLoaded', () => {
       el.textContent = '✓ Already set up';
       el.className = 'setup-status status-success';
     } else if (data.status === 'failed') {
-      el.textContent = "Couldn't do it, use Copy";
+      el.textContent = data.error || "Couldn't do it, use Copy";
       el.className = 'setup-status status-error';
     }
   }
 
   if (typeof chrome !== 'undefined' && chrome.storage?.local) {
     chrome.storage.local.get(['gemini_setup_status', 'grok_setup_status'], (items) => {
-      renderSetupStatus(setupGeminiStatus, items.gemini_setup_status as { status: string } | undefined);
-      renderSetupStatus(setupGrokStatus, items.grok_setup_status as { status: string } | undefined);
+      renderSetupStatus(setupGeminiStatus, items.gemini_setup_status as { status: string; error?: string } | undefined);
+      renderSetupStatus(setupGrokStatus, items.grok_setup_status as { status: string; error?: string } | undefined);
     });
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'local') {
         if (changes.gemini_setup_status) {
-          renderSetupStatus(setupGeminiStatus, changes.gemini_setup_status.newValue as { status: string } | undefined);
+          renderSetupStatus(setupGeminiStatus, changes.gemini_setup_status.newValue as { status: string; error?: string } | undefined);
         }
         if (changes.grok_setup_status) {
-          renderSetupStatus(setupGrokStatus, changes.grok_setup_status.newValue as { status: string } | undefined);
+          renderSetupStatus(setupGrokStatus, changes.grok_setup_status.newValue as { status: string; error?: string } | undefined);
         }
       }
     });

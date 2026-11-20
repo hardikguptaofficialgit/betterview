@@ -79,7 +79,7 @@ export function mountBlock(
   anchor: HTMLElement,
   opts: {
     theme: ThemeMode;
-    insert?: 'after' | 'inside';
+    insert?: 'after' | 'inside' | 'before';
     onStateChange?: (state: 'skeleton' | 'rendered' | 'fallback') => void;
   },
 ): BlockHandle {
@@ -87,6 +87,12 @@ export function mountBlock(
 
   if (opts.insert === 'inside') {
     anchor.appendChild(host);
+  } else if (opts.insert === 'before') {
+    if (anchor.parentNode) {
+      anchor.parentNode.insertBefore(host, anchor);
+    } else {
+      anchor.appendChild(host);
+    }
   } else {
     if (anchor.parentNode) {
       anchor.parentNode.insertBefore(host, anchor.nextSibling);

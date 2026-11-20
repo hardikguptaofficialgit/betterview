@@ -7,13 +7,14 @@
     "build:popup": "vite build -c vite.config.ts",
     "build:content": "vite build -c vite.content.config.ts",
     "build:background": "vite build -c vite.background.config.ts",
-    "build": "npm run typecheck && npm run build:popup && npm run build:content && npm run build:background",
+    "build": "npm run typecheck && npm run build:popup && npm run build:content && npm run build:background && node scripts/check-ascii.mjs",
     "fixture": "vite build -c vite.fixture.config.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/chrome": "^0.3.7",
+    "esbuild": "^0.28.2",
     "happy-dom": "^21.0.4",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
