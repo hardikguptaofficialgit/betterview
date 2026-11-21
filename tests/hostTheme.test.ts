@@ -8,8 +8,23 @@ import {
   applyHostTheme,
 } from '../src/core/hostTheme';
 import { mountBlock } from '../src/core/mount';
+import { detectHostTheme } from '../src/core/theme';
 
 describe('hostTheme', () => {
+  it('detects explicit host theme attributes before falling back to system preference', () => {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    expect(detectHostTheme()).toBe('dark');
+    document.documentElement.setAttribute('data-theme', 'light');
+    expect(detectHostTheme()).toBe('light');
+    document.documentElement.removeAttribute('data-theme');
+  });
+  it('prefers the active body theme over a stale document shell theme', () => {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.body.classList.add('dark');
+    expect(detectHostTheme()).toBe('dark');
+    document.documentElement.removeAttribute('data-theme');
+    document.body.classList.remove('dark');
+  });
   it("selectHostTheme('gemini','light').radius-card === '16px' and font includes 'Google Sans'; ('grok','dark').bg === '#141414'; unknown host returns default theme", () => {
     const geminiLight = selectHostTheme('gemini', 'light');
     expect(geminiLight['radius-card']).toBe('16px');
@@ -47,6 +62,15 @@ describe('hostTheme', () => {
     // 4. High-contrast computed color is applied
     applyHostTheme(root, 'gemini', 'light', { color: 'rgb(10, 10, 10)' });
     expect(root.style.getPropertyValue('--iui-text')).toBe('rgb(10, 10, 10)');
+  });
+
+  it('rejects host text colors that contrast with the page but disappear on Gemini cards', () => {
+    const root = document.createElement('div');
+    applyHostTheme(root, 'gemini', 'light', {
+      color: 'rgb(227, 227, 227)',
+      backgroundColor: 'rgb(19, 19, 20)',
+    });
+    expect(root.style.getPropertyValue('--iui-text')).toBe('#1F1F1F');
   });
 
   it("mountBlock with opts.host='gemini' puts data-host=\"gemini\" on .iui-root; setTheme('dark') updates tokens", () => {

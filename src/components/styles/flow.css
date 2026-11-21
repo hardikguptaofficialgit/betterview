@@ -1,6 +1,6 @@
 .flow-card {
   border-radius: var(--iui-radius-card, 18px);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .flow-controls {
@@ -233,11 +233,18 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   background: transparent;
   border: none;
   color: var(--c-ink, var(--iui-text));
+}
+
+.flow-node-iconbox svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.8;
 }
 
 .flow-node-text {
@@ -248,10 +255,10 @@
 }
 
 .flow-node-label {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--iui-text);
-  line-height: 1.4;
+  line-height: 1.42;
   word-break: break-word;
 }
 

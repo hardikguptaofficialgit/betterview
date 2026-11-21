@@ -98,6 +98,29 @@ describe('Gemini live DOM code block detection (Bug #2)', () => {
     return responseEl;
   }
 
+  it('renders Gemini UI blocks that live inside an open shadow root', () => {
+    const container = document.createElement('div');
+    const responseHost = document.createElement('model-response');
+    const shadow = responseHost.attachShadow({ mode: 'open' });
+    shadow.innerHTML = `
+      <code-block>
+        <div class="code-block-decoration">Code snippet</div>
+        <pre><code data-test-id="code-content">{"type":"flow","title":"Shadow DOM flow","nodes":[{"id":"a","label":"Start"}],"edges":[]}</code></pre>
+      </code-block>
+    `;
+    container.appendChild(responseHost);
+    const codeBlock = shadow.querySelector('code-block') as HTMLElement;
+    const scanner = startScanner(GEMINI_ADAPTER, () => 'dark', container);
+
+    expect(codeBlock.style.display).toBe('none');
+    const host = shadow.querySelector('.iui-host') as HTMLElement;
+    expect(host).not.toBeNull();
+    expect(host.shadowRoot?.querySelector('.flow-card')).not.toBeNull();
+
+    scanner.stop();
+    container.remove();
+  });
+
   it('detects positive blocks for various types and mounts before code-block in response-element', () => {
     const testCases = [
       {

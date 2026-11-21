@@ -157,7 +157,7 @@ export function mountBlock(
 
     const header = h('div', { class: 'iui-card-header' });
 
-    // Left: 20px bare Phosphor icon + title group
+    // Left: compact Lucide icon + title group
     const headerLeft = h('div', { class: 'iui-header-left' });
     const iconBox = h(
       'div',

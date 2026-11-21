@@ -208,6 +208,7 @@ export function startScanner(
       rafId = null;
       lastScanTime = Date.now();
       scan();
+      if (currentRoot) observeOpenShadowRoots(currentRoot);
     });
   }
 
@@ -250,8 +251,26 @@ export function startScanner(
         })
       : null;
 
+  // MutationObserver does not cross shadow DOM boundaries. Gemini's response
+  // renderer uses open shadow roots, so attach observers to each discovered root.
+  const observedShadowRoots = new Set<ShadowRoot>();
+  function observeOpenShadowRoots(scope: ParentNode): void {
+    if (!observer) return;
+    const visit = (parent: ParentNode): void => {
+      parent.querySelectorAll<HTMLElement>('*').forEach((el) => {
+        if (el.shadowRoot && !observedShadowRoots.has(el.shadowRoot)) {
+          observedShadowRoots.add(el.shadowRoot);
+          observer.observe(el.shadowRoot, { childList: true, subtree: true, characterData: true });
+          visit(el.shadowRoot);
+        }
+      });
+    };
+    visit(scope);
+  }
+
   if (observer && currentRoot) {
     observer.observe(currentRoot, { childList: true, subtree: true, characterData: true });
+    observeOpenShadowRoots(currentRoot);
   }
 
   // Initial scan
@@ -286,10 +305,12 @@ export function startScanner(
 
       if (observer) {
         observer.disconnect();
+        observedShadowRoots.clear();
       }
       currentRoot = rootOverride ?? adapter.chatRoot();
       if (observer && currentRoot) {
         observer.observe(currentRoot, { childList: true, subtree: true, characterData: true });
+        observeOpenShadowRoots(currentRoot);
         scan();
       }
     }

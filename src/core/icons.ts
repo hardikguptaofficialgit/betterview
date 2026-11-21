@@ -1,318 +1,343 @@
-import { UIType } from './types';
+import type { UIType } from './types';
 import { parseSvgString } from './brandIcons';
 
-// Duotone SVGs for 12 card types
-import flowDuo from '@phosphor-icons/core/assets/duotone/tree-structure-duotone.svg?raw';
-import stepperDuo from '@phosphor-icons/core/assets/duotone/steps-duotone.svg?raw';
-import tableDuo from '@phosphor-icons/core/assets/duotone/table-duotone.svg?raw';
-import compareDuo from '@phosphor-icons/core/assets/duotone/scales-duotone.svg?raw';
-import quizDuo from '@phosphor-icons/core/assets/duotone/question-duotone.svg?raw';
-import chartDuo from '@phosphor-icons/core/assets/duotone/chart-bar-duotone.svg?raw';
-import mermaidDuo from '@phosphor-icons/core/assets/duotone/graph-duotone.svg?raw';
-import calloutDuo from '@phosphor-icons/core/assets/duotone/info-duotone.svg?raw';
-import statsDuo from '@phosphor-icons/core/assets/duotone/trend-up-duotone.svg?raw';
-import tabsDuo from '@phosphor-icons/core/assets/duotone/tabs-duotone.svg?raw';
-import timelineDuo from '@phosphor-icons/core/assets/duotone/hourglass-duotone.svg?raw';
-import followupsDuo from '@phosphor-icons/core/assets/duotone/sparkle-duotone.svg?raw';
-import functionDuo from '@phosphor-icons/core/assets/duotone/function-duotone.svg?raw';
-import codeBlockDuo from '@phosphor-icons/core/assets/duotone/code-block-duotone.svg?raw';
+import activityIcon from 'lucide-static/icons/activity.svg?raw';
+import arrowLeftIcon from 'lucide-static/icons/arrow-left.svg?raw';
+import arrowRightIcon from 'lucide-static/icons/arrow-right.svg?raw';
+import arrowUpRightIcon from 'lucide-static/icons/arrow-up-right.svg?raw';
+import bellIcon from 'lucide-static/icons/bell.svg?raw';
+import bookOpenIcon from 'lucide-static/icons/book-open.svg?raw';
+import botIcon from 'lucide-static/icons/bot.svg?raw';
+import boxIcon from 'lucide-static/icons/box.svg?raw';
+import building2Icon from 'lucide-static/icons/building-2.svg?raw';
+import calendarIcon from 'lucide-static/icons/calendar.svg?raw';
+import cameraIcon from 'lucide-static/icons/camera.svg?raw';
+import chartColumnIcon from 'lucide-static/icons/chart-column.svg?raw';
+import chartNoAxesCombinedIcon from 'lucide-static/icons/chart-no-axes-combined.svg?raw';
+import chartPieIcon from 'lucide-static/icons/chart-pie.svg?raw';
+import checkIcon from 'lucide-static/icons/check.svg?raw';
+import chevronDownIcon from 'lucide-static/icons/chevron-down.svg?raw';
+import chevronLeftIcon from 'lucide-static/icons/chevron-left.svg?raw';
+import chevronRightIcon from 'lucide-static/icons/chevron-right.svg?raw';
+import chevronUpIcon from 'lucide-static/icons/chevron-up.svg?raw';
+import circleAlertIcon from 'lucide-static/icons/circle-alert.svg?raw';
+import circleCheckIcon from 'lucide-static/icons/circle-check.svg?raw';
+import circleHelpIcon from 'lucide-static/icons/circle-help.svg?raw';
+import circleXIcon from 'lucide-static/icons/circle-x.svg?raw';
+import clockIcon from 'lucide-static/icons/clock.svg?raw';
+import cloudIcon from 'lucide-static/icons/cloud.svg?raw';
+import codeIcon from 'lucide-static/icons/code.svg?raw';
+import columns3Icon from 'lucide-static/icons/columns-3.svg?raw';
+import compassIcon from 'lucide-static/icons/compass.svg?raw';
+import copyIcon from 'lucide-static/icons/copy.svg?raw';
+import cpuIcon from 'lucide-static/icons/cpu.svg?raw';
+import creditCardIcon from 'lucide-static/icons/credit-card.svg?raw';
+import databaseIcon from 'lucide-static/icons/database.svg?raw';
+import downloadIcon from 'lucide-static/icons/download.svg?raw';
+import externalLinkIcon from 'lucide-static/icons/external-link.svg?raw';
+import eyeIcon from 'lucide-static/icons/eye.svg?raw';
+import fileIcon from 'lucide-static/icons/file.svg?raw';
+import fileTextIcon from 'lucide-static/icons/file-text.svg?raw';
+import filterIcon from 'lucide-static/icons/filter.svg?raw';
+import folderIcon from 'lucide-static/icons/folder.svg?raw';
+import globeIcon from 'lucide-static/icons/globe.svg?raw';
+import graduationCapIcon from 'lucide-static/icons/graduation-cap.svg?raw';
+import hardDriveIcon from 'lucide-static/icons/hard-drive.svg?raw';
+import heartIcon from 'lucide-static/icons/heart.svg?raw';
+import hourglassIcon from 'lucide-static/icons/hourglass.svg?raw';
+import houseIcon from 'lucide-static/icons/house.svg?raw';
+import imageIcon from 'lucide-static/icons/image.svg?raw';
+import infoIcon from 'lucide-static/icons/info.svg?raw';
+import keyIcon from 'lucide-static/icons/key.svg?raw';
+import laptopIcon from 'lucide-static/icons/laptop.svg?raw';
+import layersIcon from 'lucide-static/icons/layers.svg?raw';
+import linkIcon from 'lucide-static/icons/link.svg?raw';
+import listIcon from 'lucide-static/icons/list.svg?raw';
+import listChecksIcon from 'lucide-static/icons/list-checks.svg?raw';
+import listOrderedIcon from 'lucide-static/icons/list-ordered.svg?raw';
+import lockIcon from 'lucide-static/icons/lock.svg?raw';
+import mailIcon from 'lucide-static/icons/mail.svg?raw';
+import mapPinIcon from 'lucide-static/icons/map-pin.svg?raw';
+import maximizeIcon from 'lucide-static/icons/maximize.svg?raw';
+import messageCircleIcon from 'lucide-static/icons/message-circle.svg?raw';
+import messagesSquareIcon from 'lucide-static/icons/messages-square.svg?raw';
+import minimizeIcon from 'lucide-static/icons/minimize.svg?raw';
+import minusIcon from 'lucide-static/icons/minus.svg?raw';
+import monitorIcon from 'lucide-static/icons/monitor.svg?raw';
+import musicIcon from 'lucide-static/icons/music.svg?raw';
+import networkIcon from 'lucide-static/icons/network.svg?raw';
+import packageIcon from 'lucide-static/icons/package.svg?raw';
+import panelsTopLeftIcon from 'lucide-static/icons/panels-top-left.svg?raw';
+import pencilIcon from 'lucide-static/icons/pencil.svg?raw';
+import playIcon from 'lucide-static/icons/play.svg?raw';
+import plusIcon from 'lucide-static/icons/plus.svg?raw';
+import refreshCwIcon from 'lucide-static/icons/refresh-cw.svg?raw';
+import rocketIcon from 'lucide-static/icons/rocket.svg?raw';
+import scaleIcon from 'lucide-static/icons/scale.svg?raw';
+import searchIcon from 'lucide-static/icons/search.svg?raw';
+import serverIcon from 'lucide-static/icons/server.svg?raw';
+import settingsIcon from 'lucide-static/icons/settings.svg?raw';
+import shieldIcon from 'lucide-static/icons/shield.svg?raw';
+import shieldCheckIcon from 'lucide-static/icons/shield-check.svg?raw';
+import shoppingCartIcon from 'lucide-static/icons/shopping-cart.svg?raw';
+import smartphoneIcon from 'lucide-static/icons/smartphone.svg?raw';
+import sparklesIcon from 'lucide-static/icons/sparkles.svg?raw';
+import squareIcon from 'lucide-static/icons/square.svg?raw';
+import squareFunctionIcon from 'lucide-static/icons/square-function.svg?raw';
+import starIcon from 'lucide-static/icons/star.svg?raw';
+import tableIcon from 'lucide-static/icons/table.svg?raw';
+import tagIcon from 'lucide-static/icons/tag.svg?raw';
+import targetIcon from 'lucide-static/icons/target.svg?raw';
+import terminalIcon from 'lucide-static/icons/terminal.svg?raw';
+import timerIcon from 'lucide-static/icons/timer.svg?raw';
+import trash2Icon from 'lucide-static/icons/trash-2.svg?raw';
+import trendingDownIcon from 'lucide-static/icons/trending-down.svg?raw';
+import trendingUpIcon from 'lucide-static/icons/trending-up.svg?raw';
+import triangleAlertIcon from 'lucide-static/icons/triangle-alert.svg?raw';
+import uploadIcon from 'lucide-static/icons/upload.svg?raw';
+import userIcon from 'lucide-static/icons/user.svg?raw';
+import usersIcon from 'lucide-static/icons/users.svg?raw';
+import videoIcon from 'lucide-static/icons/video.svg?raw';
+import walletIcon from 'lucide-static/icons/wallet.svg?raw';
+import wifiIcon from 'lucide-static/icons/wifi.svg?raw';
+import workflowIcon from 'lucide-static/icons/workflow.svg?raw';
+import xIcon from 'lucide-static/icons/x.svg?raw';
+import zapIcon from 'lucide-static/icons/zap.svg?raw';
 
-// Regular SVGs for UI chrome & common allowlist
-import exportReg from '@phosphor-icons/core/assets/regular/export.svg?raw';
-import downloadSimpleReg from '@phosphor-icons/core/assets/regular/download-simple.svg?raw';
-import imageReg from '@phosphor-icons/core/assets/regular/image.svg?raw';
-import copyReg from '@phosphor-icons/core/assets/regular/copy.svg?raw';
-import codeReg from '@phosphor-icons/core/assets/regular/code.svg?raw';
-import cornersOutReg from '@phosphor-icons/core/assets/regular/corners-out.svg?raw';
-import cornersInReg from '@phosphor-icons/core/assets/regular/corners-in.svg?raw';
-import xReg from '@phosphor-icons/core/assets/regular/x.svg?raw';
-import checkReg from '@phosphor-icons/core/assets/regular/check.svg?raw';
-import caretDownReg from '@phosphor-icons/core/assets/regular/caret-down.svg?raw';
-import caretUpReg from '@phosphor-icons/core/assets/regular/caret-up.svg?raw';
-import caretLeftReg from '@phosphor-icons/core/assets/regular/caret-left.svg?raw';
-import caretRightReg from '@phosphor-icons/core/assets/regular/caret-right.svg?raw';
-import arrowRightReg from '@phosphor-icons/core/assets/regular/arrow-right.svg?raw';
-import arrowLeftReg from '@phosphor-icons/core/assets/regular/arrow-left.svg?raw';
-import arrowUpRightReg from '@phosphor-icons/core/assets/regular/arrow-up-right.svg?raw';
-import arrowSquareOutReg from '@phosphor-icons/core/assets/regular/arrow-square-out.svg?raw';
-import robotReg from '@phosphor-icons/core/assets/regular/robot.svg?raw';
-import sparkleReg from '@phosphor-icons/core/assets/regular/sparkle.svg?raw';
-import shieldCheckReg from '@phosphor-icons/core/assets/regular/shield-check.svg?raw';
-import eyeReg from '@phosphor-icons/core/assets/regular/eye.svg?raw';
-import playReg from '@phosphor-icons/core/assets/regular/play.svg?raw';
-import globeReg from '@phosphor-icons/core/assets/regular/globe.svg?raw';
-import lockReg from '@phosphor-icons/core/assets/regular/lock.svg?raw';
-import hardDrivesReg from '@phosphor-icons/core/assets/regular/hard-drives.svg?raw';
-import databaseReg from '@phosphor-icons/core/assets/regular/database.svg?raw';
-import lightningReg from '@phosphor-icons/core/assets/regular/lightning.svg?raw';
-import rocketReg from '@phosphor-icons/core/assets/regular/rocket.svg?raw';
-import clockReg from '@phosphor-icons/core/assets/regular/clock.svg?raw';
-import usersReg from '@phosphor-icons/core/assets/regular/users.svg?raw';
-import userReg from '@phosphor-icons/core/assets/regular/user.svg?raw';
-import cloudReg from '@phosphor-icons/core/assets/regular/cloud.svg?raw';
-import chartLineReg from '@phosphor-icons/core/assets/regular/chart-line.svg?raw';
-import cpuReg from '@phosphor-icons/core/assets/regular/cpu.svg?raw';
-import wifiHighReg from '@phosphor-icons/core/assets/regular/wifi-high.svg?raw';
-import bellReg from '@phosphor-icons/core/assets/regular/bell.svg?raw';
-import calendarReg from '@phosphor-icons/core/assets/regular/calendar.svg?raw';
-import envelopeReg from '@phosphor-icons/core/assets/regular/envelope.svg?raw';
-import chatCircleReg from '@phosphor-icons/core/assets/regular/chat-circle.svg?raw';
-import chatsCircleReg from '@phosphor-icons/core/assets/regular/chats-circle.svg?raw';
-import heartReg from '@phosphor-icons/core/assets/regular/heart.svg?raw';
-import starReg from '@phosphor-icons/core/assets/regular/star.svg?raw';
-import magnifyingGlassReg from '@phosphor-icons/core/assets/regular/magnifying-glass.svg?raw';
-import gearReg from '@phosphor-icons/core/assets/regular/gear.svg?raw';
-import fileTextReg from '@phosphor-icons/core/assets/regular/file-text.svg?raw';
-import folderReg from '@phosphor-icons/core/assets/regular/folder.svg?raw';
-import terminalReg from '@phosphor-icons/core/assets/regular/terminal.svg?raw';
-import tagReg from '@phosphor-icons/core/assets/regular/tag.svg?raw';
-import compassReg from '@phosphor-icons/core/assets/regular/compass.svg?raw';
-import mapPinReg from '@phosphor-icons/core/assets/regular/map-pin.svg?raw';
-import creditCardReg from '@phosphor-icons/core/assets/regular/credit-card.svg?raw';
-import walletReg from '@phosphor-icons/core/assets/regular/wallet.svg?raw';
-import shoppingCartReg from '@phosphor-icons/core/assets/regular/shopping-cart.svg?raw';
-import packageReg from '@phosphor-icons/core/assets/regular/package.svg?raw';
-import cubeReg from '@phosphor-icons/core/assets/regular/cube.svg?raw';
-import hardDriveReg from '@phosphor-icons/core/assets/regular/hard-drive.svg?raw';
-import laptopReg from '@phosphor-icons/core/assets/regular/laptop.svg?raw';
-import desktopReg from '@phosphor-icons/core/assets/regular/desktop.svg?raw';
-import deviceMobileReg from '@phosphor-icons/core/assets/regular/device-mobile.svg?raw';
-import cameraReg from '@phosphor-icons/core/assets/regular/camera.svg?raw';
-import videoReg from '@phosphor-icons/core/assets/regular/video.svg?raw';
-import musicNoteReg from '@phosphor-icons/core/assets/regular/music-note.svg?raw';
-import bookReg from '@phosphor-icons/core/assets/regular/book.svg?raw';
-import studentReg from '@phosphor-icons/core/assets/regular/student.svg?raw';
-import targetReg from '@phosphor-icons/core/assets/regular/target.svg?raw';
-import funnelReg from '@phosphor-icons/core/assets/regular/funnel.svg?raw';
-import arrowsClockwiseReg from '@phosphor-icons/core/assets/regular/arrows-clockwise.svg?raw';
-import warningReg from '@phosphor-icons/core/assets/regular/warning.svg?raw';
-import warningCircleReg from '@phosphor-icons/core/assets/regular/warning-circle.svg?raw';
-import shieldReg from '@phosphor-icons/core/assets/regular/shield.svg?raw';
-import keyReg from '@phosphor-icons/core/assets/regular/key.svg?raw';
-import linkReg from '@phosphor-icons/core/assets/regular/link.svg?raw';
-import pulseReg from '@phosphor-icons/core/assets/regular/pulse.svg?raw';
-import timerReg from '@phosphor-icons/core/assets/regular/timer.svg?raw';
-import hourglassReg from '@phosphor-icons/core/assets/regular/hourglass.svg?raw';
-import trendDownReg from '@phosphor-icons/core/assets/regular/trend-down.svg?raw';
-import trendUpReg from '@phosphor-icons/core/assets/regular/trend-up.svg?raw';
-import chartPieReg from '@phosphor-icons/core/assets/regular/chart-pie.svg?raw';
-import chartBarReg from '@phosphor-icons/core/assets/regular/chart-bar.svg?raw';
-import buildingsReg from '@phosphor-icons/core/assets/regular/buildings.svg?raw';
-import houseReg from '@phosphor-icons/core/assets/regular/house.svg?raw';
-import trashReg from '@phosphor-icons/core/assets/regular/trash.svg?raw';
-import pencilSimpleReg from '@phosphor-icons/core/assets/regular/pencil-simple.svg?raw';
-import checkCircleReg from '@phosphor-icons/core/assets/regular/check-circle.svg?raw';
-import xCircleReg from '@phosphor-icons/core/assets/regular/x-circle.svg?raw';
-import infoReg from '@phosphor-icons/core/assets/regular/info.svg?raw';
-import questionReg from '@phosphor-icons/core/assets/regular/question.svg?raw';
-import tableReg from '@phosphor-icons/core/assets/regular/table.svg?raw';
-import columnsReg from '@phosphor-icons/core/assets/regular/columns.svg?raw';
-import scalesReg from '@phosphor-icons/core/assets/regular/scales.svg?raw';
-import stepsReg from '@phosphor-icons/core/assets/regular/steps.svg?raw';
-import treeStructureReg from '@phosphor-icons/core/assets/regular/tree-structure.svg?raw';
-import graphReg from '@phosphor-icons/core/assets/regular/graph.svg?raw';
-import tabsReg from '@phosphor-icons/core/assets/regular/tabs.svg?raw';
-import listReg from '@phosphor-icons/core/assets/regular/list.svg?raw';
-import plusReg from '@phosphor-icons/core/assets/regular/plus.svg?raw';
-import minusReg from '@phosphor-icons/core/assets/regular/minus.svg?raw';
-import boundingBoxReg from '@phosphor-icons/core/assets/regular/bounding-box.svg?raw';
-
-export const CARD_TYPE_DUOTONE: Record<UIType, string> = {
-  flow: flowDuo,
-  stepper: stepperDuo,
-  table: tableDuo,
-  compare: compareDuo,
-  quiz: quizDuo,
-  chart: chartDuo,
-  mermaid: mermaidDuo,
-  callout: calloutDuo,
-  stats: statsDuo,
-  tabs: tabsDuo,
-  timeline: timelineDuo,
-  followups: followupsDuo,
-  math: functionDuo,
-  code: codeBlockDuo,
-  checklist: listReg,
-  form: listReg,
-  generic: listReg,
+const REGULAR_ICON_MAP: Record<string, string> = {
+  'export': uploadIcon,
+  'download': downloadIcon,
+  'download-simple': downloadIcon,
+  'image': imageIcon,
+  'copy': copyIcon,
+  'code': codeIcon,
+  'corners-out': maximizeIcon,
+  'maximize': maximizeIcon,
+  'maximize-2': maximizeIcon,
+  'expand': maximizeIcon,
+  'corners-in': minimizeIcon,
+  'minimize': minimizeIcon,
+  'x': xIcon,
+  'check': checkIcon,
+  'caret-down': chevronDownIcon,
+  'chevron-down': chevronDownIcon,
+  'caret-up': chevronUpIcon,
+  'chevron-up': chevronUpIcon,
+  'caret-left': chevronLeftIcon,
+  'chevron-left': chevronLeftIcon,
+  'caret-right': chevronRightIcon,
+  'chevron-right': chevronRightIcon,
+  'arrow-right': arrowRightIcon,
+  'arrow-left': arrowLeftIcon,
+  'arrow-up-right': arrowUpRightIcon,
+  'arrow-ne': arrowUpRightIcon,
+  'arrow-square-out': externalLinkIcon,
+  'external-link': externalLinkIcon,
+  'robot': botIcon,
+  'bot': botIcon,
+  'sparkle': sparklesIcon,
+  'sparkles': sparklesIcon,
+  'shield-check': shieldCheckIcon,
+  'eye': eyeIcon,
+  'play': playIcon,
+  'globe': globeIcon,
+  'lock': lockIcon,
+  'server': serverIcon,
+  'hard-drives': serverIcon,
+  'database': databaseIcon,
+  'lightning': zapIcon,
+  'zap': zapIcon,
+  'rocket': rocketIcon,
+  'clock': clockIcon,
+  'users': usersIcon,
+  'user': userIcon,
+  'cloud': cloudIcon,
+  'chart-line': chartNoAxesCombinedIcon,
+  'trending-up': trendingUpIcon,
+  'cpu': cpuIcon,
+  'wifi-high': wifiIcon,
+  'wifi': wifiIcon,
+  'bell': bellIcon,
+  'calendar': calendarIcon,
+  'envelope': mailIcon,
+  'mail': mailIcon,
+  'chat-circle': messageCircleIcon,
+  'message': messageCircleIcon,
+  'chats-circle': messagesSquareIcon,
+  'heart': heartIcon,
+  'star': starIcon,
+  'magnifying-glass': searchIcon,
+  'search': searchIcon,
+  'gear': settingsIcon,
+  'settings': settingsIcon,
+  'file-text': fileTextIcon,
+  'file': fileIcon,
+  'folder': folderIcon,
+  'terminal': terminalIcon,
+  'tag': tagIcon,
+  'compass': compassIcon,
+  'map-pin': mapPinIcon,
+  'credit-card': creditCardIcon,
+  'wallet': walletIcon,
+  'shopping-cart': shoppingCartIcon,
+  'cart': shoppingCartIcon,
+  'package': packageIcon,
+  'cube': boxIcon,
+  'box': boxIcon,
+  'hard-drive': hardDriveIcon,
+  'laptop': laptopIcon,
+  'desktop': monitorIcon,
+  'monitor': monitorIcon,
+  'device-mobile': smartphoneIcon,
+  'smartphone': smartphoneIcon,
+  'camera': cameraIcon,
+  'video': videoIcon,
+  'music-note': musicIcon,
+  'book': bookOpenIcon,
+  'student': graduationCapIcon,
+  'graduation-cap': graduationCapIcon,
+  'target': targetIcon,
+  'funnel': filterIcon,
+  'filter': filterIcon,
+  'arrows-clockwise': refreshCwIcon,
+  'refresh': refreshCwIcon,
+  'refresh-cw': refreshCwIcon,
+  'warning': triangleAlertIcon,
+  'warning-circle': circleAlertIcon,
+  'alert-triangle': triangleAlertIcon,
+  'shield': shieldIcon,
+  'key': keyIcon,
+  'link': linkIcon,
+  'activity': activityIcon,
+  'pulse': activityIcon,
+  'timer': timerIcon,
+  'hourglass': hourglassIcon,
+  'trend-down': trendingDownIcon,
+  'trend-up': trendingUpIcon,
+  'chart-pie': chartPieIcon,
+  'pie-chart': chartPieIcon,
+  'chart-bar': chartColumnIcon,
+  'bar-chart': chartColumnIcon,
+  'chart': chartColumnIcon,
+  'buildings': building2Icon,
+  'building': building2Icon,
+  'house': houseIcon,
+  'home': houseIcon,
+  'trash': trash2Icon,
+  'pencil-simple': pencilIcon,
+  'edit': pencilIcon,
+  'check-circle': circleCheckIcon,
+  'x-circle': circleXIcon,
+  'info': infoIcon,
+  'question': circleHelpIcon,
+  'help-circle': circleHelpIcon,
+  'table': tableIcon,
+  'columns': columns3Icon,
+  'scales': scaleIcon,
+  'scale': scaleIcon,
+  'steps': listOrderedIcon,
+  'tree-structure': workflowIcon,
+  'workflow': workflowIcon,
+  'network': networkIcon,
+  'graph': networkIcon,
+  'tabs': panelsTopLeftIcon,
+  'layers': layersIcon,
+  'list': listIcon,
+  'plus': plusIcon,
+  'minus': minusIcon,
+  'bounding-box': squareIcon,
+  'shrink': minimizeIcon,
+  'function': squareFunctionIcon,
+  'checklist': listChecksIcon,
 };
 
-export const REGULAR_ICON_MAP: Record<string, string> = {
-  'export': exportReg,
-  'download': downloadSimpleReg,
-  'download-simple': downloadSimpleReg,
-  'image': imageReg,
-  'copy': copyReg,
-  'code': codeReg,
-  'corners-out': cornersOutReg,
-  'maximize': cornersOutReg,
-  'maximize-2': cornersOutReg,
-  'expand': cornersOutReg,
-  'corners-in': cornersInReg,
-  'minimize': cornersInReg,
-  'x': xReg,
-  'check': checkReg,
-  'caret-down': caretDownReg,
-  'chevron-down': caretDownReg,
-  'caret-up': caretUpReg,
-  'chevron-up': caretUpReg,
-  'caret-left': caretLeftReg,
-  'chevron-left': caretLeftReg,
-  'caret-right': caretRightReg,
-  'chevron-right': caretRightReg,
-  'arrow-right': arrowRightReg,
-  'arrow-left': arrowLeftReg,
-  'arrow-up-right': arrowUpRightReg,
-  'arrow-ne': arrowUpRightReg,
-  'arrow-square-out': arrowSquareOutReg,
-  'external-link': arrowSquareOutReg,
-  'robot': robotReg,
-  'bot': robotReg,
-  'sparkle': sparkleReg,
-  'sparkles': sparkleReg,
-  'shield-check': shieldCheckReg,
-  'eye': eyeReg,
-  'play': playReg,
-  'globe': globeReg,
-  'lock': lockReg,
-  'server': hardDrivesReg,
-  'hard-drives': hardDrivesReg,
-  'database': databaseReg,
-  'lightning': lightningReg,
-  'zap': lightningReg,
-  'rocket': rocketReg,
-  'clock': clockReg,
-  'users': usersReg,
-  'user': userReg,
-  'cloud': cloudReg,
-  'chart-line': chartLineReg,
-  'trending-up': trendUpReg,
-  'cpu': cpuReg,
-  'wifi-high': wifiHighReg,
-  'wifi': wifiHighReg,
-  'bell': bellReg,
-  'calendar': calendarReg,
-  'envelope': envelopeReg,
-  'mail': envelopeReg,
-  'chat-circle': chatCircleReg,
-  'message': chatCircleReg,
-  'chats-circle': chatsCircleReg,
-  'heart': heartReg,
-  'star': starReg,
-  'magnifying-glass': magnifyingGlassReg,
-  'search': magnifyingGlassReg,
-  'gear': gearReg,
-  'settings': gearReg,
-  'file-text': fileTextReg,
-  'file': fileTextReg,
-  'folder': folderReg,
-  'terminal': terminalReg,
-  'tag': tagReg,
-  'compass': compassReg,
-  'map-pin': mapPinReg,
-  'credit-card': creditCardReg,
-  'wallet': walletReg,
-  'shopping-cart': shoppingCartReg,
-  'cart': shoppingCartReg,
-  'package': packageReg,
-  'cube': cubeReg,
-  'box': cubeReg,
-  'hard-drive': hardDriveReg,
-  'laptop': laptopReg,
-  'desktop': desktopReg,
-  'monitor': desktopReg,
-  'device-mobile': deviceMobileReg,
-  'smartphone': deviceMobileReg,
-  'camera': cameraReg,
-  'video': videoReg,
-  'music-note': musicNoteReg,
-  'book': bookReg,
-  'student': studentReg,
-  'graduation-cap': studentReg,
-  'target': targetReg,
-  'funnel': funnelReg,
-  'filter': funnelReg,
-  'arrows-clockwise': arrowsClockwiseReg,
-  'refresh': arrowsClockwiseReg,
-  'refresh-cw': arrowsClockwiseReg,
-  'warning': warningReg,
-  'warning-circle': warningCircleReg,
-  'alert-triangle': warningReg,
-  'shield': shieldReg,
-  'key': keyReg,
-  'link': linkReg,
-  'activity': pulseReg,
-  'pulse': pulseReg,
-  'timer': timerReg,
-  'hourglass': hourglassReg,
-  'trend-down': trendDownReg,
-  'trend-up': trendUpReg,
-  'chart-pie': chartPieReg,
-  'pie-chart': chartPieReg,
-  'chart-bar': chartBarReg,
-  'bar-chart': chartBarReg,
-  'chart': chartBarReg,
-  'buildings': buildingsReg,
-  'building': buildingsReg,
-  'house': houseReg,
-  'home': houseReg,
-  'trash': trashReg,
-  'pencil-simple': pencilSimpleReg,
-  'edit': pencilSimpleReg,
-  'check-circle': checkCircleReg,
-  'x-circle': xCircleReg,
-  'info': infoReg,
-  'question': questionReg,
-  'help-circle': questionReg,
-  'table': tableReg,
-  'columns': columnsReg,
-  'scales': scalesReg,
-  'scale': scalesReg,
-  'steps': stepsReg,
-  'tree-structure': treeStructureReg,
-  'workflow': treeStructureReg,
-  'network': graphReg,
-  'graph': graphReg,
-  'tabs': tabsReg,
-  'layers': tabsReg,
-  'list': listReg,
-  'plus': plusReg,
-  'minus': minusReg,
-  'bounding-box': boundingBoxReg,
-  'shrink': cornersInReg,
+const CARD_TYPE_ICONS: Record<UIType, string> = {
+  flow: workflowIcon,
+  stepper: listOrderedIcon,
+  table: tableIcon,
+  compare: scaleIcon,
+  quiz: circleHelpIcon,
+  chart: chartColumnIcon,
+  mermaid: networkIcon,
+  callout: infoIcon,
+  stats: chartNoAxesCombinedIcon,
+  tabs: panelsTopLeftIcon,
+  timeline: clockIcon,
+  followups: sparklesIcon,
+  math: squareFunctionIcon,
+  code: codeIcon,
+  checklist: listChecksIcon,
+  form: listIcon,
+  generic: listIcon,
 };
 
-/**
- * Common allowlist of ~60 Phosphor icon names allowed for model choice.
- */
 export const ALLOWED_ICONS = [
+  'export',
+  'download',
+  'download-simple',
+  'image',
+  'copy',
+  'code',
+  'corners-out',
+  'maximize',
+  'maximize-2',
+  'expand',
+  'corners-in',
+  'minimize',
+  'check',
+  'caret-down',
+  'chevron-down',
+  'caret-up',
+  'chevron-up',
+  'caret-left',
+  'chevron-left',
+  'caret-right',
+  'chevron-right',
+  'arrow-right',
+  'arrow-left',
+  'arrow-up-right',
+  'arrow-ne',
+  'arrow-square-out',
+  'external-link',
+  'robot',
+  'bot',
+  'sparkle',
+  'sparkles',
+  'shield-check',
+  'eye',
+  'play',
   'globe',
   'lock',
   'server',
+  'hard-drives',
   'database',
   'lightning',
+  'zap',
   'rocket',
   'clock',
   'users',
   'user',
-  'code',
   'cloud',
-  'shield-check',
-  'shield',
   'chart-line',
-  'chart-bar',
-  'chart-pie',
+  'trending-up',
   'cpu',
   'wifi-high',
+  'wifi',
   'bell',
   'calendar',
   'envelope',
+  'mail',
   'chat-circle',
+  'message',
+  'chats-circle',
   'heart',
   'star',
   'magnifying-glass',
+  'search',
   'gear',
+  'settings',
   'file-text',
+  'file',
   'folder',
   'terminal',
   'tag',
@@ -321,71 +346,103 @@ export const ALLOWED_ICONS = [
   'credit-card',
   'wallet',
   'shopping-cart',
+  'cart',
   'package',
   'cube',
+  'box',
   'hard-drive',
   'laptop',
+  'desktop',
+  'monitor',
   'device-mobile',
+  'smartphone',
   'camera',
   'video',
   'music-note',
   'book',
   'student',
+  'graduation-cap',
   'target',
   'funnel',
+  'filter',
   'arrows-clockwise',
+  'refresh',
+  'refresh-cw',
   'warning',
+  'warning-circle',
+  'alert-triangle',
+  'shield',
   'key',
   'link',
+  'activity',
   'pulse',
   'timer',
   'hourglass',
-  'trend-up',
   'trend-down',
+  'trend-up',
+  'chart-pie',
+  'pie-chart',
+  'chart-bar',
+  'bar-chart',
+  'chart',
   'buildings',
+  'building',
   'house',
+  'home',
   'trash',
   'pencil-simple',
+  'edit',
   'check-circle',
   'x-circle',
   'info',
   'question',
+  'help-circle',
+  'table',
+  'columns',
+  'scales',
+  'scale',
+  'steps',
+  'tree-structure',
+  'workflow',
+  'network',
+  'graph',
+  'tabs',
+  'layers',
+  'list',
+  'plus',
+  'minus',
+  'bounding-box',
+  'shrink',
+  'function',
+  'checklist',
 ] as const;
-
 export const ALLOWED_ICON_NAMES = new Set<string>(ALLOWED_ICONS);
-
-export function isAllowedIcon(name: string | undefined): boolean {
-  if (!name) return false;
-  const norm = normalizeIconName(name);
-  return ALLOWED_ICON_NAMES.has(norm) || norm in REGULAR_ICON_MAP;
-}
 
 export function normalizeIconName(name: string | undefined): string {
   if (!name) return '';
-  let s = name.trim();
-  s = s.replace(/([a-z0-9])([A-Z])/g, '$1-$2');
-  s = s.toLowerCase();
-  s = s.replace(/[\s_]+/g, '-');
-  return s;
+  return name.trim().replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase().replace(/[\s_]+/g, '-');
 }
 
-/**
- * Returns a duotone Phosphor icon for the 12 card types.
- */
+export function isAllowedIcon(name: string | undefined): boolean {
+  return !!name && normalizeIconName(name) in REGULAR_ICON_MAP;
+}
+
+function makeLucideIcon(raw: string, size = 16, className?: string): SVGElement {
+  const svg = parseSvgString(raw, size);
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.8');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  if (className) svg.setAttribute('class', className);
+  return svg;
+}
+
 export function typeIconEl(type: UIType, size = 16, className?: string): SVGElement {
-  const raw = CARD_TYPE_DUOTONE[type] || CARD_TYPE_DUOTONE.flow;
-  const svg = parseSvgString(raw, size);
-  if (className) svg.setAttribute('class', className);
-  return svg;
+  return makeLucideIcon(CARD_TYPE_ICONS[type] || CARD_TYPE_ICONS.flow, size, className);
 }
 
-/**
- * Returns a regular Phosphor icon for UI chrome and components.
- */
 export function iconEl(name: string | undefined, size = 16, className?: string): SVGElement {
-  const norm = normalizeIconName(name);
-  const raw = (norm && REGULAR_ICON_MAP[norm]) ? REGULAR_ICON_MAP[norm] : sparkleReg;
-  const svg = parseSvgString(raw, size);
-  if (className) svg.setAttribute('class', className);
-  return svg;
+  const raw = REGULAR_ICON_MAP[normalizeIconName(name)] || sparklesIcon;
+  return makeLucideIcon(raw, size, className);
 }

@@ -36,6 +36,19 @@ export const BETTERVIEW_TYPES = [
   'code',
 ] as const;
 
+/** Query through open shadow roots as well as the light DOM used by older hosts. */
+function querySelectorAllDeep<T extends Element>(root: ParentNode, selector: string): T[] {
+  const found = new Set<T>();
+  const visit = (scope: ParentNode): void => {
+    scope.querySelectorAll<T>(selector).forEach((el) => found.add(el));
+    scope.querySelectorAll<HTMLElement>('*').forEach((el) => {
+      if (el.shadowRoot) visit(el.shadowRoot);
+    });
+  };
+  visit(root);
+  return Array.from(found);
+}
+
 export function isCodeOnlyWrapper(wrapper: HTMLElement, block: HTMLElement): boolean {
   if (wrapper === block) return true;
   if (!wrapper.contains(block)) return false;
@@ -86,7 +99,8 @@ export const GEMINI_ADAPTER: SiteAdapter = {
     );
   },
   findCodeBlocks(root: ParentNode): HTMLElement[] {
-    const blocks = root.querySelectorAll<HTMLElement>(
+    const blocks = querySelectorAllDeep<HTMLElement>(
+      root,
       'model-response code-block, .markdown.markdown-main-panel code-block, code-block, .code-block',
     );
     const seen = new Set<HTMLElement>();
@@ -166,7 +180,7 @@ export const GROK_ADAPTER: SiteAdapter = {
     return document.querySelector('main') ?? document.body;
   },
   findCodeBlocks(root: ParentNode): HTMLElement[] {
-    return Array.from(root.querySelectorAll<HTMLElement>('pre'));
+    return querySelectorAllDeep<HTMLElement>(root, 'pre');
   },
   codeElementOf(block: HTMLElement): HTMLElement | null {
     return block.querySelector<HTMLElement>('code') ?? (block.tagName.toLowerCase() === 'code' ? block : null);

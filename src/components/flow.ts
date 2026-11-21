@@ -232,13 +232,16 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
     const topoRank = topoOrder.get(node.id) ?? 0;
     nodeEl.style.setProperty('--node-topo-idx', String(topoRank));
 
-    // Iconbox
-    const iconBox = h(
-      'div',
-      { class: 'flow-node-iconbox' },
-      iconEl(node.icon, 18)
-    );
-    nodeEl.appendChild(iconBox);
+    // Only show an icon when the model supplied a meaningful one. Filling
+    // every node with a generic sparkle makes diagrams feel noisy and templated.
+    if (node.icon) {
+      const iconBox = h(
+        'div',
+        { class: 'flow-node-iconbox' },
+        iconEl(node.icon, 16)
+      );
+      nodeEl.appendChild(iconBox);
+    }
 
     // Text column
     const textCol = h('div', { class: 'flow-node-text' });

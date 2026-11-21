@@ -12,7 +12,7 @@ export const COMPONENT_CATALOG: ComponentCatalogEntry[] = [
     type: 'flow',
     required: ['type', 'nodes', 'edges'],
     whenToUse: 'Process flows or architecture',
-    schemaSnippet: '{"type":"flow","title":"...","nodes":[{"id":"a","label":"User","icon":"user","color":"blue"}],"edges":[{"from":"a","to":"b","label":"Yes"}]}',
+    schemaSnippet: '{"type":"flow","title":"...","nodes":[{"id":"a","label":"User"},{"id":"b","label":"API server"}],"edges":[{"from":"a","to":"b","label":"Request"}]}',
   },
   {
     type: 'stepper',
@@ -118,17 +118,21 @@ function generateCompactCatalog(): string {
   ).join(' · ');
 }
 
-export const CURRENT_INSTRUCTION_VERSION = 6;
+export const CURRENT_INSTRUCTION_VERSION = 7;
 
-export const SETUP_INSTRUCTION = `[BetterView v6] Answer normally in text and markdown; the text answer is the main answer and must stand on its own. When the user asks for something visual, a diagram or a chart, answer in text with \`\`\`ui blocks and NEVER generate or create images unless the user explicitly says "image" or "picture". Only where a visual genuinely helps, add a \`\`\`ui block with ONE valid JSON object at the relevant spot (Never more than 3 per answer, none for short or casual answers, never the whole answer in ui, never invent numbers). Each block is {"type":"<one of the types>","title":"...", ...fields}; use double quotes, no comments, no trailing commas. Followups optional at the end of long answers.
+export const SETUP_INSTRUCTION = `[BetterView v7] Answer normally in text and markdown; the text answer is the main answer and must stand on its own. When the user asks for something visual, a diagram or a chart, answer in text with \`\`\`ui blocks and NEVER generate or create images unless the user explicitly says "image" or "picture". Only where a visual genuinely helps, add a \`\`\`ui block with ONE valid JSON object at the relevant spot (Never more than 3 per answer, none for short or casual answers, never the whole answer in ui, never invent numbers). Each block is {"type":"<one of the types>","title":"...", ...fields}; use double quotes, no comments, no trailing commas.
+
+STYLE: Use restrained editorial layouts, existing muted colors, clear spacing and readable labels. Prefer dividers over nested cards; use Lucide icons sparingly and avoid decorative repetition.
 Types: flow{nodes[id,label,icon?],edges[from,to,label?]} stepper{steps[title,detail]} table{columns,rows} compare{items[label,tone,points]} chart{chartType,labels,datasets[label,data]} stats{items[label,value,delta?]} timeline{events[title,time,text]} callout{tone,text} tabs{tabs[label,content]} quiz{questions[q,options,answer,explain]} checklist{items[text,detail?,checked?]} form{fields[id,label,type,options?,required?]} mermaid{code} math{latex,steps?} code{language,code} followups{suggestions}`;
 
-export const SYSTEM_INSTRUCTION = `[BetterView v6] Answer normally in plain text and markdown. The text answer is the main answer and must stand on its own. When asked for something visual, a diagram or a chart, answer in text with \`\`\`ui blocks; NEVER generate or create images unless the user explicitly says "image" or "picture". Only where a visual genuinely adds clarity (process, steps, trade-offs, table, metrics, timeline, formula), ALSO add a fenced code block with language ui containing ONE valid JSON object (double quotes, no comments, no trailing commas, "type" first, then "title"). Place it at the relevant spot inside your normal answer; keep text around it. Short answers and casual chat get no ui. Never more than 3 ui blocks per answer. Never put the whole answer inside ui blocks. Never invent numbers. Followups optional at the end of long answers.
+export const SYSTEM_INSTRUCTION = `[BetterView v7] Answer normally in plain text and markdown. The text answer is the main answer and must stand on its own. When asked for something visual, a diagram or a chart, answer in text with \`\`\`ui blocks; NEVER generate or create images unless the user explicitly says "image" or "picture". Only where a visual genuinely adds clarity (process, steps, trade-offs, table, metrics, timeline, formula), ALSO add a fenced code block with language ui containing ONE valid JSON object (double quotes, no comments, no trailing commas, "type" first, then "title"). Place it at the relevant spot inside your normal answer; keep text around it. Short answers and casual chat get no ui. Never more than 3 ui blocks per answer. Never put the whole answer inside ui blocks. Never invent numbers. Followups optional at the end of long answers.
+
+STYLE: Use restrained editorial layouts, existing muted colors, clear spacing and readable labels. Prefer dividers over nested cards; use Lucide icons sparingly and avoid decorative repetition.
 
 Type catalog:
 ${generateCatalogSection()}`;
 
-export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v6] In markdown. For visuals/diagrams, answer in text with \`\`\`ui; NEVER generate or create images unless asked for "image" or "picture". Add ui block when helpful. Casual chat gets no ui. Never more than 3 ui blocks per answer. Never invent numbers.
+export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v7] In markdown. For visuals/diagrams, answer in text with \`\`\`ui; NEVER generate or create images unless asked for "image" or "picture". Add ui block when helpful. Casual chat gets no ui. Never more than 3 ui blocks per answer. Never invent numbers. Use restrained layouts, existing colors and sparse Lucide icons.
 Types: ${generateCompactCatalog()}`;
 
 export function getCompactInstruction(): string {

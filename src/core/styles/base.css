@@ -616,6 +616,13 @@
   color: var(--iui-text);
 }
 
+.iui-type-iconbox svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  stroke-width: 1.8;
+}
+
 .iui-root[data-theme="dark"] .iui-type-iconbox {
   color: var(--iui-muted);
 }
@@ -658,6 +665,7 @@
   margin: 0;
   color: var(--iui-text);
   line-height: 1.35;
+  letter-spacing: -0.018em;
   animation: iui-title-wipe 300ms cubic-bezier(.2,.8,.2,1) forwards;
 }
 
@@ -686,6 +694,11 @@
   font-weight: 400;
   color: var(--iui-muted);
   line-height: 1.35;
+}
+
+.iui-card .iui-title + .iui-chart-plot,
+.iui-card .iui-title + .iui-mermaid-wrap {
+  margin-top: 2px;
 }
 
 /* Both hosts: no shadows, no glow */
@@ -805,7 +818,8 @@
 /* Custom Tooltip */
 .iui-tooltip {
   position: absolute;
-  bottom: calc(100% + 6px);
+  top: calc(100% + 6px);
+  bottom: auto;
   left: 50%;
   transform: translateX(-50%);
   background-color: var(--iui-text);
@@ -823,6 +837,24 @@
   transition-delay: 0ms;
   z-index: 1000;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  max-width: min(220px, calc(100vw - 24px));
+}
+
+/* Keep edge tooltips inside the viewport instead of clipping at the toolbar. */
+.iui-card-toolbar > .iui-tool-btn:first-child .iui-tooltip {
+  left: 0;
+  transform: none;
+}
+
+.iui-card-toolbar > .iui-tool-btn:last-child .iui-tooltip {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.iui-export-wrap .iui-tooltip {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .iui-tool-btn:hover .iui-tooltip,

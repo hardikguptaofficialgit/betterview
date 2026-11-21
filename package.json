@@ -24,8 +24,8 @@
     "vitest": "^5.1.1"
   },
   "dependencies": {
-    "@phosphor-icons/core": "2.1.1",
     "chart.js": "^4.6.1",
+    "lucide-static": "^0.468.0",
     "mermaid": "^12.3.0"
   }
 }

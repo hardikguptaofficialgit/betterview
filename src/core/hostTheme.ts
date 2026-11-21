@@ -339,10 +339,12 @@ export function applyHostTheme(
     root.style.setProperty('--iui-lh', '1.55');
   }
 
-  // Text color: only when computed color has enough contrast with --iui-bg
+  // Validate host text against the surface where the card text is actually
+  // rendered. Gemini cards use the surface token rather than the page bg.
   let textColor = tokens.text;
   if (typography?.color) {
-    const ratio = getContrastRatio(typography.color, currentBg);
+    const textSurface = host === 'gemini' ? tokens.surface : currentBg;
+    const ratio = getContrastRatio(typography.color, textSurface);
     if (ratio >= 3.0) {
       textColor = typography.color;
     }

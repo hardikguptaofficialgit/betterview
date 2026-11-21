@@ -1,7 +1,7 @@
 /* Code Component Styles */
 .iui-code-card {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   border-radius: var(--iui-radius-card, 18px);
 }
 

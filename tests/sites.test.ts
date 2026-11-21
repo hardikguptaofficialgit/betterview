@@ -28,16 +28,16 @@ import { grokIconSvg } from '../src/core/brandIcons';
 describe('System Instruction', () => {
   it('SETUP_INSTRUCTION conforms to constraints', () => {
     expect(SETUP_INSTRUCTION.length).toBeLessThanOrEqual(1400);
-    expect(SETUP_INSTRUCTION.startsWith('[BetterView v6]')).toBe(true);
+    expect(SETUP_INSTRUCTION.startsWith('[BetterView v7]')).toBe(true);
     expect(SETUP_INSTRUCTION).toContain('ui');
     expect(SETUP_INSTRUCTION).toContain('3');
     expect(getCompactInstruction()).toBe(SETUP_INSTRUCTION);
   });
 
-  it('Instruction tests: version is 6, marker present, contains "Never more than 3", length not greater than before', () => {
-    expect(CURRENT_INSTRUCTION_VERSION).toBe(6);
+  it('Instruction tests: version is 7, marker present, contains "Never more than 3", length not greater than before', () => {
+    expect(CURRENT_INSTRUCTION_VERSION).toBe(7);
     const compact = getCompactInstruction();
-    expect(compact).toContain('[BetterView v6]');
+    expect(compact).toContain('[BetterView v7]');
     expect(compact).toContain('Never more than 3');
     expect(compact).toContain('NEVER generate or create images');
     expect(compact.length).toBeLessThanOrEqual(1400);
@@ -74,6 +74,18 @@ describe('SiteAdapter: Gemini', () => {
     expect(blocks.length).toBe(2);
     expect(blocks[0].id).toBe('cb1');
     expect(blocks[1].id).toBe('cb2');
+  });
+
+  it('finds Gemini code blocks inside open shadow roots', () => {
+    const container = document.createElement('div');
+    const responseHost = document.createElement('model-response');
+    const shadow = responseHost.attachShadow({ mode: 'open' });
+    shadow.innerHTML = '<code-block><pre><code data-test-id="code-content">{"type":"flow"}</code></pre></code-block>';
+    container.appendChild(responseHost);
+    const blocks = GEMINI_ADAPTER.findCodeBlocks(container);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].tagName.toLowerCase()).toBe('code-block');
+    expect(isUiBlock(GEMINI_ADAPTER, blocks[0])).toBe(true);
   });
 
   it('detects language from code class or code-block-decoration', () => {
@@ -394,7 +406,7 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
 
     await fillGeminiMemoryDialog(overlay, { waitTimeoutMs: 2000, pollIntervalMs: 50 });
 
-    expect(textarea.value.startsWith('[BetterView v6] ')).toBe(true);
+    expect(textarea.value.startsWith('[BetterView v7] ')).toBe(true);
     expect(textarea.value).toBe(getCompactInstruction());
     expect(submitClicked).toBe(true);
 
@@ -1041,11 +1053,11 @@ describe('runGrokSetup', () => {
 
     const result = await runGrokSetup();
     expect(result.status).toBe('added');
-    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value.startsWith('[BetterView v6]')).toBe(true);
+    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value.startsWith('[BetterView v7]')).toBe(true);
     document.body.replaceChildren();
   });
 
-  it('saves the current v4 instruction successfully', async () => {
+  it('saves the current v7 instruction successfully', async () => {
     const region = document.createElement('div');
     region.setAttribute('role', 'region');
     region.setAttribute('aria-label', 'Customize');
@@ -1059,7 +1071,7 @@ describe('runGrokSetup', () => {
     const result = await runGrokSetup();
     const textarea = region.querySelector('textarea')!;
     expect(result.status).toBe('added');
-    expect(textarea.value.startsWith('[BetterView v6]')).toBe(true);
+    expect(textarea.value.startsWith('[BetterView v7]')).toBe(true);
 
     region.remove();
   });
@@ -1070,14 +1082,14 @@ describe('runGrokSetup', () => {
     region.setAttribute('aria-label', 'Customize');
     region.innerHTML = `
       <button role="combobox">Custom</button>
-      <textarea aria-label="Instructions">[BetterView v6] current instruction</textarea>
+      <textarea aria-label="Instructions">[BetterView v7] current instruction</textarea>
       <button>Save</button>
     `;
     document.body.appendChild(region);
 
     const result = await runGrokSetup();
     expect(result.status).toBe('already');
-    expect(region.querySelector('textarea')?.value).toBe('[BetterView v6] current instruction');
+    expect(region.querySelector('textarea')?.value).toBe('[BetterView v7] current instruction');
 
     region.remove();
   });

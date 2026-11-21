@@ -472,6 +472,7 @@ describe('Flow diagram canvas controls', () => {
     expect(card.querySelectorAll('[aria-label="Fit diagram"]')).toHaveLength(1);
     expect(card.querySelectorAll('[aria-label="Enter full screen"]')).toHaveLength(1);
     expect(card.querySelectorAll('.flow-node')).toHaveLength(3);
+    expect(card.querySelectorAll('.flow-node-iconbox')).toHaveLength(0);
 
     zoomIn.click();
     expect(card.querySelector('.flow-zoom-label')?.textContent).toBe('115%');
