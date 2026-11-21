@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
 import { startScanner } from '../src/content/scanner';
-import { GEMINI_ADAPTER } from '../src/content/sites';
+import { GEMINI_ADAPTER, GROK_ADAPTER } from '../src/content/sites';
 
 describe('startScanner', () => {
   it('scans root, hides original wrapper and mounts host', () => {
@@ -219,6 +219,209 @@ describe('Gemini live DOM code block detection (Bug #2)', () => {
     expect(skel).not.toBeNull();
 
     scanner.stop();
+    container.remove();
+  });
+});
+
+describe('M15: Safe wrapper, prose preservation, and flicker-free streaming', () => {
+  it('(a) Grok-like DOM: keeps h2, p, ul intact and visible, mounts host at code wrapper spot', () => {
+    const container = document.createElement('div');
+    const message = document.createElement('div');
+    message.className = 'message-bubble';
+    message.innerHTML = `
+      <h2>Executive Summary</h2>
+      <p>Here are the latest operational metrics for Q3:</p>
+      <div class="grok-code-wrapper">
+        <div class="grok-code-header"><span>ui</span><button>Copy</button></div>
+        <pre><code class="language-ui">{"type":"stats","title":"Q3 Metrics","items":[{"label":"Uptime","value":"99.9%"}]}</code></pre>
+      </div>
+      <p>Key takeaways:</p>
+      <ul>
+        <li>Service reliability reached target</li>
+        <li>Zero high-severity incidents</li>
+      </ul>
+    `;
+    container.appendChild(message);
+    document.body.appendChild(container);
+
+    const h2 = message.querySelector('h2')!;
+    const p1 = message.querySelectorAll('p')[0];
+    const p2 = message.querySelectorAll('p')[1];
+    const ul = message.querySelector('ul')!;
+    const h2Text = h2.textContent;
+    const p1Text = p1.textContent;
+    const p2Text = p2.textContent;
+    const ulText = ul.textContent;
+    const codeWrapper = message.querySelector('.grok-code-wrapper') as HTMLElement;
+
+    const scanner = startScanner(GROK_ADAPTER, () => 'light', container);
+
+    // Every h2/p/ul is still present, visible (no display:none, no data-iui-hidden) and textContent unchanged
+    expect(h2.style.display).not.toBe('none');
+    expect(h2.hasAttribute('data-iui-hidden')).toBe(false);
+    expect(h2.textContent).toBe(h2Text);
+
+    expect(p1.style.display).not.toBe('none');
+    expect(p1.hasAttribute('data-iui-hidden')).toBe(false);
+    expect(p1.textContent).toBe(p1Text);
+
+    expect(p2.style.display).not.toBe('none');
+    expect(p2.hasAttribute('data-iui-hidden')).toBe(false);
+    expect(p2.textContent).toBe(p2Text);
+
+    expect(ul.style.display).not.toBe('none');
+    expect(ul.hasAttribute('data-iui-hidden')).toBe(false);
+    expect(ul.textContent).toBe(ulText);
+
+    // Code wrapper is hidden
+    expect(codeWrapper.style.display).toBe('none');
+    expect(codeWrapper.getAttribute('data-iui-hidden')).toBe('1');
+
+    // Host sits at exact spot where code wrapper was (previousSibling of codeWrapper, both children of message)
+    const host = message.querySelector('.iui-host') as HTMLElement;
+    expect(host).not.toBeNull();
+    expect(host.parentElement).toBe(message);
+    expect(codeWrapper.parentElement).toBe(message);
+    expect(codeWrapper.previousElementSibling).toBe(host);
+    expect(host.previousElementSibling).toBe(p1);
+    expect(codeWrapper.nextElementSibling).toBe(p2);
+
+    scanner.stop();
+    container.remove();
+  });
+
+  it('(b) Grok message with single <pre> and prose siblings in same parent: only <pre> is hidden, never container', () => {
+    const container = document.createElement('div');
+    const message = document.createElement('div');
+    message.className = 'grok-message-container';
+    message.innerHTML = `
+      <p>Here is your data:</p>
+      <pre><code class="language-ui">{"type":"table","title":"Data","columns":["A","B"],"rows":[["1","2"]]}</code></pre>
+      <p>Let me know if you need more details.</p>
+    `;
+    container.appendChild(message);
+    document.body.appendChild(container);
+
+    const pre = message.querySelector('pre') as HTMLElement;
+    const scanner = startScanner(GROK_ADAPTER, () => 'light', container);
+
+    // Message container is NOT hidden
+    expect(message.style.display).not.toBe('none');
+    expect(message.hasAttribute('data-iui-hidden')).toBe(false);
+
+    // Pre is hidden
+    expect(pre.style.display).toBe('none');
+    expect(pre.getAttribute('data-iui-hidden')).toBe('1');
+
+    // Prose siblings untouched
+    const paras = message.querySelectorAll('p');
+    expect(paras[0].style.display).not.toBe('none');
+    expect(paras[1].style.display).not.toBe('none');
+
+    scanner.stop();
+    container.remove();
+  });
+
+  it('(c) Gemini-like DOM: prose stays untouched, only code-block is hidden', () => {
+    const container = document.createElement('div');
+    const message = document.createElement('div');
+    message.className = 'gemini-message';
+    message.innerHTML = `
+      <h3>Instructions</h3>
+      <p>Follow these steps:</p>
+      <code-block>
+        <div class="code-block-decoration">ui</div>
+        <pre><code class="language-ui">{"type":"stepper","title":"Steps","steps":[{"title":"1","detail":"Start"}]}</code></pre>
+      </code-block>
+      <p>Done!</p>
+    `;
+    container.appendChild(message);
+    document.body.appendChild(container);
+
+    const cb = message.querySelector('code-block') as HTMLElement;
+    const scanner = startScanner(GEMINI_ADAPTER, () => 'light', container);
+
+    expect(cb.style.display).toBe('none');
+    expect(cb.getAttribute('data-iui-hidden')).toBe('1');
+
+    const h3 = message.querySelector('h3')!;
+    const paras = message.querySelectorAll('p');
+    expect(h3.style.display).not.toBe('none');
+    expect(paras[0].style.display).not.toBe('none');
+    expect(paras[1].style.display).not.toBe('none');
+
+    scanner.stop();
+    container.remove();
+  });
+
+  it('(d) Streaming: incomplete ui block shows skeleton of fixed 120px height, feeding partial text preserves node identity, completing renders card', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <code-block>
+        <pre><code class="language-ui">{"type": "flow"</code></pre>
+      </code-block>
+    `;
+    document.body.appendChild(container);
+
+    const codeEl = container.querySelector('code')!;
+    const scanner = startScanner(GEMINI_ADAPTER, () => 'light', container);
+
+    const host = container.querySelector('.iui-host') as HTMLElement;
+    expect(host).not.toBeNull();
+
+    // Incomplete ui block shows a skeleton of fixed 120px height
+    const skeletonCard = host.shadowRoot?.querySelector('.iui-skeleton-card') as HTMLElement;
+    expect(skeletonCard).not.toBeNull();
+    expect(skeletonCard.style.height).toBe('120px');
+    expect(skeletonCard.style.minHeight).toBe('120px');
+    expect(skeletonCard.style.maxHeight).toBe('120px');
+
+    // Feeding more partial text does not replace the skeleton element (same node identity)
+    codeEl.textContent = '{"type": "flow", "title": "System Architecture", "nodes": [';
+    scanner.rescan();
+
+    const skeletonCardAfter = host.shadowRoot?.querySelector('.iui-skeleton-card') as HTMLElement;
+    expect(skeletonCardAfter).toBe(skeletonCard); // exact same node reference!
+
+    // Completing the JSON renders the card
+    codeEl.textContent =
+      '{"type": "flow", "title": "System Architecture", "nodes": [{"id":"a","label":"A"}], "edges": []}';
+    scanner.rescan();
+
+    const renderedCard = host.shadowRoot?.querySelector('.iui-card:not(.iui-skeleton-card)');
+    expect(renderedCard).not.toBeNull();
+
+    scanner.stop();
+    container.remove();
+  });
+
+  it('(e) stop() restores exactly the hidden element and leaves prose identical', () => {
+    const container = document.createElement('div');
+    const message = document.createElement('div');
+    message.innerHTML = `
+      <h2>Executive Summary</h2>
+      <p>Paragraph before</p>
+      <div class="grok-wrapper">
+        <div class="header"><span>ui</span><button>Copy</button></div>
+        <pre><code class="language-ui">{"type":"callout","tone":"info","title":"Note","text":"Hello"}</code></pre>
+      </div>
+      <p>Paragraph after</p>
+    `;
+    container.appendChild(message);
+    document.body.appendChild(container);
+
+    const initialInnerHtml = message.innerHTML;
+
+    const scanner = startScanner(GROK_ADAPTER, () => 'light', container);
+
+    const host = message.querySelector('.iui-host') as HTMLElement;
+    expect(host).not.toBeNull();
+
+    scanner.stop();
+
+    expect(message.querySelector('.iui-host')).toBeNull();
+    expect(message.innerHTML).toBe(initialInnerHtml);
+
     container.remove();
   });
 });

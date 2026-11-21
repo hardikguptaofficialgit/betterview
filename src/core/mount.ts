@@ -5,7 +5,7 @@ import { parsePartialJson } from './partialJson';
 import { validateSpec } from './validate';
 import { clear, h } from './dom';
 import { iconEl, typeIconEl } from './icons';
-import { TYPE_META, createTypeSkeleton, diffChildren } from './incremental';
+import { TYPE_META } from './incremental';
 import { RENDERERS, RenderContext } from '../components/index';
 import baseCss from './styles/base.css?inline';
 import { COMPONENT_STYLES } from '../components/styles';
@@ -53,6 +53,7 @@ export function mountBlock(
     theme: ThemeMode;
     insert?: 'after' | 'inside' | 'before';
     onStateChange?: (state: 'skeleton' | 'rendered' | 'fallback') => void;
+    initialText?: string;
   },
 ): BlockHandle {
   const host = h('div', { class: 'iui-host', 'data-iui': '1' });
@@ -83,7 +84,6 @@ export function mountBlock(
   let currentState: 'skeleton' | 'rendered' | 'fallback' = 'skeleton';
   let cleanups: (() => void)[] = [];
   let finalizeTimer: number | null = null;
-  let rafUpdateId: number | null = null;
 
   let lastText: string | null = null;
   let lastRawText = '';
@@ -117,34 +117,7 @@ export function mountBlock(
     cleanups = [];
   }
 
-  function easeHeight(wrapper: HTMLElement, mutateFn: () => void): void {
-    const prefersReduced =
-      typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    if (prefersReduced) {
-      mutateFn();
-      return;
-    }
-
-    const prevH = wrapper.getBoundingClientRect().height;
-    mutateFn();
-    const nextH = wrapper.getBoundingClientRect().height;
-
-    if (prevH > 0 && nextH > 0 && Math.abs(prevH - nextH) > 4) {
-      wrapper.style.height = `${prevH}px`;
-      wrapper.style.overflow = 'hidden';
-      wrapper.style.transition = 'height 240ms cubic-bezier(.2,.8,.2,1)';
-      void wrapper.offsetHeight;
-      wrapper.style.height = `${nextH}px`;
-      setTimeout(() => {
-        wrapper.style.height = '';
-        wrapper.style.overflow = '';
-        wrapper.style.transition = '';
-      }, 260);
-    }
-  }
 
   function createHeaderToolbar(
     titleText: string,
@@ -509,11 +482,61 @@ export function mountBlock(
     closeBtn.focus();
   }
 
+  function createGenericSkeleton(typeHint?: UIType): HTMLElement {
+    const card = h('div', {
+      class: 'iui-card iui-skeleton-card',
+      style:
+        'height: 120px; min-height: 120px; max-height: 120px; overflow: hidden; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; padding: 14px;',
+    });
+
+    const header = h('div', {
+      class: 'iui-skel-header',
+      style: 'display: flex; align-items: center; gap: 8px;',
+    });
+    const icon = h('div', {
+      class: 'iui-skel',
+      style: 'width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;',
+    });
+    const label = h(
+      'span',
+      {
+        class: 'iui-skel-label',
+        style: 'font-size: 12px; font-weight: 500; color: var(--iui-muted, #737373);',
+      },
+      typeHint ? TYPE_META[typeHint]?.label || typeHint : 'UI block',
+    );
+    header.appendChild(icon);
+    header.appendChild(label);
+    card.appendChild(header);
+
+    const lines = h('div', { style: 'display: flex; flex-direction: column; gap: 8px;' });
+    const line1 = h('div', { class: 'iui-skel iui-skel-line', style: 'width: 85%; height: 14px; margin: 0;' });
+    const line2 = h('div', { class: 'iui-skel iui-skel-line', style: 'width: 55%; height: 14px; margin: 0;' });
+    lines.appendChild(line1);
+    lines.appendChild(line2);
+    card.appendChild(lines);
+
+    return card;
+  }
+
   function showSkeleton(typeHint?: UIType): void {
+    if (currentState === 'skeleton') {
+      const existingCard = root.querySelector<HTMLElement>('.iui-skeleton-card');
+      if (existingCard) {
+        if (typeHint) {
+          const labelEl = existingCard.querySelector<HTMLElement>('.iui-skel-label');
+          if (labelEl) {
+            labelEl.textContent = TYPE_META[typeHint]?.label || typeHint;
+          }
+        }
+        return;
+      }
+    }
+
     runCleanups();
     clear(root);
     const wrapper = h('div', { class: 'iui-rendered-wrap' });
-    const skel = createTypeSkeleton(typeHint);
+    const skel = createGenericSkeleton(typeHint);
     wrapper.appendChild(skel);
     root.appendChild(wrapper);
     currentState = 'skeleton';
@@ -579,16 +602,8 @@ export function mountBlock(
       const toggleBtn = h('button', { class: 'iui-source-toggle' }, '{ } View source');
       wrapper.appendChild(toggleBtn);
 
-      const existingWrapper = root.querySelector<HTMLElement>('.iui-rendered-wrap');
-      if (existingWrapper) {
-        easeHeight(root, () => {
-          clear(root);
-          root.appendChild(wrapper);
-        });
-      } else {
-        clear(root);
-        root.appendChild(wrapper);
-      }
+      clear(root);
+      root.appendChild(wrapper);
 
       currentState = 'rendered';
       hasGoodRender = true;
@@ -601,6 +616,41 @@ export function mountBlock(
         showFallback(msg, rawText);
       } else {
         markPartialError();
+      }
+    }
+  }
+
+  let lastRenderTime = 0;
+  let renderThrottleTimer: number | null = null;
+  let pendingRenderSpec: UISpec | null = null;
+  let pendingRenderText = '';
+
+  function scheduleThrottledRender(spec: UISpec, text: string): void {
+    const now = Date.now();
+    const elapsed = now - lastRenderTime;
+
+    if (elapsed >= 250) {
+      if (renderThrottleTimer !== null) {
+        window.clearTimeout(renderThrottleTimer);
+        renderThrottleTimer = null;
+      }
+      pendingRenderSpec = null;
+      lastRenderTime = now;
+      renderSpec(spec, text);
+    } else {
+      pendingRenderSpec = spec;
+      pendingRenderText = text;
+      if (renderThrottleTimer === null) {
+        renderThrottleTimer = window.setTimeout(() => {
+          renderThrottleTimer = null;
+          if (pendingRenderSpec) {
+            lastRenderTime = Date.now();
+            const s = pendingRenderSpec;
+            const t = pendingRenderText;
+            pendingRenderSpec = null;
+            renderSpec(s, t);
+          }
+        }, 250 - elapsed);
       }
     }
   }
@@ -639,26 +689,62 @@ export function mountBlock(
     }
   }
 
-  // Initial skeleton view
-  showSkeleton();
+  let mountedSynchronously = false;
+  if (opts.initialText) {
+    lastText = opts.initialText;
+    lastRawText = opts.initialText;
+    const parseRes = tryParse(opts.initialText);
+    if (parseRes.ok && typeof parseRes.value === 'object' && parseRes.value !== null) {
+      const valRes = validateSpec(parseRes.value);
+      if (valRes.ok) {
+        renderSpec(valRes.spec, opts.initialText);
+        mountedSynchronously = true;
+      }
+    }
+  }
+
+  if (!mountedSynchronously) {
+    showSkeleton();
+  }
 
   function finalize(): void {
     if (finalizeTimer !== null) {
       window.clearTimeout(finalizeTimer);
       finalizeTimer = null;
     }
-    if (rafUpdateId !== null) {
-      cancelAnimationFrame(rafUpdateId);
-      rafUpdateId = null;
-    }
-
-    const parseRes = tryParse(lastRawText);
-    if (parseRes.ok) {
-      const valRes = validateSpec(parseRes.value);
-      if (valRes.ok) {
-        renderSpec(valRes.spec, lastRawText);
+    if (renderThrottleTimer !== null) {
+      window.clearTimeout(renderThrottleTimer);
+      renderThrottleTimer = null;
+      if (pendingRenderSpec) {
+        const s = pendingRenderSpec;
+        const t = pendingRenderText;
+        pendingRenderSpec = null;
+        renderSpec(s, t);
         return;
       }
+    }
+
+    let specToRender: UISpec | null = null;
+    const parseRes = tryParse(lastRawText);
+    if (parseRes.ok && typeof parseRes.value === 'object' && parseRes.value !== null) {
+      const valRes = validateSpec(parseRes.value);
+      if (valRes.ok) {
+        specToRender = valRes.spec;
+      }
+    }
+    if (!specToRender) {
+      const partial = parsePartialJson(lastRawText);
+      if (partial.ok && partial.value && typeof partial.value === 'object') {
+        const valRes = validateSpec(partial.value);
+        if (valRes.ok) {
+          specToRender = valRes.spec;
+        }
+      }
+    }
+
+    if (specToRender) {
+      renderSpec(specToRender, lastRawText);
+      return;
     }
 
     // If final JSON is invalid:
@@ -671,39 +757,54 @@ export function mountBlock(
   }
 
   function processUpdate(text: string): void {
-    // 1. Try tolerant incremental JSON parse
-    const partial = parsePartialJson(text);
-    if (partial.ok && partial.value && typeof partial.value === 'object') {
-      const valRes = validateSpec(partial.value);
-      if (valRes.ok) {
-        lastErrorMessage = '';
-        const canonical = JSON.stringify(valRes.spec);
-        if (canonical !== lastRenderedSpecJson || currentState !== 'rendered') {
-          renderSpec(valRes.spec, text);
+    if (currentState === 'rendered') {
+      let spec: UISpec | null = null;
+      const parseRes = tryParse(text);
+      if (parseRes.ok && typeof parseRes.value === 'object' && parseRes.value !== null) {
+        const valRes = validateSpec(parseRes.value);
+        if (valRes.ok) {
+          spec = valRes.spec;
+        }
+      }
+      if (!spec) {
+        const partial = parsePartialJson(text);
+        if (partial.ok && partial.value && typeof partial.value === 'object') {
+          const valRes = validateSpec(partial.value);
+          if (valRes.ok) {
+            spec = valRes.spec;
+          }
+        }
+      }
+
+      if (spec) {
+        const canonical = JSON.stringify(spec);
+        if (canonical !== lastRenderedSpecJson) {
+          scheduleThrottledRender(spec, text);
         } else {
           const pre = root.querySelector<HTMLElement>('.iui-source-pre');
           if (pre) pre.textContent = text;
         }
+      }
+      return;
+    }
+
+    // While JSON is incomplete, keep the skeleton
+    const parseRes = tryParse(text);
+    if (parseRes.ok && typeof parseRes.value === 'object' && parseRes.value !== null) {
+      const valRes = validateSpec(parseRes.value);
+      if (valRes.ok) {
+        lastErrorMessage = '';
+        renderSpec(valRes.spec, text);
         return;
       } else {
         lastErrorMessage = valRes.error;
-        const typeHint =
-          typeof (partial.value as any)?.type === 'string' &&
-          (UI_TYPES as readonly string[]).includes((partial.value as any).type)
-            ? ((partial.value as any).type as UIType)
-            : sniffType(text);
-
-        if (currentState !== 'rendered') {
-          showSkeleton(typeHint);
-        }
       }
     } else {
-      lastErrorMessage = partial.error || 'Parsing partial JSON';
-      const hint = sniffType(text);
-      if (currentState !== 'rendered') {
-        showSkeleton(hint);
-      }
+      lastErrorMessage = 'Parsing JSON';
     }
+
+    const hint = sniffType(text);
+    showSkeleton(hint);
   }
 
   return {
@@ -721,18 +822,7 @@ export function mountBlock(
         finalize();
       }, 1500);
 
-      // Throttled with requestAnimationFrame
-      if (typeof requestAnimationFrame !== 'undefined') {
-        if (rafUpdateId !== null) {
-          cancelAnimationFrame(rafUpdateId);
-        }
-        rafUpdateId = requestAnimationFrame(() => {
-          rafUpdateId = null;
-          processUpdate(text);
-        });
-      } else {
-        processUpdate(text);
-      }
+      processUpdate(text);
     },
     finalize,
     setTheme(t: ThemeMode) {
@@ -747,9 +837,9 @@ export function mountBlock(
         window.clearTimeout(finalizeTimer);
         finalizeTimer = null;
       }
-      if (rafUpdateId !== null) {
-        cancelAnimationFrame(rafUpdateId);
-        rafUpdateId = null;
+      if (renderThrottleTimer !== null) {
+        window.clearTimeout(renderThrottleTimer);
+        renderThrottleTimer = null;
       }
       if (activeModalEl) {
         activeModalEl.remove();

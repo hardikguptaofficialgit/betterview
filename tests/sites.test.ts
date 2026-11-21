@@ -5,19 +5,40 @@ import {
   GROK_ADAPTER,
   pickAdapter,
   isUiBlock,
+  isCodeOnlyWrapper,
   appendInstruction,
   hasBetterViewMarker,
+  extractInstructionVersion,
+  hasOlderInstruction,
   fillGeminiMemoryDialog,
   runGeminiSetup,
 } from '../src/content/sites';
-import { getCompactInstruction, SYSTEM_INSTRUCTION } from '../src/shared/systemInstruction';
+import {
+  getCompactInstruction,
+  SYSTEM_INSTRUCTION,
+  SYSTEM_INSTRUCTION_SHORT,
+  CURRENT_INSTRUCTION_VERSION,
+} from '../src/shared/systemInstruction';
 
 describe('System Instruction', () => {
   it('getCompactInstruction starts with marker and is under 2900 characters', () => {
     const compact = getCompactInstruction();
-    expect(compact.startsWith('[BetterView v2] ')).toBe(true);
+    expect(compact.startsWith('[BetterView v3] ')).toBe(true);
     expect(compact.length).toBeLessThanOrEqual(2900);
     expect(compact).toContain(SYSTEM_INSTRUCTION);
+  });
+
+  it('Instruction tests: version is 3, marker present, contains "Never more than 3", length not greater than before', () => {
+    expect(CURRENT_INSTRUCTION_VERSION).toBe(3);
+    const compact = getCompactInstruction();
+    expect(compact).toContain('[BetterView v3]');
+    expect(compact).toContain('Never more than 3');
+    expect(compact.length).toBeLessThanOrEqual(2900);
+    expect(SYSTEM_INSTRUCTION).toContain('Never more than 3');
+    expect(SYSTEM_INSTRUCTION_SHORT).toContain('Never more than 3');
+    // Ensure total length is not greater than the v2 benchmark (2825)
+    expect(SYSTEM_INSTRUCTION.length).toBeLessThanOrEqual(2825);
+    expect(SYSTEM_INSTRUCTION_SHORT.length).toBeLessThanOrEqual(1820);
   });
 });
 
@@ -111,6 +132,73 @@ describe('SiteAdapter: Grok', () => {
     const pre = outer.querySelector('pre')!;
     expect(GROK_ADAPTER.wrapperOf(pre)).toBe(outer);
   });
+
+  it('Grok wrapperOf never returns an element containing a <p>', () => {
+    const message = document.createElement('div');
+    message.className = 'grok-message';
+    message.innerHTML = `
+      <p>Introduction paragraph</p>
+      <div class="code-wrapper">
+        <div><span>ui</span></div>
+        <pre><code>test</code></pre>
+      </div>
+      <p>Follow-up paragraph</p>
+    `;
+    const pre = message.querySelector('pre')!;
+    const wrapper = GROK_ADAPTER.wrapperOf(pre);
+    expect(wrapper).not.toBe(message);
+    expect(wrapper.className).toBe('code-wrapper');
+    expect(wrapper.querySelector('p')).toBeNull();
+
+    // Direct pre inside message with <p>
+    const directMessage = document.createElement('div');
+    directMessage.innerHTML = `
+      <p>Text</p>
+      <pre><code>code</code></pre>
+    `;
+    const directPre = directMessage.querySelector('pre')!;
+    const directWrap = GROK_ADAPTER.wrapperOf(directPre);
+    expect(directWrap).toBe(directPre);
+    expect(directWrap.querySelector('p')).toBeNull();
+  });
+});
+
+describe('isCodeOnlyWrapper', () => {
+  it('returns true when wrapper === block', () => {
+    const pre = document.createElement('pre');
+    expect(isCodeOnlyWrapper(pre, pre)).toBe(true);
+  });
+
+  it('returns true when wrapper has only code block and small label/button', () => {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = '<span>ui</span><button>Copy code</button><pre><code>test</code></pre>';
+    const pre = wrap.querySelector('pre')!;
+    expect(isCodeOnlyWrapper(wrap, pre)).toBe(true);
+  });
+
+  it('returns false when wrapper contains forbidden elements outside block', () => {
+    const forbiddenTags = ['p', 'li', 'ul', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'blockquote', 'hr'];
+    for (const tag of forbiddenTags) {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `<${tag}>Forbidden</${tag}><pre><code>test</code></pre>`;
+      const pre = wrap.querySelector('pre')!;
+      expect(isCodeOnlyWrapper(wrap, pre)).toBe(false);
+    }
+  });
+
+  it('returns false when outside text exceeds 40 characters', () => {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = '<div>This is some lengthy explanation text outside the code block that exceeds 40 characters</div><pre><code>test</code></pre>';
+    const pre = wrap.querySelector('pre')!;
+    expect(isCodeOnlyWrapper(wrap, pre)).toBe(false);
+  });
+
+  it('ignores button text when computing outside text length', () => {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = '<span>ui</span><button>This is a very long button text that exceeds 40 characters easily</button><pre><code>test</code></pre>';
+    const pre = wrap.querySelector('pre')!;
+    expect(isCodeOnlyWrapper(wrap, pre)).toBe(true);
+  });
 });
 
 describe('pickAdapter', () => {
@@ -199,11 +287,61 @@ describe('Auto-setup append & marker logic', () => {
     expect(result).toBe(existing);
   });
 
-  it('updates instruction if new instruction has a higher version', () => {
+  it('updates instruction if new instruction has a higher version (v1->v2, v2->v3)', () => {
     const existing = 'Existing text\n\n[BetterView] instructions already here';
-    const instruction = '[BetterView v2] new instructions';
-    const result = appendInstruction(existing, instruction);
-    expect(result).toBe('Existing text\n\n[BetterView v2] new instructions');
+    const instructionV2 = '[BetterView v2] new instructions';
+    const resultV2 = appendInstruction(existing, instructionV2);
+    expect(resultV2).toBe('Existing text\n\n[BetterView v2] new instructions');
+
+    const existingV2 = 'Existing text\n\n[BetterView v2] v2 instructions';
+    const instructionV3 = '[BetterView v3] v3 instructions';
+    const resultV3 = appendInstruction(existingV2, instructionV3);
+    expect(resultV3).toBe('Existing text\n\n[BetterView v3] v3 instructions');
+  });
+
+  it('Setup tests for v2->v3 upgrade detection (hasOldEntry true, not already)', () => {
+    const bodyWithV2 = 'Your instructions for Gemini\n\n[BetterView v2] old prompt';
+    const verV2 = extractInstructionVersion(bodyWithV2);
+    expect(verV2).toBe(2);
+    const hasOldEntryV2 = hasOlderInstruction(bodyWithV2);
+    expect(hasOldEntryV2).toBe(true);
+    const alreadyV2 = verV2 !== null && verV2 >= CURRENT_INSTRUCTION_VERSION;
+    expect(alreadyV2).toBe(false);
+
+    const bodyWithV3 = 'Your instructions for Gemini\n\n[BetterView v3] latest prompt';
+    const verV3 = extractInstructionVersion(bodyWithV3);
+    expect(verV3).toBe(3);
+    const hasOldEntryV3 = hasOlderInstruction(bodyWithV3);
+    expect(hasOldEntryV3).toBe(false);
+    const alreadyV3 = verV3 !== null && verV3 >= CURRENT_INSTRUCTION_VERSION;
+    expect(alreadyV3).toBe(true);
+  });
+
+  it('detects instruction versions: highest among multiple markers, and older markers detection', () => {
+    // text with v2 then v3 -> extractInstructionVersion 3 and hasOlderInstruction true
+    const textV2V3 = 'Your instructions for Gemini\n\n[BetterView v2] old prompt\n\n[BetterView v3] latest prompt';
+    expect(extractInstructionVersion(textV2V3)).toBe(3);
+    expect(hasOlderInstruction(textV2V3)).toBe(true);
+
+    // text with v3 then v2 (reverse order) -> extractInstructionVersion 3 and hasOlderInstruction true
+    const textV3V2 = 'Your instructions for Gemini\n\n[BetterView v3] latest prompt\n\n[BetterView v2] old prompt';
+    expect(extractInstructionVersion(textV3V2)).toBe(3);
+    expect(hasOlderInstruction(textV3V2)).toBe(true);
+
+    // only v3 -> false
+    const textOnlyV3 = 'Your instructions for Gemini\n\n[BetterView v3] latest prompt';
+    expect(extractInstructionVersion(textOnlyV3)).toBe(3);
+    expect(hasOlderInstruction(textOnlyV3)).toBe(false);
+
+    // only plain [BetterView] -> 1 and true
+    const textPlain = 'Your instructions for Gemini\n\n[BetterView] original prompt';
+    expect(extractInstructionVersion(textPlain)).toBe(1);
+    expect(hasOlderInstruction(textPlain)).toBe(true);
+
+    // text without any markers -> null and false
+    const textNone = 'Your instructions for Gemini\n\nNothing here';
+    expect(extractInstructionVersion(textNone)).toBeNull();
+    expect(hasOlderInstruction(textNone)).toBe(false);
   });
 
   it('detects BetterView marker case-insensitively', () => {
@@ -248,7 +386,7 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
 
     await fillGeminiMemoryDialog(overlay, { waitTimeoutMs: 2000, pollIntervalMs: 50 });
 
-    expect(textarea.value.startsWith('[BetterView v2] ')).toBe(true);
+    expect(textarea.value.startsWith('[BetterView v3] ')).toBe(true);
     expect(textarea.value).toBe(getCompactInstruction());
     expect(submitClicked).toBe(true);
 

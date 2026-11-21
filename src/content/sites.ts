@@ -17,7 +17,7 @@ export interface SiteAdapter {
 }
 
 export const BETTERVIEW_STREAMING_TYPE_RE =
-  /^\s*\{\s*"type"\s*:\s*"(flow|stepper|table|compare|quiz|chart|mermaid|callout|stats|tabs|timeline|followups)"/;
+  /^\s*\{\s*"type"\s*:\s*"(flow|stepper|table|compare|quiz|chart|mermaid|callout|stats|tabs|timeline|followups|math|code)"/;
 
 export const BETTERVIEW_TYPES = [
   'flow',
@@ -32,7 +32,44 @@ export const BETTERVIEW_TYPES = [
   'tabs',
   'timeline',
   'followups',
+  'math',
+  'code',
 ] as const;
+
+export function isCodeOnlyWrapper(wrapper: HTMLElement, block: HTMLElement): boolean {
+  if (wrapper === block) return true;
+  if (!wrapper.contains(block)) return false;
+
+  const forbiddenSelector = 'p, li, ul, ol, h1, h2, h3, h4, h5, h6, table, blockquote, hr';
+  if (wrapper.matches(forbiddenSelector)) return false;
+  const forbidden = wrapper.querySelectorAll(forbiddenSelector);
+  for (const el of Array.from(forbidden)) {
+    if (!block.contains(el)) {
+      return false;
+    }
+  }
+
+  let outsideText = '';
+  function walk(node: Node): void {
+    if (node === block || block.contains(node)) return;
+    if (node instanceof HTMLElement && (node.tagName.toLowerCase() === 'button' || node.closest('button'))) {
+      return;
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+      outsideText += node.textContent ?? '';
+      return;
+    }
+    for (let i = 0; i < node.childNodes.length; i++) {
+      walk(node.childNodes[i]);
+    }
+  }
+
+  for (let i = 0; i < wrapper.childNodes.length; i++) {
+    walk(wrapper.childNodes[i]);
+  }
+
+  return outsideText.trim().length <= 40;
+}
 
 export const GEMINI_ADAPTER: SiteAdapter = {
   id: 'gemini',
@@ -143,41 +180,41 @@ export const GROK_ADAPTER: SiteAdapter = {
       }
     }
 
-    let curr: HTMLElement | null = block.parentElement;
-    let depth = 0;
-    while (curr && depth < 4) {
-      depth++;
-      const pres = curr.querySelectorAll('pre');
-      if (pres.length === 1 && (pres[0] === block || pres[0].contains(block))) {
-        const candidates = curr.querySelectorAll('*');
-        for (const cand of Array.from(candidates)) {
-          if (cand === block || cand.contains(block)) continue;
-          if (cand.tagName.toLowerCase() === 'button' || cand.closest('button')) continue;
-          if (cand.children.length > 0) continue;
-          const txt = (cand.textContent ?? '').trim();
-          if (txt.length >= 1 && txt.length <= 12) {
-            return txt.toLowerCase();
-          }
+    const wrapper = this.wrapperOf(block);
+    if (wrapper && wrapper !== block) {
+      const candidates = wrapper.querySelectorAll('*');
+      for (const cand of Array.from(candidates)) {
+        if (cand === block || cand.contains(block) || block.contains(cand)) continue;
+        if (cand.tagName.toLowerCase() === 'button' || cand.closest('button')) continue;
+        if (cand.children.length > 0) continue;
+        const txt = (cand.textContent ?? '').trim();
+        if (txt.length >= 1 && txt.length <= 12) {
+          return txt.toLowerCase();
         }
-        break;
       }
-      curr = curr.parentElement;
     }
 
     return null;
   },
   wrapperOf(block: HTMLElement): HTMLElement {
     let curr: HTMLElement | null = block.parentElement;
+    let lastAccepted: HTMLElement = block;
     let depth = 0;
     while (curr && depth < 4) {
       depth++;
       const pres = curr.querySelectorAll('pre');
       if (pres.length === 1 && (pres[0] === block || pres[0].contains(block))) {
-        return curr;
+        if (isCodeOnlyWrapper(curr, block)) {
+          lastAccepted = curr;
+        } else {
+          break;
+        }
+      } else {
+        break;
       }
       curr = curr.parentElement;
     }
-    return block;
+    return lastAccepted;
   },
   composer(): HTMLElement | null {
     return document.querySelector<HTMLElement>('form textarea, textarea, form [contenteditable="true"]');
@@ -276,10 +313,26 @@ export const GROK_SETUP_SELECTORS = {
 };
 
 export function extractInstructionVersion(text: string): number | null {
-  const match = text.match(/\[betterview\s+v(\d+)\]/i);
-  if (match) return parseInt(match[1], 10);
-  if (/\[betterview\]/i.test(text)) return 1;
-  return null;
+  const matches = text.matchAll(/\[betterview(?:\s+v(\d+))?\]/gi);
+  let highest: number | null = null;
+  for (const match of matches) {
+    const version = match[1] ? parseInt(match[1], 10) : 1;
+    if (highest === null || version > highest) {
+      highest = version;
+    }
+  }
+  return highest;
+}
+
+export function hasOlderInstruction(text: string): boolean {
+  const matches = text.matchAll(/\[betterview(?:\s+v(\d+))?\]/gi);
+  for (const match of matches) {
+    const version = match[1] ? parseInt(match[1], 10) : 1;
+    if (version < CURRENT_INSTRUCTION_VERSION) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function appendInstruction(existing: string, instruction: string): string {
@@ -478,11 +531,11 @@ export async function runGeminiSetup(): Promise<SetupResult> {
     }
 
     const bodyText = document.body.textContent ?? '';
-    const hasV2 = /\[betterview\s+v2\]/i.test(bodyText);
-    const hasOldEntry = /\[betterview\]/i.test(bodyText) && !hasV2;
+    const existingVer = extractInstructionVersion(bodyText);
+    const hasOldEntry = hasOlderInstruction(bodyText);
 
-    if (hasV2) {
-      const res: SetupResult = { status: 'already', version: CURRENT_INSTRUCTION_VERSION, hasOldEntry };
+    if (existingVer !== null && existingVer >= CURRENT_INSTRUCTION_VERSION) {
+      const res: SetupResult = { status: 'already', version: existingVer, hasOldEntry };
       recordSetupResult('gemini', res);
       return res;
     }
@@ -512,11 +565,12 @@ export async function runGeminiSetup(): Promise<SetupResult> {
       return res;
     }
 
-    // Confirm success: entry containing [BetterView v2] appears within 10s
+    // Confirm success: entry containing [BetterView v3] appears within 10s
     let entryAppeared = false;
     const startConfirm = Date.now();
     while (Date.now() - startConfirm < 10000) {
-      if (/\[betterview(?:\s+v2)?\]/i.test(document.body.textContent ?? '')) {
+      const ver = extractInstructionVersion(document.body.textContent ?? '');
+      if (ver !== null && ver >= CURRENT_INSTRUCTION_VERSION) {
         entryAppeared = true;
         break;
       }
@@ -629,8 +683,10 @@ export async function runGrokSetup(): Promise<SetupResult> {
       return { status: 'failed', error: msg };
     }
 
-    if (textarea.value.includes('[BetterView v2]')) {
-      return { status: 'already', version: CURRENT_INSTRUCTION_VERSION };
+    const existingVer = extractInstructionVersion(textarea.value);
+    const hasOldEntry = hasOlderInstruction(textarea.value);
+    if (existingVer !== null && existingVer >= CURRENT_INSTRUCTION_VERSION) {
+      return { status: 'already', version: existingVer, hasOldEntry };
     }
 
     const nextVal = appendInstruction(textarea.value, getCompactInstruction());
@@ -671,7 +727,7 @@ export async function runGrokSetup(): Promise<SetupResult> {
     saveBtn.click();
 
     await new Promise((r) => setTimeout(r, 800));
-    return { status: 'added', version: CURRENT_INSTRUCTION_VERSION };
+    return { status: 'added', version: CURRENT_INSTRUCTION_VERSION, hasOldEntry: hasOlderInstruction(textarea.value) };
   } catch (err: unknown) {
     showGrokFallbackToast();
     const msg = err instanceof Error ? err.message : String(err);

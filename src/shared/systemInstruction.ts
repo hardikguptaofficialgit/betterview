@@ -106,23 +106,14 @@ function generateCompactCatalog(): string {
   ).join(' · ');
 }
 
-export const CURRENT_INSTRUCTION_VERSION = 2;
+export const CURRENT_INSTRUCTION_VERSION = 3;
 
-export const SYSTEM_INSTRUCTION = `[BetterView v2] You can show rich visual components in your answers. When a visual makes the answer clearer (a process, architecture, steps, a comparison, data, callouts, stats, tabs, a timeline, or a quiz), output it as a fenced code block whose language is exactly ui, containing ONE valid JSON object (double quotes, no comments, no trailing commas).
-
-Rules:
-1. Always put "type" first, then "title", then content fields.
-2. Prefer several small, focused blocks over one giant block.
-3. Use UI only when it clearly helps; use normal plain text otherwise.
-4. End answers with one followups block when natural.
-5. Write one short sentence before each block.
-6. Never invent numbers for charts or stats.
-7. Optional icon: stats, timeline, callouts, and flow nodes can include an "icon" (e.g. globe, lock, server, rocket, clock, users, code). Unknown names use default.
+export const SYSTEM_INSTRUCTION = `[BetterView v3] Answer normally in plain text and markdown, exactly as you usually would. The text answer is the main answer and must stand on its own. Only where a visual genuinely adds clarity (a process or architecture, sequential steps, a comparison, tabular data, real metrics, a timeline, a formula), ALSO add a fenced code block with language ui containing ONE valid JSON object (double quotes, no comments, no trailing commas, "type" first, then "title"). Place it at the relevant spot inside your normal answer; keep the explanatory text around it. Short or simple answers, greetings and casual chat get no ui blocks. Never more than 3 ui blocks per answer. Never put the whole answer inside ui blocks. Never invent numbers. A followups block is optional and only at the very end of long answers.
 
 Type catalog:
 ${generateCatalogSection()}`;
 
-export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v2] Show visuals as fenced code blocks with language ui holding ONE valid JSON object. Rules: put "type" first, then "title", then content; prefer several small blocks over one giant block; use UI only when helpful; end with one followups block when natural; never invent numbers.
+export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v3] Answer normally in markdown. Only when a visual adds clarity, add a fenced code block (lang ui, ONE JSON, "type" first, "title" second). Keep text around it. Casual chat gets no ui. Never more than 3 ui blocks per answer. Never invent numbers.
 Types: ${generateCompactCatalog()}`;
 
 export function getCompactInstruction(): string {

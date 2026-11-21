@@ -1,13 +1,27 @@
-import { SiteAdapter, isUiBlock, getBlockCodeText } from './sites';
+import { SiteAdapter, isUiBlock, getBlockCodeText, isCodeOnlyWrapper } from './sites';
 import { ThemeMode } from '../core/theme';
 import { mountBlock, BlockHandle } from '../core/mount';
+import { tryParse } from '../core/parse';
+import { validateSpec } from '../core/validate';
 
 interface TrackedItem {
   handle: BlockHandle;
-  wrapper: HTMLElement;
+  target: HTMLElement;
   lastText: string;
   noteHost?: HTMLElement;
   finalizeTimer?: number;
+}
+
+const renderedTextsCache = new Map<string, true>();
+
+function markRenderedText(text: string): void {
+  renderedTextsCache.set(text, true);
+  if (renderedTextsCache.size > 200) {
+    const oldest = renderedTextsCache.keys().next().value;
+    if (oldest !== undefined) {
+      renderedTextsCache.delete(oldest);
+    }
+  }
 }
 
 export function startScanner(
@@ -24,28 +38,21 @@ export function startScanner(
   const liveHandles = new Set<BlockHandle>();
   const trackedBlocks = new Set<HTMLElement>();
 
-  let debounceTimer: number | null = null;
+  let throttleTimer: number | null = null;
   let rafId: number | null = null;
-  let scanPending = false;
+  let lastScanTime = 0;
+  let hasTrailing = false;
   let isStopped = false;
 
   function restoreFallbackWrapper(block: HTMLElement, item: TrackedItem): void {
-    item.wrapper.style.visibility = '';
-    item.wrapper.style.height = '';
-    item.wrapper.style.minHeight = '';
-    item.wrapper.style.maxHeight = '';
-    item.wrapper.style.overflow = '';
-    item.wrapper.style.margin = '';
-    item.wrapper.style.padding = '';
-    item.wrapper.style.border = '';
-    item.wrapper.style.display = '';
-    item.wrapper.removeAttribute('data-iui-hidden');
-    item.wrapper.removeAttribute('data-betterview-handled');
+    item.target.style.display = '';
+    item.target.removeAttribute('data-iui-hidden');
+    item.target.removeAttribute('data-betterview-handled');
     block.removeAttribute('data-betterview-handled');
     item.handle.destroy();
     liveHandles.delete(item.handle);
 
-    if (!item.noteHost && item.wrapper.parentNode) {
+    if (!item.noteHost && item.target.parentNode) {
       const noteHost = document.createElement('div');
       noteHost.className = 'iui-host';
       noteHost.setAttribute('data-iui', '1');
@@ -61,7 +68,7 @@ export function startScanner(
       note.textContent = "Couldn't render this UI block";
       root.appendChild(note);
       sr.appendChild(root);
-      item.wrapper.parentNode.insertBefore(noteHost, item.wrapper);
+      item.target.parentNode.insertBefore(noteHost, item.target);
       item.noteHost = noteHost;
     }
   }
@@ -96,14 +103,10 @@ export function startScanner(
       if (block.closest('.iui-host') || block.closest('[data-iui]')) {
         continue;
       }
-      if (!isUiBlock(adapter, block)) {
-        continue;
-      }
-
-      const text = getBlockCodeText(adapter, block);
 
       if (tracked.has(block)) {
         const item = tracked.get(block)!;
+        const text = getBlockCodeText(adapter, block);
         if (text !== item.lastText) {
           item.lastText = text;
           item.handle.update(text);
@@ -117,84 +120,127 @@ export function startScanner(
             }
           }, 1600);
         }
+        continue;
+      }
+
+      const wrapper = adapter.wrapperOf(block);
+      if (
+        block.getAttribute('data-betterview-handled') === '1' ||
+        wrapper.getAttribute('data-betterview-handled') === '1'
+      ) {
+        continue;
+      }
+
+      if (!isUiBlock(adapter, block)) {
+        continue;
+      }
+
+      const text = getBlockCodeText(adapter, block);
+      const target = isCodeOnlyWrapper(wrapper, block) ? wrapper : block;
+
+      let initialText: string | undefined = undefined;
+      if (renderedTextsCache.has(text)) {
+        initialText = text;
       } else {
-        if (
-          block.getAttribute('data-betterview-handled') === '1' ||
-          adapter.wrapperOf(block).getAttribute('data-betterview-handled') === '1'
-        ) {
-          continue;
-        }
-
-        const wrapper = adapter.wrapperOf(block);
-        let item: TrackedItem;
-
-        const handle = mountBlock(wrapper, {
-          theme: getTheme(),
-          insert: 'before',
-          onStateChange: (state) => {
-            if (state === 'fallback' && !isStopped) {
-              restoreFallbackWrapper(block, item);
-            }
-          },
-        });
-
-        wrapper.style.visibility = 'hidden';
-        wrapper.style.height = '0';
-        wrapper.style.minHeight = '0';
-        wrapper.style.maxHeight = '0';
-        wrapper.style.overflow = 'hidden';
-        wrapper.style.margin = '0';
-        wrapper.style.padding = '0';
-        wrapper.style.border = '0';
-        wrapper.style.display = 'none';
-        wrapper.setAttribute('data-iui-hidden', '1');
-        wrapper.setAttribute('data-betterview-handled', '1');
-        block.setAttribute('data-betterview-handled', '1');
-
-        item = {
-          handle,
-          wrapper,
-          lastText: text,
-        };
-
-        item.finalizeTimer = window.setTimeout(() => {
-          if (handle.state === 'fallback') {
-            restoreFallbackWrapper(block, item);
+        const parseRes = tryParse(text);
+        if (parseRes.ok && typeof parseRes.value === 'object' && parseRes.value !== null) {
+          if (validateSpec(parseRes.value).ok) {
+            initialText = text;
           }
-        }, 1600);
+        }
+      }
 
-        tracked.set(block, item);
-        liveHandles.add(handle);
-        trackedBlocks.add(block);
+      let item: TrackedItem;
 
+      const handle = mountBlock(target, {
+        theme: getTheme(),
+        insert: 'before',
+        initialText,
+        onStateChange: (state) => {
+          if (state === 'fallback' && !isStopped) {
+            restoreFallbackWrapper(block, item);
+          } else if (state === 'rendered') {
+            markRenderedText(item.lastText);
+          }
+        },
+      });
+
+      if (handle.state === 'rendered') {
+        markRenderedText(text);
+      }
+
+      target.style.display = 'none';
+      target.setAttribute('data-iui-hidden', '1');
+      target.setAttribute('data-betterview-handled', '1');
+      block.setAttribute('data-betterview-handled', '1');
+
+      item = {
+        handle,
+        target,
+        lastText: text,
+      };
+
+      item.finalizeTimer = window.setTimeout(() => {
+        if (handle.state === 'fallback') {
+          restoreFallbackWrapper(block, item);
+        }
+      }, 1600);
+
+      tracked.set(block, item);
+      liveHandles.add(handle);
+      trackedBlocks.add(block);
+
+      if (!initialText) {
         handle.update(text);
       }
     }
   }
 
-  function scheduleScan(): void {
+  function scheduleRafScan(): void {
+    if (rafId !== null) return;
+    rafId = window.requestAnimationFrame(() => {
+      rafId = null;
+      lastScanTime = Date.now();
+      scan();
+    });
+  }
+
+  function triggerThrottledScan(): void {
     if (isStopped) return;
-    if (debounceTimer !== null) {
-      window.clearTimeout(debounceTimer);
-    }
-    debounceTimer = window.setTimeout(() => {
-      debounceTimer = null;
-      if (!scanPending) {
-        scanPending = true;
-        rafId = window.requestAnimationFrame(() => {
-          scanPending = false;
-          rafId = null;
-          scan();
-        });
+    const now = Date.now();
+    const elapsed = now - lastScanTime;
+    const remaining = 120 - elapsed;
+
+    if (remaining <= 0) {
+      if (throttleTimer !== null) {
+        window.clearTimeout(throttleTimer);
+        throttleTimer = null;
       }
-    }, 150);
+      hasTrailing = false;
+      scheduleRafScan();
+    } else {
+      hasTrailing = true;
+      if (throttleTimer === null) {
+        throttleTimer = window.setTimeout(() => {
+          throttleTimer = null;
+          if (hasTrailing && !isStopped) {
+            hasTrailing = false;
+            scheduleRafScan();
+          }
+        }, remaining);
+      }
+    }
   }
 
   const observer =
     typeof MutationObserver !== 'undefined'
-      ? new MutationObserver(() => {
-          scan();
-          scheduleScan();
+      ? new MutationObserver((mutations) => {
+          const isAllOurDom = mutations.every((m) => {
+            const el = m.target instanceof Element ? m.target : m.target.parentElement;
+            return el && (el.closest('.iui-host') || el.closest('[data-iui]'));
+          });
+          if (isAllOurDom) return;
+          triggerThrottledScan();
         })
       : null;
 
@@ -223,9 +269,9 @@ export function startScanner(
           if (item.finalizeTimer !== undefined) {
             window.clearTimeout(item.finalizeTimer);
           }
-          item.wrapper.style.display = '';
-          item.wrapper.removeAttribute('data-iui-hidden');
-          item.wrapper.removeAttribute('data-betterview-handled');
+          item.target.style.display = '';
+          item.target.removeAttribute('data-iui-hidden');
+          item.target.removeAttribute('data-betterview-handled');
           block.removeAttribute('data-betterview-handled');
           item.noteHost?.remove();
         }
@@ -246,14 +292,15 @@ export function startScanner(
   return {
     stop(): void {
       isStopped = true;
-      if (debounceTimer !== null) {
-        window.clearTimeout(debounceTimer);
-        debounceTimer = null;
+      if (throttleTimer !== null) {
+        window.clearTimeout(throttleTimer);
+        throttleTimer = null;
       }
       if (rafId !== null) {
         window.cancelAnimationFrame(rafId);
         rafId = null;
       }
+      hasTrailing = false;
       window.clearInterval(spaInterval);
       if (observer) {
         observer.disconnect();
@@ -270,9 +317,9 @@ export function startScanner(
           if (item.finalizeTimer !== undefined) {
             window.clearTimeout(item.finalizeTimer);
           }
-          item.wrapper.style.display = '';
-          item.wrapper.removeAttribute('data-iui-hidden');
-          item.wrapper.removeAttribute('data-betterview-handled');
+          item.target.style.display = '';
+          item.target.removeAttribute('data-iui-hidden');
+          item.target.removeAttribute('data-betterview-handled');
           block.removeAttribute('data-betterview-handled');
           item.noteHost?.remove();
         }

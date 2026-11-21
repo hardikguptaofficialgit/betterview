@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { initPopup } from '../src/popup/popup';
-import { SYSTEM_INSTRUCTION } from '../src/shared/systemInstruction';
+import { SYSTEM_INSTRUCTION, CURRENT_INSTRUCTION_VERSION } from '../src/shared/systemInstruction';
 
 describe('BetterView Popup', () => {
   let storageListeners: Array<(changes: Record<string, { newValue?: unknown }>, area: string) => void> = [];
@@ -351,7 +351,10 @@ describe('BetterView Popup', () => {
 
       // Simulate Gemini setup success
       for (const listener of storageListeners) {
-        listener({ gemini_setup_status: { newValue: { status: 'added', version: 2 } } }, 'local');
+        listener(
+          { gemini_setup_status: { newValue: { status: 'added', version: CURRENT_INSTRUCTION_VERSION } } },
+          'local',
+        );
       }
 
       expect(statusEl.textContent).toBe('Added \u2713');
@@ -360,7 +363,10 @@ describe('BetterView Popup', () => {
 
       // Simulate Grok setup already
       for (const listener of storageListeners) {
-        listener({ grok_setup_status: { newValue: { status: 'already', version: 2 } } }, 'local');
+        listener(
+          { grok_setup_status: { newValue: { status: 'already', version: CURRENT_INSTRUCTION_VERSION } } },
+          'local',
+        );
       }
 
       expect(statusEl.textContent).toBe('Already set up \u2713');
