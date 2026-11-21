@@ -9,6 +9,7 @@
     "build:background": "vite build -c vite.background.config.ts",
     "build": "npm run typecheck && npm run build:popup && npm run build:content && npm run build:background && node scripts/check-ascii.mjs && node scripts/check-content.mjs",
     "package": "node scripts/package.mjs",
+    "build:installer": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build.ps1",
     "fixture": "vite build -c vite.fixture.config.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

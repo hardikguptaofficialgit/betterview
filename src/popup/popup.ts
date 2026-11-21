@@ -114,25 +114,25 @@ export function initPopup(): () => void {
     label?.classList.remove('hidden');
 
     let kind: StatusKind = 'not-set-up';
-    let statusText = 'Not set up';
-    let btnLabel = 'Set up';
+    let statusText = 'Prompt not added';
+    let btnLabel = 'Add prompt';
     let isGhost = false;
     let title = '';
 
     if (!data || !data.status) {
       kind = 'not-set-up';
-      statusText = 'Not set up';
-      btnLabel = 'Set up';
+      statusText = 'Prompt not added';
+      btnLabel = 'Add prompt';
     } else if (data.status === 'added' || data.status === 'already') {
       const ver = data.version ?? 1;
       if (ver >= CURRENT_INSTRUCTION_VERSION) {
         kind = 'ready';
-        statusText = 'Ready';
-        btnLabel = 'Redo';
+        statusText = 'Prompt added';
+        btnLabel = 'Refresh';
         isGhost = true;
       } else {
         kind = 'needs-update';
-        statusText = 'Needs update';
+        statusText = 'Update available';
         btnLabel = 'Update';
       }
     } else if (data.status === 'failed') {
@@ -272,10 +272,10 @@ export function initPopup(): () => void {
   // Setup buttons click handlers
   if (setupGeminiBtn) {
     setupGeminiBtn.addEventListener('click', () => {
-      setStatusText('Setting up\u2026', 'muted');
+      setStatusText('Adding prompt…', 'muted');
       spinnerGemini?.classList.remove('hidden');
-      if (labelGemini) labelGemini.textContent = 'Setting up';
-      if (setupGeminiStatus) setupGeminiStatus.textContent = 'Setting up...';
+      if (labelGemini) labelGemini.textContent = 'Adding…';
+      if (setupGeminiStatus) setupGeminiStatus.textContent = 'Adding prompt…';
       if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
         chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'gemini' });
       }
@@ -284,10 +284,10 @@ export function initPopup(): () => void {
 
   if (setupGrokBtn) {
     setupGrokBtn.addEventListener('click', () => {
-      setStatusText('Setting up\u2026', 'muted');
+      setStatusText('Adding prompt…', 'muted');
       spinnerGrok?.classList.remove('hidden');
-      if (labelGrok) labelGrok.textContent = 'Setting up';
-      if (setupGrokStatus) setupGrokStatus.textContent = 'Setting up...';
+      if (labelGrok) labelGrok.textContent = 'Adding…';
+      if (setupGrokStatus) setupGrokStatus.textContent = 'Adding prompt…';
       if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
         chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'grok' });
       }
@@ -299,7 +299,7 @@ export function initPopup(): () => void {
   if (tryItBtn) {
     tryItBtn.addEventListener('click', async () => {
       try {
-        const samplePrompt = 'Create a flow diagram of OAuth 2.0 authorization code grant with token refresh';
+        const samplePrompt = 'Create a clear flow diagram showing how a web browser loads a webpage, from entering a URL to displaying the finished page.';
         if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(samplePrompt);
         }
