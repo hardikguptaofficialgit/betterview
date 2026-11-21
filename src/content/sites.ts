@@ -384,10 +384,31 @@ function geminiDeepQueryAll<T extends Element>(root: ParentNode, selector: strin
 }
 
 function findGeminiDialog(root: ParentNode): HTMLElement | null {
-  return geminiDeepQueryAll<HTMLElement>(
+  const allDialogs = geminiDeepQueryAll<HTMLElement>(
     root,
-    'edit-memory-dialog, [role="dialog"], mat-dialog-container, dialog',
-  ).find((el) => el.getAttribute('aria-hidden') !== 'true' && el.getAttribute('inert') === null) ?? null;
+    'mat-dialog-container, edit-memory-dialog, [role="dialog"], dialog',
+  ).filter((el) => {
+    if (el.getAttribute('aria-hidden') === 'true' || el.getAttribute('inert') !== null) {
+      return false;
+    }
+    if (el instanceof HTMLElement && (el.style.display === 'none' || el.hidden)) {
+      return false;
+    }
+    return true;
+  });
+
+  if (allDialogs.length === 0) return null;
+
+  const memoryDialogs = allDialogs.filter((el) =>
+    Boolean(
+      el.querySelector(
+        'textarea.edit-memory-input, textarea[aria-label*="memory" i], textarea, [contenteditable="true"][role="textbox"], [contenteditable="true"], input[type="text"]',
+      ),
+    ),
+  );
+
+  const candidates = memoryDialogs.length > 0 ? memoryDialogs : allDialogs;
+  return candidates[candidates.length - 1];
 }
 
 function findGeminiTextarea(root: ParentNode): GeminiEditor | null {
@@ -395,10 +416,25 @@ function findGeminiTextarea(root: ParentNode): GeminiEditor | null {
   // Never fall back to the whole page: Gemini's chat composer is also a
   // contenteditable textbox and must not receive the Saved Info instruction.
   if (!dialog) return null;
-  return geminiDeepQueryAll<GeminiEditor>(
-    dialog,
-    'edit-memory-dialog textarea, textarea[aria-label*="memory" i], textarea, [contenteditable="true"][role="textbox"], [contenteditable="true"], input[type="text"]',
-  ).find((el) => el.getAttribute('aria-hidden') !== 'true') ?? null;
+  return (
+    geminiDeepQueryAll<GeminiEditor>(
+      dialog,
+      'textarea.edit-memory-input, textarea[aria-label*="memory" i], textarea, [contenteditable="true"][role="textbox"], [contenteditable="true"], input[type="text"]',
+    ).find((el) => {
+      if (el.getAttribute('aria-hidden') === 'true' || el.getAttribute('inert') !== null) return false;
+      if (el instanceof HTMLElement && (el.style.display === 'none' || el.hidden)) return false;
+      return true;
+    }) ?? null
+  );
+}
+
+function isGeminiSubmitButtonEnabled(btn: HTMLButtonElement | null): boolean {
+  if (!btn) return false;
+  if (btn.disabled) return false;
+  if (btn.hasAttribute('disabled')) return false;
+  if (btn.classList.contains('mat-mdc-button-disabled')) return false;
+  if (btn.getAttribute('aria-disabled') === 'true') return false;
+  return true;
 }
 
 function findGeminiSubmitButton(root: ParentNode): HTMLButtonElement | null {
@@ -407,9 +443,22 @@ function findGeminiSubmitButton(root: ParentNode): HTMLButtonElement | null {
   if (!dialog) return null;
   const buttons = geminiDeepQueryAll<HTMLButtonElement>(dialog, 'button, [role="button"]');
   for (const button of buttons) {
-    const labels = [button.textContent, button.getAttribute('aria-label'), button.getAttribute('data-test-id')]
-      .filter(Boolean).map((value) => (value ?? '').replace(/\s+/g, ' ').trim());
-    if (labels.some((label) => /^(submit|save|add|done)(?:\s+(?:memory|info|instruction|changes))?$/i.test(label) || /submit-button/i.test(label))) {
+    const labels = [
+      button.textContent,
+      button.getAttribute('aria-label'),
+      button.getAttribute('data-test-id'),
+      button.className,
+    ]
+      .filter(Boolean)
+      .map((value) => (value ?? '').replace(/\s+/g, ' ').trim());
+    if (
+      labels.some(
+        (label) =>
+          /^(submit|save|add|done)(?:\s+(?:memory|info|instruction|changes))?$/i.test(label) ||
+          /submit-button/i.test(label) ||
+          /edit-memory-submit-button/i.test(label),
+      )
+    ) {
       return button as HTMLButtonElement;
     }
   }
@@ -535,69 +584,166 @@ export function findGeminiAddButton(root: ParentNode = document): HTMLElement | 
   return null;
 }
 
+function isGeminiEditorVisible(el: GeminiEditor): boolean {
+  if (!(el instanceof HTMLElement)) return true;
+  if (!el.isConnected) return false;
+  if (el.getAttribute('aria-hidden') === 'true' || el.hidden) return false;
+  if (el.style.display === 'none' || el.style.visibility === 'hidden') return false;
+
+  // Real DOM layout check: offsetParent or non-zero rect
+  if (el.offsetParent !== null && el.offsetParent !== undefined) {
+    return true;
+  }
+  const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : null;
+  if (rect && (rect.width > 0 || rect.height > 0)) {
+    return true;
+  }
+  // In mock DOM environments (happy-dom), offsetParent is undefined and rect is 0x0
+  if (el.offsetParent === undefined) {
+    return true;
+  }
+  return false;
+}
+
+async function waitForGeminiDialogSettled(
+  root: ParentNode,
+  options: { waitTimeoutMs?: number; pollIntervalMs?: number; minSettleMs?: number } = {},
+): Promise<GeminiEditor> {
+  const timeoutMs = options.waitTimeoutMs ?? 10000;
+  const pollInterval =
+    options.pollIntervalMs !== undefined && options.pollIntervalMs < 100
+      ? options.pollIntervalMs
+      : 250;
+  const minSettle =
+    options.minSettleMs ??
+    (options.pollIntervalMs !== undefined && options.pollIntervalMs < 100
+      ? options.pollIntervalMs * 2
+      : 600);
+
+  const startTime = Date.now();
+  let appearTime: number | null = null;
+  let lastEditor: GeminiEditor | null = null;
+  let consecutiveMatches = 0;
+
+  while (Date.now() - startTime < timeoutMs) {
+    const current = findGeminiTextarea(root);
+    if (current && current.isConnected && isGeminiEditorVisible(current)) {
+      if (appearTime === null) {
+        appearTime = Date.now();
+      }
+      if (current === lastEditor) {
+        consecutiveMatches++;
+      } else {
+        lastEditor = current;
+        consecutiveMatches = 1;
+      }
+
+      const elapsed = Date.now() - appearTime;
+      if (consecutiveMatches >= 2 && elapsed >= minSettle) {
+        console.info('[BetterView] gemini setup: dialog settled');
+        return current;
+      }
+    } else {
+      lastEditor = null;
+      consecutiveMatches = 0;
+    }
+
+    await new Promise((r) => setTimeout(r, pollInterval));
+  }
+
+  const finalEditor = findGeminiTextarea(root);
+  if (finalEditor && finalEditor.isConnected && isGeminiEditorVisible(finalEditor)) {
+    console.info('[BetterView] gemini setup: dialog settled');
+    return finalEditor;
+  }
+
+  const msg = "Couldn't find the text box";
+  console.warn('[BetterView]', msg);
+  throw new Error(msg);
+}
+
+function fillGeminiEditor(el: GeminiEditor, text: string): void {
+  el.focus();
+  if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+    try {
+      el.select();
+    } catch {
+      try {
+        el.setSelectionRange(0, el.value.length);
+      } catch {}
+    }
+  }
+
+  let execSucceeded = false;
+  if (typeof document !== 'undefined' && typeof document.execCommand === 'function') {
+    try {
+      execSucceeded = document.execCommand('insertText', false, text);
+    } catch {
+      execSucceeded = false;
+    }
+  }
+
+  const currentValue =
+    el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
+      ? el.value
+      : (el.textContent ?? '');
+
+  if (!execSucceeded || currentValue !== text) {
+    if (el instanceof HTMLTextAreaElement) {
+      const desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+      if (desc?.set) desc.set.call(el, text);
+      else el.value = text;
+    } else if (el instanceof HTMLInputElement) {
+      const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+      if (desc?.set) desc.set.call(el, text);
+      else el.value = text;
+    } else {
+      el.textContent = text;
+    }
+
+    try {
+      el.dispatchEvent(
+        new InputEvent('input', {
+          bubbles: true,
+          cancelable: true,
+          inputType: 'insertText',
+          data: text,
+        }),
+      );
+    } catch {
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+
+    try {
+      el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: ' ' }));
+    } catch {}
+
+    try {
+      el.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+    } catch {
+      el.dispatchEvent(new Event('blur', { bubbles: true }));
+    }
+  }
+}
+
 export async function fillGeminiMemoryDialog(
   root: ParentNode = document,
-  options: { waitTimeoutMs?: number; pollIntervalMs?: number; waitForClose?: boolean } = {},
+  options: {
+    waitTimeoutMs?: number;
+    pollIntervalMs?: number;
+    waitForClose?: boolean;
+    minSettleMs?: number;
+  } = {},
 ): Promise<void> {
   const timeoutMs = options.waitTimeoutMs ?? 10000;
   const pollMs = options.pollIntervalMs ?? 100;
 
-  // 1. Wait for the editor inside the Add dialog. Gemini has changed this
-  // dialog's custom element and accessibility markup more than once.
-  let textarea: GeminiEditor | null = findGeminiTextarea(root);
+  // 1. Wait until dialog and textarea settle
+  await waitForGeminiDialogSettled(root, options);
 
-  if (!textarea) {
-    textarea = await new Promise<GeminiEditor | null>((resolve) => {
-      let resolved = false;
-      let observer: MutationObserver | null = null;
-      let timer: number | null = null;
-      let interval: number | null = null;
-
-      const cleanup = () => {
-        if (!resolved) {
-          resolved = true;
-          if (observer) observer.disconnect();
-          if (timer !== null) window.clearTimeout(timer);
-          if (interval !== null) window.clearInterval(interval);
-        }
-      };
-
-      if (typeof MutationObserver !== 'undefined') {
-        const obsTarget =
-          root instanceof Element || root instanceof Document ? root : document.body;
-        observer = new MutationObserver(() => {
-          const el = findGeminiTextarea(root);
-          if (el && !resolved) {
-            cleanup();
-            resolve(el);
-          }
-        });
-        observer.observe(obsTarget, { childList: true, subtree: true });
-      }
-
-      interval = window.setInterval(() => {
-        const el = findGeminiTextarea(root);
-        if (el && !resolved) {
-          cleanup();
-          resolve(el);
-        }
-      }, pollMs);
-
-      timer = window.setTimeout(() => {
-        cleanup();
-        resolve(findGeminiTextarea(root));
-      }, timeoutMs);
-    });
-  }
-
-  if (!textarea) {
-    const msg = "Couldn't find the text box";
-    console.warn('[BetterView]', msg);
-    throw new Error(msg);
-  }
-
-  // 2. Fill the editor through its native value setter (or contenteditable
-  // text) and dispatch the events Angular/Material listens for.
+  // 2. Guard: instruction length
   const instruction = getCompactInstruction();
   if (instruction.length > 1400) {
     const msg = `Instruction too long for Gemini (${instruction.length} chars)`;
@@ -605,85 +751,66 @@ export async function fillGeminiMemoryDialog(
     throw new Error(msg);
   }
 
-  const applyNativeFill = (el: GeminiEditor, val: string) => {
-    el.focus();
-    try {
-      el.dispatchEvent(
-        new InputEvent('beforeinput', {
-          bubbles: true,
-          cancelable: true,
-          inputType: 'insertText',
-          data: val,
-        }),
-      );
-    } catch {
-      // ignore if InputEvent construction fails
+  // 3. Fill and refill if value is reset (up to 3 attempts total)
+  const fillWaitMs =
+    options.pollIntervalMs !== undefined && options.pollIntervalMs < 100
+      ? options.pollIntervalMs
+      : 400;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    // Always re-query the textarea from the topmost dialog right before filling; never reuse an earlier reference.
+    const editor = findGeminiTextarea(root);
+    if (!editor) {
+      const msg = "Couldn't find the text box";
+      console.warn('[BetterView]', msg);
+      throw new Error(msg);
     }
 
-    if (el instanceof HTMLTextAreaElement) {
-      const desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
-      if (desc?.set) desc.set.call(el, val);
-      else el.value = val;
-    } else if (el instanceof HTMLInputElement) {
-      const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-      if (desc?.set) desc.set.call(el, val);
-      else el.value = val;
-    } else {
-      let inserted = false;
-      if (typeof document !== 'undefined' && typeof document.execCommand === 'function') {
-        try {
-          inserted = document.execCommand('insertText', false, val);
-        } catch {
-          inserted = false;
-        }
-      }
-      if (!inserted || el.textContent !== val) {
-        el.textContent = val;
-      }
+    fillGeminiEditor(editor, instruction);
+
+    const currentVal =
+      editor instanceof HTMLInputElement || editor instanceof HTMLTextAreaElement
+        ? editor.value
+        : (editor.textContent ?? '');
+    console.info(`[BetterView] gemini setup: fill attempt ${attempt} value length ${currentVal.length}`);
+
+    await new Promise((r) => setTimeout(r, fillWaitMs));
+
+    // Re-read value from a fresh query
+    const freshEditor = findGeminiTextarea(root);
+    const freshVal =
+      freshEditor instanceof HTMLInputElement || freshEditor instanceof HTMLTextAreaElement
+        ? freshEditor.value
+        : (freshEditor?.textContent ?? '');
+
+    if (freshVal === instruction) {
+      break;
     }
-    el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: val }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: ' ' }));
-    const actual =
-      el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
-        ? el.value
-        : (el.textContent ?? '');
-    if (actual !== val) throw new Error('Gemini editor did not accept the complete BetterView instruction');
-  };
-
-  applyNativeFill(textarea, instruction);
-
-  // 3. Wait until button[data-test-id="submit-button"] is enabled (poll up to 5s)
-  const isEnabled = (btn: HTMLButtonElement | null) =>
-    Boolean(btn && !btn.disabled && !btn.hasAttribute('disabled') && btn.getAttribute('aria-disabled') !== 'true');
-
-  const waitForSubmitButton = async (maxMs: number): Promise<HTMLButtonElement | null> => {
-    const start = Date.now();
-    while (Date.now() - start < maxMs) {
-      const btn = findGeminiSubmitButton(root);
-      if (isEnabled(btn)) return btn;
-      await new Promise((r) => setTimeout(r, pollMs));
-    }
-    return null;
-  };
-
-  let submitBtn = await waitForSubmitButton(Math.min(timeoutMs, 5000));
-
-  // Retry the fill once if the button is still disabled
-  if (!submitBtn) {
-    applyNativeFill(textarea, instruction);
-    submitBtn = await waitForSubmitButton(Math.min(timeoutMs, 5000));
   }
 
-  if (!submitBtn) {
-    const msg = "Submit button remained disabled";
+  // 4. Poll up to 5s for Submit to be enabled
+  const submitMaxWait = Math.min(timeoutMs, 5000);
+  const startSubmitWait = Date.now();
+  let submitBtn: HTMLButtonElement | null = null;
+
+  while (Date.now() - startSubmitWait < submitMaxWait) {
+    submitBtn = findGeminiSubmitButton(root);
+    if (isGeminiSubmitButtonEnabled(submitBtn)) {
+      break;
+    }
+    await new Promise((r) => setTimeout(r, pollMs));
+  }
+
+  if (!submitBtn || !isGeminiSubmitButtonEnabled(submitBtn)) {
+    const msg = "Gemini's Submit button stayed disabled after filling";
     console.warn('[BetterView]', msg);
     throw new Error(msg);
   }
 
+  console.info('[BetterView] gemini setup: Submit enabled');
   submitBtn.click();
 
-  // Wait for the dialog to close (up to 8s) if requested or by default if close is observed
+  // 5. Wait for dialog to close if requested
   if (options.waitForClose) {
     const startCloseWait = Date.now();
     const maxCloseWait = Math.min(timeoutMs, 8000);
@@ -747,8 +874,10 @@ export async function runGeminiSetup(options: GeminiSetupOptions = {}): Promise<
     const outsideText = getGeminiOutsideText(root);
     hasOldEntry = hasOlderInstruction(outsideText);
 
-    // 1b. If no dialog is open: check existing instructions outside dialog
-    if (!isDialogOpen) {
+    // 1b. If dialog is already open, skip clicking Add
+    if (isDialogOpen) {
+      console.info('[BetterView] gemini setup: dialog already open (skipping Add)');
+    } else {
       console.info('[BetterView] gemini setup: checking existing instructions');
       const existingVer = extractInstructionVersion(outsideText);
       if (existingVer !== null && existingVer >= CURRENT_INSTRUCTION_VERSION) {
@@ -762,29 +891,50 @@ export async function runGeminiSetup(options: GeminiSetupOptions = {}): Promise<
         return res;
       }
 
-      // 1c. Find Add button and click it (up to 3 attempts)
-      let dialogEditor: GeminiEditor | null = null;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        console.info(`[BetterView] gemini setup: looking for Add button (attempt ${attempt}/3)`);
-        const addBtn = findGeminiAddButton(root);
-        if (!addBtn) {
-          break;
-        }
-        console.info(`[BetterView] gemini setup: clicking Add button (attempt ${attempt}/3)`);
-        addBtn.click();
-
-        const waitStart = Date.now();
-        while (Date.now() - waitStart < addRetryMs) {
-          dialogEditor = findGeminiTextarea(root);
-          if (dialogEditor) break;
-          await new Promise((r) => setTimeout(r, pollMs));
-        }
-        if (dialogEditor) break;
-      }
-
-      editor = dialogEditor ?? findGeminiTextarea(root);
+      // Check again whether dialog appeared before clicking Add
       dialog = findGeminiDialog(root);
-      isDialogOpen = Boolean(dialog && editor);
+      editor = dialog ? findGeminiTextarea(root) : null;
+      if (dialog && editor) {
+        console.info('[BetterView] gemini setup: dialog already open (skipping Add)');
+        isDialogOpen = true;
+      } else {
+        // 1c. Find Add button and click it (up to 3 attempts)
+        let dialogEditor: GeminiEditor | null = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          dialog = findGeminiDialog(root);
+          editor = dialog ? findGeminiTextarea(root) : null;
+          if (dialog && editor) {
+            console.info('[BetterView] gemini setup: dialog already open (skipping Add)');
+            isDialogOpen = true;
+            dialogEditor = editor;
+            break;
+          }
+
+          console.info(`[BetterView] gemini setup: looking for Add button (attempt ${attempt}/3)`);
+          const addBtn = findGeminiAddButton(root);
+          if (!addBtn) {
+            break;
+          }
+          console.info(`[BetterView] gemini setup: clicking Add button (attempt ${attempt}/3)`);
+          addBtn.click();
+
+          const waitStart = Date.now();
+          while (Date.now() - waitStart < addRetryMs) {
+            dialog = findGeminiDialog(root);
+            dialogEditor = dialog ? findGeminiTextarea(root) : null;
+            if (dialog && dialogEditor) {
+              isDialogOpen = true;
+              break;
+            }
+            await new Promise((r) => setTimeout(r, pollMs));
+          }
+          if (isDialogOpen) break;
+        }
+
+        editor = dialogEditor ?? findGeminiTextarea(root);
+        dialog = findGeminiDialog(root);
+        isDialogOpen = Boolean(dialog && editor);
+      }
 
       if (!isDialogOpen || !editor) {
         const msg =
@@ -824,6 +974,7 @@ export async function runGeminiSetup(options: GeminiSetupOptions = {}): Promise<
     }
 
     // 1e. Fill memory dialog and submit
+    const targetDialog = findGeminiDialog(root);
     console.info('[BetterView] gemini setup: filling memory dialog');
     await fillGeminiMemoryDialog(root, {
       waitTimeoutMs: Math.min(verifyTimeoutMs, 5000),
@@ -868,6 +1019,10 @@ export async function runGeminiSetup(options: GeminiSetupOptions = {}): Promise<
       // Check if dialog closed
       const currentDialog = findGeminiDialog(root);
       const isClosed =
+        (targetDialog !== null &&
+          (!targetDialog.isConnected ||
+            (targetDialog instanceof HTMLElement &&
+              (targetDialog.style.display === 'none' || targetDialog.hidden)))) ||
         !currentDialog ||
         !currentDialog.isConnected ||
         (currentDialog instanceof HTMLElement &&
@@ -898,6 +1053,10 @@ export async function runGeminiSetup(options: GeminiSetupOptions = {}): Promise<
     // After timeout
     const finalDialog = findGeminiDialog(root);
     const finalClosed =
+      (targetDialog !== null &&
+        (!targetDialog.isConnected ||
+          (targetDialog instanceof HTMLElement &&
+            (targetDialog.style.display === 'none' || targetDialog.hidden)))) ||
       !finalDialog ||
       !finalDialog.isConnected ||
       (finalDialog instanceof HTMLElement &&

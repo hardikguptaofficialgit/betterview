@@ -401,7 +401,7 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
     overlay.remove();
   });
 
-  it('dispatches input, change, and keyup events and retries fill if disabled', async () => {
+  it('dispatches input, change, and blur events and refills if value reset', async () => {
     const overlay = document.createElement('div');
     overlay.className = 'cdk-overlay-container';
     overlay.innerHTML = `
@@ -418,13 +418,17 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
     let keyupCount = 0;
     let changeCount = 0;
     let inputCount = 0;
+    let blurCount = 0;
 
     textarea.addEventListener('keyup', () => { keyupCount++; });
     textarea.addEventListener('change', () => { changeCount++; });
+    textarea.addEventListener('blur', () => { blurCount++; });
     textarea.addEventListener('input', () => {
       inputCount++;
-      // Enable on second attempt (retry)
-      if (inputCount >= 2) {
+      // Enable on second attempt (retry after value reset)
+      if (inputCount === 1) {
+        textarea.value = '';
+      } else {
         submitBtn.disabled = false;
         submitBtn.removeAttribute('disabled');
       }
@@ -438,6 +442,7 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
 
     expect(inputCount).toBeGreaterThanOrEqual(2);
     expect(changeCount).toBeGreaterThanOrEqual(2);
+    expect(blurCount).toBeGreaterThanOrEqual(2);
     expect(keyupCount).toBeGreaterThanOrEqual(2);
 
     overlay.remove();
@@ -803,6 +808,199 @@ describe('runGeminiSetup', () => {
     expect(isGeminiSavedInfoPath('/app')).toBe(false);
     expect(isGeminiSavedInfoPath('/saved-info-x')).toBe(false);
     expect(isGeminiSavedInfoPath('/')).toBe(false);
+  });
+
+  it('a pre-opened dialog means Add isn\'t clicked', async () => {
+    document.body.replaceChildren();
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'create-memory-button';
+    addBtn.textContent = 'Add';
+    let addClicked = false;
+    addBtn.addEventListener('click', () => {
+      addClicked = true;
+    });
+
+    const dialog = document.createElement('mat-dialog-container');
+    dialog.setAttribute('role', 'dialog');
+    dialog.innerHTML = `
+      <edit-memory-dialog>
+        <textarea class="edit-memory-input" aria-label="Enter new memory"></textarea>
+        <button data-test-id="submit-button" class="edit-memory-submit-button" disabled>Submit</button>
+      </edit-memory-dialog>
+    `;
+    const textarea = dialog.querySelector('textarea')!;
+    const submit = dialog.querySelector<HTMLButtonElement>('button[data-test-id="submit-button"]')!;
+    textarea.addEventListener('input', () => {
+      submit.disabled = false;
+      submit.removeAttribute('disabled');
+      submit.classList.remove('mat-mdc-button-disabled');
+    });
+    submit.addEventListener('click', () => {
+      dialog.remove();
+    });
+
+    document.body.append(addBtn, dialog);
+
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 500,
+      addRetryMs: 100,
+      verifyTimeoutMs: 500,
+      pollMs: 20,
+    });
+
+    expect(result.status).toBe('added');
+    expect(addClicked).toBe(false);
+    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('dialog already open (skipping Add)'));
+    infoSpy.mockRestore();
+  });
+
+  it('a value reset after fill triggers a refill', async () => {
+    document.body.replaceChildren();
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    const dialog = document.createElement('mat-dialog-container');
+    dialog.setAttribute('role', 'dialog');
+    dialog.innerHTML = `
+      <edit-memory-dialog>
+        <textarea class="edit-memory-input" aria-label="Enter new memory"></textarea>
+        <button data-test-id="submit-button" class="edit-memory-submit-button" disabled>Submit</button>
+      </edit-memory-dialog>
+    `;
+    const textarea = dialog.querySelector('textarea')!;
+    const submit = dialog.querySelector<HTMLButtonElement>('button[data-test-id="submit-button"]')!;
+
+    let fills = 0;
+    textarea.addEventListener('input', () => {
+      fills++;
+      if (fills === 1) {
+        // Simulate Angular resetting the value after first fill
+        textarea.value = '';
+      } else {
+        submit.disabled = false;
+        submit.removeAttribute('disabled');
+        submit.classList.remove('mat-mdc-button-disabled');
+      }
+    });
+
+    submit.addEventListener('click', () => {
+      dialog.remove();
+    });
+
+    document.body.appendChild(dialog);
+
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 500,
+      addRetryMs: 100,
+      verifyTimeoutMs: 500,
+      pollMs: 20,
+    });
+
+    expect(result.status).toBe('added');
+    expect(fills).toBeGreaterThanOrEqual(2);
+    expect(textarea.value).toBe(getCompactInstruction());
+    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('fill attempt 1 value length'));
+    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('fill attempt 2 value length'));
+    infoSpy.mockRestore();
+  });
+
+  it('a Submit that stays disabled gives the clear error and no click', async () => {
+    document.body.replaceChildren();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    const dialog = document.createElement('mat-dialog-container');
+    dialog.setAttribute('role', 'dialog');
+    dialog.innerHTML = `
+      <edit-memory-dialog>
+        <textarea class="edit-memory-input" aria-label="Enter new memory"></textarea>
+        <button data-test-id="submit-button" class="edit-memory-submit-button mat-mdc-button-disabled" disabled>Submit</button>
+      </edit-memory-dialog>
+    `;
+    const submit = dialog.querySelector<HTMLButtonElement>('button[data-test-id="submit-button"]')!;
+
+    let submitClicked = false;
+    submit.addEventListener('click', () => {
+      submitClicked = true;
+    });
+
+    document.body.appendChild(dialog);
+
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 200,
+      addRetryMs: 50,
+      verifyTimeoutMs: 200,
+      pollMs: 20,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.error).toBe("Gemini's Submit button stayed disabled after filling");
+    expect(submitClicked).toBe(false);
+
+    // Verify "submitted memory dialog" was never logged
+    const loggedCalls = infoSpy.mock.calls.map((c) => String(c[0]));
+    expect(loggedCalls.some((c) => c.includes('submitted memory dialog'))).toBe(false);
+
+    warnSpy.mockRestore();
+    infoSpy.mockRestore();
+  });
+
+  it('two dialogs means the topmost is used', async () => {
+    document.body.replaceChildren();
+
+    // Dialog 1: lower/earlier dialog
+    const dialog1 = document.createElement('mat-dialog-container');
+    dialog1.setAttribute('role', 'dialog');
+    dialog1.innerHTML = `
+      <edit-memory-dialog>
+        <textarea class="edit-memory-input" aria-label="Enter new memory"></textarea>
+        <button data-test-id="submit-button" class="edit-memory-submit-button" disabled>Submit</button>
+      </edit-memory-dialog>
+    `;
+    const ta1 = dialog1.querySelector('textarea')!;
+    const btn1 = dialog1.querySelector<HTMLButtonElement>('button[data-test-id="submit-button"]')!;
+    let btn1Clicked = false;
+    btn1.addEventListener('click', () => {
+      btn1Clicked = true;
+    });
+
+    // Dialog 2: topmost/last dialog
+    const dialog2 = document.createElement('mat-dialog-container');
+    dialog2.setAttribute('role', 'dialog');
+    dialog2.innerHTML = `
+      <edit-memory-dialog>
+        <textarea class="edit-memory-input" aria-label="Enter new memory"></textarea>
+        <button data-test-id="submit-button" class="edit-memory-submit-button" disabled>Submit</button>
+      </edit-memory-dialog>
+    `;
+    const ta2 = dialog2.querySelector('textarea')!;
+    const btn2 = dialog2.querySelector<HTMLButtonElement>('button[data-test-id="submit-button"]')!;
+    let btn2Clicked = false;
+    ta2.addEventListener('input', () => {
+      btn2.disabled = false;
+      btn2.removeAttribute('disabled');
+      btn2.classList.remove('mat-mdc-button-disabled');
+    });
+    btn2.addEventListener('click', () => {
+      btn2Clicked = true;
+      dialog2.remove();
+    });
+
+    document.body.append(dialog1, dialog2);
+
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 500,
+      addRetryMs: 100,
+      verifyTimeoutMs: 500,
+      pollMs: 20,
+    });
+
+    expect(result.status).toBe('added');
+    expect(btn1Clicked).toBe(false);
+    expect(btn2Clicked).toBe(true);
+    expect(ta1.value).toBe('');
+    expect(ta2.value).toBe(getCompactInstruction());
   });
 });
 
