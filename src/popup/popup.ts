@@ -299,8 +299,7 @@ export function initPopup(): () => void {
   if (tryItBtn) {
     tryItBtn.addEventListener('click', async () => {
       try {
-        const samplePrompt = 'Create a clear flow diagram showing how a web browser loads a webpage, from entering a URL to displaying the finished page.';
-        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+const samplePrompt = 'Teach me how a web browser loads a webpage, starting from entering a URL to displaying the finished page. Break down every step in a beginner-friendly way, explain the underlying concepts, and use a clear flow diagram with practical examples to help me understand how everything works.';        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(samplePrompt);
         }
         if (tryItLabel) {
