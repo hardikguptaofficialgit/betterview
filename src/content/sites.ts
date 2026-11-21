@@ -416,6 +416,125 @@ function findGeminiSubmitButton(root: ParentNode): HTMLButtonElement | null {
   return null;
 }
 
+export function isGeminiSavedInfoPath(pathname: string): boolean {
+  return /^\/(u\/\d+\/)?saved-info\/?$/.test(pathname);
+}
+
+function getScopeElement(root: ParentNode): HTMLElement | null {
+  return 'body' in root && (root as Document).body ? (root as Document).body : (root as HTMLElement);
+}
+
+function getGeminiOutsideText(root: ParentNode = document): string {
+  const dialog = findGeminiDialog(root);
+  const scope = getScopeElement(root);
+  if (!scope) return '';
+
+  if (!dialog) {
+    return scope.innerText || scope.textContent || '';
+  }
+
+  let text = '';
+  const walk = (node: Node) => {
+    if (node === dialog || dialog.contains(node)) return;
+    if (node.nodeType === Node.TEXT_NODE) {
+      text += ' ' + (node.textContent ?? '');
+      return;
+    }
+    if (node instanceof HTMLElement && node.shadowRoot) {
+      walk(node.shadowRoot);
+    }
+    for (let i = 0; i < node.childNodes.length; i++) {
+      walk(node.childNodes[i]);
+    }
+  };
+  walk(scope);
+  return text.trim();
+}
+
+function hasGeminiSavedInfoHeading(root: ParentNode = document): boolean {
+  const headings = geminiDeepQueryAll<HTMLElement>(root, 'h1, h2, h3, h4, [role="heading"]');
+  for (const h of headings) {
+    const text = (h.textContent ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (
+      text.includes('saved info') ||
+      text.includes('instructions for gemini') ||
+      text.includes('your instructions')
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function findGeminiAddButton(root: ParentNode = document): HTMLElement | null {
+  const isVisibleAndEnabled = (el: Element): boolean => {
+    if (el.getAttribute('aria-hidden') === 'true' || el.getAttribute('inert') !== null) {
+      return false;
+    }
+    if (
+      el.hasAttribute('disabled') ||
+      el.getAttribute('aria-disabled') === 'true' ||
+      (el as HTMLButtonElement).disabled === true
+    ) {
+      return false;
+    }
+    if (el instanceof HTMLElement) {
+      if (el.style.display === 'none' || el.style.visibility === 'hidden' || el.hidden) {
+        return false;
+      }
+      if (el.closest('rich-textarea, .ql-editor, [contenteditable="true"], chat-window, model-response')) {
+        return false;
+      }
+      if (el.closest('edit-memory-dialog, [role="dialog"], mat-dialog-container, dialog')) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // 1. span.mdc-button__label text === "Add"
+  const mdcLabels = geminiDeepQueryAll<HTMLElement>(root, 'span.mdc-button__label');
+  for (const span of mdcLabels) {
+    if (!isVisibleAndEnabled(span)) continue;
+    if ((span.textContent ?? '').trim() === 'Add') {
+      const btn = span.closest('button, [role="button"]') as HTMLElement | null;
+      if (btn && isVisibleAndEnabled(btn)) return btn;
+      return span;
+    }
+  }
+
+  // 2. button/[role=button] whose normalized textContent or aria-label matches
+  // /^(\+\s*)?add( new)?( info| memory| instruction)?$/i
+  // or aria-label containing "add" and ("info"|"memory"|"instruction")
+  const buttons = geminiDeepQueryAll<HTMLElement>(root, 'button, [role="button"]');
+  const addPattern = /^(\+\s*)?add( new)?( info| memory| instruction)?$/i;
+  for (const btn of buttons) {
+    if (!isVisibleAndEnabled(btn)) continue;
+    const text = (btn.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const aria = (btn.getAttribute('aria-label') ?? '').replace(/\s+/g, ' ').trim();
+    if (addPattern.test(text) || addPattern.test(aria)) {
+      return btn;
+    }
+    if (/add/i.test(aria) && /(info|memory|instruction)/i.test(aria)) {
+      return btn;
+    }
+  }
+
+  // 3. data-test-id containing "add"
+  const testIdEls = geminiDeepQueryAll<HTMLElement>(root, '[data-test-id*="add" i]');
+  for (const el of testIdEls) {
+    if (!isVisibleAndEnabled(el)) continue;
+    const btn =
+      el.tagName.toLowerCase() === 'button' || el.getAttribute('role') === 'button'
+        ? el
+        : (el.closest('button, [role="button"]') as HTMLElement | null);
+    if (btn && isVisibleAndEnabled(btn)) return btn;
+    return el;
+  }
+
+  return null;
+}
+
 export async function fillGeminiMemoryDialog(
   root: ParentNode = document,
   options: { waitTimeoutMs?: number; pollIntervalMs?: number; waitForClose?: boolean } = {},
@@ -480,9 +599,27 @@ export async function fillGeminiMemoryDialog(
   // 2. Fill the editor through its native value setter (or contenteditable
   // text) and dispatch the events Angular/Material listens for.
   const instruction = getCompactInstruction();
+  if (instruction.length > 1400) {
+    const msg = `Instruction too long for Gemini (${instruction.length} chars)`;
+    console.warn('[BetterView]', msg);
+    throw new Error(msg);
+  }
 
   const applyNativeFill = (el: GeminiEditor, val: string) => {
     el.focus();
+    try {
+      el.dispatchEvent(
+        new InputEvent('beforeinput', {
+          bubbles: true,
+          cancelable: true,
+          inputType: 'insertText',
+          data: val,
+        }),
+      );
+    } catch {
+      // ignore if InputEvent construction fails
+    }
+
     if (el instanceof HTMLTextAreaElement) {
       const desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
       if (desc?.set) desc.set.call(el, val);
@@ -492,14 +629,25 @@ export async function fillGeminiMemoryDialog(
       if (desc?.set) desc.set.call(el, val);
       else el.value = val;
     } else {
-      el.textContent = val;
+      let inserted = false;
+      if (typeof document !== 'undefined' && typeof document.execCommand === 'function') {
+        try {
+          inserted = document.execCommand('insertText', false, val);
+        } catch {
+          inserted = false;
+        }
+      }
+      if (!inserted || el.textContent !== val) {
+        el.textContent = val;
+      }
     }
     el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: val }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
     el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: ' ' }));
-    const actual = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
-      ? el.value
-      : (el.textContent ?? '');
+    const actual =
+      el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
+        ? el.value
+        : (el.textContent ?? '');
     if (actual !== val) throw new Error('Gemini editor did not accept the complete BetterView instruction');
   };
 
@@ -557,32 +705,234 @@ export async function fillGeminiMemoryDialog(
   }
 }
 
-export async function runGeminiSetup(): Promise<SetupResult> {
+export interface GeminiSetupOptions {
+  readyTimeoutMs?: number;
+  addRetryMs?: number;
+  verifyTimeoutMs?: number;
+  pollMs?: number;
+  root?: ParentNode;
+}
+
+export async function runGeminiSetup(options: GeminiSetupOptions = {}): Promise<SetupResult> {
+  const readyTimeoutMs = options.readyTimeoutMs ?? 15000;
+  const addRetryMs = options.addRetryMs ?? 4000;
+  const verifyTimeoutMs = options.verifyTimeoutMs ?? 10000;
+  const pollMs = options.pollMs ?? 200;
+  const root = options.root ?? (typeof document !== 'undefined' ? document : ({} as ParentNode));
+
+  let hasOldEntry = false;
+
   try {
-    // Gemini opens its Add memory dialog automatically when Saved info is
-    // opened through the setup link. Do not inspect existing entries or click
-    // Add again: wait for that already-open form, fill it, and submit it.
-    if (window.location.hostname === 'gemini.google.com' && window.location.pathname.replace(/\/+$/, '') !== '/saved-info') {
-      const msg = 'Gemini setup must run on https://gemini.google.com/saved-info';
+    // 1a. Wait (poll 200ms, up to 15s) for the Saved info page to be ready
+    console.info('[BetterView] gemini setup: waiting for saved info page');
+    const isReady = (): boolean => {
+      const dialog = findGeminiDialog(root);
+      if (dialog && findGeminiTextarea(root)) return true;
+      if (findGeminiAddButton(root)) return true;
+      if (hasGeminiSavedInfoHeading(root)) return true;
+      return false;
+    };
+
+    const startReady = Date.now();
+    while (Date.now() - startReady < readyTimeoutMs) {
+      if (isReady()) break;
+      await new Promise((r) => setTimeout(r, pollMs));
+    }
+    console.info('[BetterView] gemini setup: saved info page ready check completed');
+
+    let dialog = findGeminiDialog(root);
+    let editor = dialog ? findGeminiTextarea(root) : null;
+    let isDialogOpen = Boolean(dialog && editor);
+
+    const outsideText = getGeminiOutsideText(root);
+    hasOldEntry = hasOlderInstruction(outsideText);
+
+    // 1b. If no dialog is open: check existing instructions outside dialog
+    if (!isDialogOpen) {
+      console.info('[BetterView] gemini setup: checking existing instructions');
+      const existingVer = extractInstructionVersion(outsideText);
+      if (existingVer !== null && existingVer >= CURRENT_INSTRUCTION_VERSION) {
+        console.info(`[BetterView] gemini setup: instruction already present (v${existingVer})`);
+        const res: SetupResult = {
+          status: 'already',
+          version: existingVer,
+          hasOldEntry,
+        };
+        recordSetupResult('gemini', res);
+        return res;
+      }
+
+      // 1c. Find Add button and click it (up to 3 attempts)
+      let dialogEditor: GeminiEditor | null = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        console.info(`[BetterView] gemini setup: looking for Add button (attempt ${attempt}/3)`);
+        const addBtn = findGeminiAddButton(root);
+        if (!addBtn) {
+          break;
+        }
+        console.info(`[BetterView] gemini setup: clicking Add button (attempt ${attempt}/3)`);
+        addBtn.click();
+
+        const waitStart = Date.now();
+        while (Date.now() - waitStart < addRetryMs) {
+          dialogEditor = findGeminiTextarea(root);
+          if (dialogEditor) break;
+          await new Promise((r) => setTimeout(r, pollMs));
+        }
+        if (dialogEditor) break;
+      }
+
+      editor = dialogEditor ?? findGeminiTextarea(root);
+      dialog = findGeminiDialog(root);
+      isDialogOpen = Boolean(dialog && editor);
+
+      if (!isDialogOpen || !editor) {
+        const msg =
+          "Couldn't find Gemini's Add button. Open gemini.google.com/saved-info, make sure you're signed in, then try again.";
+        console.warn('[BetterView]', msg);
+        const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
+        recordSetupResult('gemini', res);
+        return res;
+      }
+    }
+
+    // 1d. If dialog IS already open: only use if empty or contains our text
+    if (!editor) {
+      editor = findGeminiTextarea(root);
+    }
+    const currentText =
+      editor instanceof HTMLInputElement || editor instanceof HTMLTextAreaElement
+        ? editor.value
+        : (editor?.textContent ?? '');
+    const trimmedCurrent = currentText.trim();
+    if (trimmedCurrent !== '' && !hasBetterViewMarker(trimmedCurrent)) {
+      const msg = 'Gemini dialog contains existing text; aborting to avoid overwriting';
       console.warn('[BetterView]', msg);
-      const res: SetupResult = { status: 'failed', error: msg };
+      const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
       recordSetupResult('gemini', res);
       return res;
     }
 
-    await fillGeminiMemoryDialog(document, {
-      waitTimeoutMs: 20000,
-      pollIntervalMs: 200,
-      waitForClose: true,
-    });
+    // 4. Guard: instruction length
+    const instruction = getCompactInstruction();
+    if (instruction.length > 1400) {
+      const msg = `Instruction too long for Gemini (${instruction.length} chars)`;
+      console.warn('[BetterView]', msg);
+      const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
+      recordSetupResult('gemini', res);
+      return res;
+    }
 
-    const res: SetupResult = { status: 'added', version: CURRENT_INSTRUCTION_VERSION };
+    // 1e. Fill memory dialog and submit
+    console.info('[BetterView] gemini setup: filling memory dialog');
+    await fillGeminiMemoryDialog(root, {
+      waitTimeoutMs: Math.min(verifyTimeoutMs, 5000),
+      pollIntervalMs: pollMs,
+      waitForClose: false,
+    });
+    console.info('[BetterView] gemini setup: submitted memory dialog');
+
+    // 1f. Verify success after submit: poll up to verifyTimeoutMs
+    console.info('[BetterView] gemini setup: verifying saved entry');
+    const startVerify = Date.now();
+    const errorPattern = /wasn't saved|couldn't save|something went wrong|try again later|too long/i;
+    const successMarker = `[BetterView v${CURRENT_INSTRUCTION_VERSION}`;
+
+    while (Date.now() - startVerify < verifyTimeoutMs) {
+      await new Promise((r) => setTimeout(r, pollMs));
+
+      // Check for error text on whole page
+      const fullText = getScopeElement(root)?.textContent ?? '';
+      const errMatch = fullText.match(errorPattern);
+      if (errMatch) {
+        const msg = `Gemini rejected the entry: ${errMatch[0]}`;
+        console.warn('[BetterView]', msg);
+        const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
+        recordSetupResult('gemini', res);
+        return res;
+      }
+
+      // Check for success marker outside dialogs
+      const liveOutside = getGeminiOutsideText(root);
+      if (liveOutside.includes(successMarker)) {
+        console.info(`[BetterView] gemini setup: verified entry on page (${successMarker})`);
+        const res: SetupResult = {
+          status: 'added',
+          version: CURRENT_INSTRUCTION_VERSION,
+          hasOldEntry,
+        };
+        recordSetupResult('gemini', res);
+        return res;
+      }
+
+      // Check if dialog closed
+      const currentDialog = findGeminiDialog(root);
+      const isClosed =
+        !currentDialog ||
+        !currentDialog.isConnected ||
+        (currentDialog instanceof HTMLElement &&
+          (currentDialog.style.display === 'none' || currentDialog.hidden));
+
+      if (isClosed) {
+        await new Promise((r) => setTimeout(r, pollMs));
+        const postText = getScopeElement(root)?.textContent ?? '';
+        const postErr = postText.match(errorPattern);
+        if (postErr) {
+          const msg = `Gemini rejected the entry: ${postErr[0]}`;
+          console.warn('[BetterView]', msg);
+          const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
+          recordSetupResult('gemini', res);
+          return res;
+        }
+        console.info('[BetterView] gemini setup: dialog closed successfully');
+        const res: SetupResult = {
+          status: 'added',
+          version: CURRENT_INSTRUCTION_VERSION,
+          hasOldEntry,
+        };
+        recordSetupResult('gemini', res);
+        return res;
+      }
+    }
+
+    // After timeout
+    const finalDialog = findGeminiDialog(root);
+    const finalClosed =
+      !finalDialog ||
+      !finalDialog.isConnected ||
+      (finalDialog instanceof HTMLElement &&
+        (finalDialog.style.display === 'none' || finalDialog.hidden));
+
+    const finalFullText = getScopeElement(root)?.textContent ?? '';
+    const finalErr = finalFullText.match(errorPattern);
+    if (finalErr) {
+      const msg = `Gemini rejected the entry: ${finalErr[0]}`;
+      console.warn('[BetterView]', msg);
+      const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
+      recordSetupResult('gemini', res);
+      return res;
+    }
+
+    const finalOutside = getGeminiOutsideText(root);
+    if (finalOutside.includes(successMarker) || finalClosed) {
+      const res: SetupResult = {
+        status: 'added',
+        version: CURRENT_INSTRUCTION_VERSION,
+        hasOldEntry,
+      };
+      recordSetupResult('gemini', res);
+      return res;
+    }
+
+    const msg = "Gemini didn't accept the entry (dialog still open)";
+    console.warn('[BetterView]', msg);
+    const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
     recordSetupResult('gemini', res);
     return res;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn('[BetterView]', 'Gemini setup error:', msg);
-    const res: SetupResult = { status: 'failed', error: msg };
+    const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
     recordSetupResult('gemini', res);
     return res;
   }

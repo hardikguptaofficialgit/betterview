@@ -137,7 +137,10 @@ export function initPopup(): () => void {
       }
     } else if (data.status === 'failed') {
       kind = 'failed';
-      statusText = "Setup didn't finish";
+      const rawError = data.error?.trim();
+      statusText = rawError
+        ? (rawError.length > 80 ? `${rawError.slice(0, 79)}…` : rawError)
+        : "Setup didn't finish";
       btnLabel = 'Retry';
       title = data.error || "Setup didn't finish";
     }

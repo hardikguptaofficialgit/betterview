@@ -389,14 +389,14 @@ describe('BetterView Popup', () => {
       expect(grokLabel.textContent).toBe('Update');
       expect(grokBtn.classList.contains('is-done')).toBe(false);
 
-      // State 3: Failed -> Setup didn't finish / Retry with error in title
+      // State 3: Failed -> Error in visible text and title / Retry
       for (const listener of storageListeners) {
         listener(
           { gemini_setup_status: { newValue: { status: 'failed', error: 'Gemini rejected the entry' } } },
           'local',
         );
       }
-      expect(geminiStatus.textContent).toBe("Setup didn't finish");
+      expect(geminiStatus.textContent).toBe('Gemini rejected the entry');
       expect(geminiStatus.getAttribute('title')).toBe('Gemini rejected the entry');
       expect(geminiLabel.textContent).toBe('Retry');
       expect(geminiBtn.classList.contains('is-done')).toBe(false);

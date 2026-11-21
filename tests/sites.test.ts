@@ -13,6 +13,8 @@ import {
   fillGeminiMemoryDialog,
   runGeminiSetup,
   runGrokSetup,
+  isGeminiSavedInfoPath,
+  findGeminiAddButton,
 } from '../src/content/sites';
 import {
   SETUP_INSTRUCTION,
@@ -492,7 +494,7 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
 });
 
 describe('runGeminiSetup', () => {
-  it('fills and submits the form Gemini opened automatically without checking entries or clicking Add', async () => {
+  it('fills and submits the form Gemini opened automatically as the dialog already open path', async () => {
     document.body.replaceChildren();
     const dialog = document.createElement('edit-memory-dialog');
     dialog.setAttribute('role', 'dialog');
@@ -503,7 +505,12 @@ describe('runGeminiSetup', () => {
     submit.addEventListener('click', () => dialog.remove());
     document.body.appendChild(dialog);
 
-    const result = await runGeminiSetup();
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 100,
+      addRetryMs: 50,
+      verifyTimeoutMs: 200,
+      pollMs: 20,
+    });
 
     expect(result.status).toBe('added');
     expect(result.version).toBe(CURRENT_INSTRUCTION_VERSION);
@@ -512,7 +519,7 @@ describe('runGeminiSetup', () => {
     expect(document.querySelector('button')).toBeNull();
   });
 
-  it('fills and submits Gemini\'s automatically opened shadow-root form', async () => {
+  it('fills and submits Gemini\'s automatically opened shadow-root form as the dialog already open path', async () => {
     document.body.replaceChildren();
     const host = document.createElement('gemini-saved-info');
     const shadow = host.attachShadow({ mode: 'open' });
@@ -526,10 +533,276 @@ describe('runGeminiSetup', () => {
     shadow.append(dialog, section);
     document.body.appendChild(host);
 
-    const result = await runGeminiSetup();
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 100,
+      addRetryMs: 50,
+      verifyTimeoutMs: 200,
+      pollMs: 20,
+    });
     expect(result.status).toBe('added');
     expect(editor.value).toBe(getCompactInstruction());
     expect(dialog.isConnected).toBe(false);
+  });
+
+  it('page with Add button (mdc label "Add"): clicking opens dialog, fills, submits, and appends list item', async () => {
+    document.body.replaceChildren();
+    const heading = document.createElement('h2');
+    heading.textContent = 'Saved info';
+    const list = document.createElement('ul');
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'mdc-button';
+    const span = document.createElement('span');
+    span.className = 'mdc-button__label';
+    span.textContent = 'Add';
+    addBtn.appendChild(span);
+
+    let addClicks = 0;
+    let dialogTextarea: HTMLTextAreaElement | null = null;
+    addBtn.addEventListener('click', () => {
+      addClicks++;
+      const dialog = document.createElement('edit-memory-dialog');
+      dialog.setAttribute('role', 'dialog');
+      dialog.innerHTML = `
+        <textarea aria-label="Enter new memory"></textarea>
+        <button data-test-id="submit-button" disabled>Submit</button>
+      `;
+      dialogTextarea = dialog.querySelector('textarea')!;
+      const submit = dialog.querySelector<HTMLButtonElement>('button')!;
+      dialogTextarea.addEventListener('input', () => {
+        submit.disabled = false;
+        submit.removeAttribute('disabled');
+      });
+      submit.addEventListener('click', () => {
+        dialog.remove();
+        const li = document.createElement('li');
+        li.textContent = dialogTextarea!.value;
+        list.appendChild(li);
+      });
+      document.body.appendChild(dialog);
+    });
+
+    document.body.append(heading, addBtn, list);
+
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 500,
+      addRetryMs: 100,
+      verifyTimeoutMs: 500,
+      pollMs: 20,
+    });
+
+    expect(result.status).toBe('added');
+    expect(result.version).toBe(CURRENT_INSTRUCTION_VERSION);
+    expect(addClicks).toBe(1);
+    expect(dialogTextarea).not.toBeNull();
+    expect(dialogTextarea!.value).toBe(getCompactInstruction());
+    expect(list.textContent).toContain(getCompactInstruction());
+  });
+
+  it('Add button that only opens the dialog on the 2nd click -> added (retry works)', async () => {
+    document.body.replaceChildren();
+    const addBtn = document.createElement('button');
+    const span = document.createElement('span');
+    span.className = 'mdc-button__label';
+    span.textContent = 'Add';
+    addBtn.appendChild(span);
+
+    let clicks = 0;
+    addBtn.addEventListener('click', () => {
+      clicks++;
+      if (clicks >= 2) {
+        const dialog = document.createElement('edit-memory-dialog');
+        dialog.setAttribute('role', 'dialog');
+        dialog.innerHTML = `
+          <textarea aria-label="Enter new memory"></textarea>
+          <button data-test-id="submit-button" disabled>Submit</button>
+        `;
+        const textarea = dialog.querySelector('textarea')!;
+        const submit = dialog.querySelector<HTMLButtonElement>('button')!;
+        textarea.addEventListener('input', () => {
+          submit.disabled = false;
+        });
+        submit.addEventListener('click', () => {
+          dialog.remove();
+          const item = document.createElement('div');
+          item.textContent = textarea.value;
+          document.body.appendChild(item);
+        });
+        document.body.appendChild(dialog);
+      }
+    });
+
+    document.body.appendChild(addBtn);
+
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 500,
+      addRetryMs: 60,
+      verifyTimeoutMs: 500,
+      pollMs: 15,
+    });
+
+    expect(result.status).toBe('added');
+    expect(clicks).toBe(2);
+  });
+
+  it('page already containing "[BetterView v<CURRENT>]" entry text -> already, Add NOT clicked', async () => {
+    document.body.replaceChildren();
+    const entry = document.createElement('div');
+    entry.textContent = `Saved instructions: [BetterView v${CURRENT_INSTRUCTION_VERSION}] some instructions`;
+
+    const addBtn = document.createElement('button');
+    const span = document.createElement('span');
+    span.className = 'mdc-button__label';
+    span.textContent = 'Add';
+    addBtn.appendChild(span);
+
+    let addClicked = false;
+    addBtn.addEventListener('click', () => {
+      addClicked = true;
+    });
+
+    document.body.append(entry, addBtn);
+
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 200,
+      addRetryMs: 50,
+      verifyTimeoutMs: 200,
+      pollMs: 20,
+    });
+
+    expect(result.status).toBe('already');
+    expect(result.version).toBe(CURRENT_INSTRUCTION_VERSION);
+    expect(result.hasOldEntry).toBe(false);
+    expect(addClicked).toBe(false);
+  });
+
+  it('page with older "[BetterView v3]" entry -> adds and result.hasOldEntry === true', async () => {
+    document.body.replaceChildren();
+    const oldEntry = document.createElement('div');
+    oldEntry.textContent = 'Saved instructions: [BetterView v3] older instructions';
+
+    const addBtn = document.createElement('button');
+    addBtn.setAttribute('aria-label', 'Add memory');
+
+    addBtn.addEventListener('click', () => {
+      const dialog = document.createElement('edit-memory-dialog');
+      dialog.setAttribute('role', 'dialog');
+      dialog.innerHTML = `
+        <textarea aria-label="Enter new memory"></textarea>
+        <button data-test-id="submit-button" disabled>Submit</button>
+      `;
+      const textarea = dialog.querySelector('textarea')!;
+      const submit = dialog.querySelector<HTMLButtonElement>('button')!;
+      textarea.addEventListener('input', () => {
+        submit.disabled = false;
+        submit.removeAttribute('disabled');
+      });
+      submit.addEventListener('click', () => {
+        dialog.remove();
+        const item = document.createElement('div');
+        item.textContent = textarea.value;
+        document.body.appendChild(item);
+      });
+      document.body.appendChild(dialog);
+    });
+
+    document.body.append(oldEntry, addBtn);
+
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 500,
+      addRetryMs: 80,
+      verifyTimeoutMs: 500,
+      pollMs: 20,
+    });
+
+    expect(result.status).toBe('added');
+    expect(result.hasOldEntry).toBe(true);
+  });
+
+  it('no Add button / no dialog -> failed with error mentioning Add button', async () => {
+    document.body.replaceChildren();
+    const heading = document.createElement('h2');
+    heading.textContent = 'Your instructions for Gemini';
+    document.body.appendChild(heading);
+
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 50,
+      addRetryMs: 40,
+      verifyTimeoutMs: 50,
+      pollMs: 10,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.error).toMatch(/Add button/i);
+  });
+
+  it('error toast "Something went wrong" after submit (dialog stays) -> failed', async () => {
+    document.body.replaceChildren();
+    const dialog = document.createElement('edit-memory-dialog');
+    dialog.setAttribute('role', 'dialog');
+    dialog.innerHTML = `
+      <textarea aria-label="Enter new memory"></textarea>
+      <button data-test-id="submit-button" disabled>Submit</button>
+    `;
+    const textarea = dialog.querySelector('textarea')!;
+    const submit = dialog.querySelector<HTMLButtonElement>('button')!;
+    textarea.addEventListener('input', () => {
+      submit.disabled = false;
+      submit.removeAttribute('disabled');
+    });
+    submit.addEventListener('click', () => {
+      const toast = document.createElement('div');
+      toast.className = 'error-toast';
+      toast.textContent = 'Something went wrong. Please try again later.';
+      document.body.appendChild(toast);
+    });
+    document.body.appendChild(dialog);
+
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 500,
+      addRetryMs: 100,
+      verifyTimeoutMs: 500,
+      pollMs: 20,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.error).toMatch(/Gemini rejected the entry: Something went wrong/i);
+    expect(dialog.isConnected).toBe(true);
+  });
+
+  it('auto-opened dialog with non-empty unrelated user text -> failed, text unchanged', async () => {
+    document.body.replaceChildren();
+    const userText = 'Remember that my dog name is Rover and my birthday is May 4th.';
+    const dialog = document.createElement('edit-memory-dialog');
+    dialog.setAttribute('role', 'dialog');
+    dialog.innerHTML = `
+      <textarea aria-label="Enter new memory">${userText}</textarea>
+      <button data-test-id="submit-button">Submit</button>
+    `;
+    document.body.appendChild(dialog);
+
+    const textarea = dialog.querySelector('textarea')!;
+
+    const result = await runGeminiSetup({
+      readyTimeoutMs: 200,
+      addRetryMs: 50,
+      verifyTimeoutMs: 200,
+      pollMs: 20,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.error).toMatch(/existing|overwriting/i);
+    expect(textarea.value).toBe(userText);
+  });
+
+  it('isGeminiSavedInfoPath correctly classifies saved-info paths and non-saved-info paths', () => {
+    expect(isGeminiSavedInfoPath('/saved-info')).toBe(true);
+    expect(isGeminiSavedInfoPath('/saved-info/')).toBe(true);
+    expect(isGeminiSavedInfoPath('/u/1/saved-info')).toBe(true);
+    expect(isGeminiSavedInfoPath('/u/0/saved-info/')).toBe(true);
+    expect(isGeminiSavedInfoPath('/app')).toBe(false);
+    expect(isGeminiSavedInfoPath('/saved-info-x')).toBe(false);
+    expect(isGeminiSavedInfoPath('/')).toBe(false);
   });
 });
 
