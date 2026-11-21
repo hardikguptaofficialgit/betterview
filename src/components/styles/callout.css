@@ -14,16 +14,15 @@
 }
 
 .iui-callout-iconbox {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background-color: var(--iui-bg);
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
   color: var(--c-ink, var(--iui-text));
-  border: 1px solid var(--c-line, var(--iui-border));
   margin-top: 1px;
 }
 

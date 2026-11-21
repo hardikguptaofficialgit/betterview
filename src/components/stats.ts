@@ -43,7 +43,7 @@ export function renderStats(spec: StatsSpec, ctx: RenderContext): HTMLElement {
     renderMathText(label, item.label);
     labelRow.appendChild(label);
     if (item.icon) {
-      const iconWrap = h('span', { class: 'iui-stat-item-icon' }, iconEl(item.icon, 15));
+      const iconWrap = h('span', { class: 'iui-stat-item-icon' }, iconEl(item.icon, 18));
       labelRow.appendChild(iconWrap);
     }
     itemCard.appendChild(labelRow);

@@ -99,7 +99,7 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
   });
   const markerPath = svg('path', {
     d: 'M 1 2 L 6 4 L 1 6 z',
-    fill: 'var(--iui-subtle)',
+    fill: 'var(--iui-text)',
   });
   marker.appendChild(markerPath);
   defs.appendChild(marker);
@@ -128,7 +128,7 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
     const iconBox = h(
       'div',
       { class: 'flow-node-iconbox' },
-      iconEl(node.icon, 16)
+      iconEl(node.icon, 18)
     );
     nodeEl.appendChild(iconBox);
 
@@ -330,14 +330,16 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
     );
     const scrollH = Math.max(flowInner.scrollHeight, flowInner.clientHeight);
 
-    // Fit to chat width: scale down to min 0.8, then allow horizontal scroll with soft edge fade
+    // Fit to chat width: scale down to fit exactly, no arbitrary minimum
     const canvasWidth = canvas.clientWidth;
     if (canvasWidth > 0 && scrollW > canvasWidth) {
-      const scale = Math.max(0.8, canvasWidth / scrollW);
+      const scale = Math.min(1, canvasWidth / scrollW);
       flowInner.style.transformOrigin = 'top left';
       flowInner.style.transform = scale < 0.999 ? `scale(${scale})` : '';
+      canvas.style.height = scale < 0.999 ? `${Math.ceil(scrollH * scale)}px` : '';
     } else {
       flowInner.style.transform = '';
+      canvas.style.height = '';
     }
 
     svgOverlay.setAttribute('width', String(scrollW));
@@ -406,7 +408,7 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
 
       const pathEl = svg('path', {
         d: route.pathD,
-        stroke: 'var(--iui-subtle)',
+        stroke: 'var(--iui-text)',
         'stroke-width': '1.5',
         fill: 'none',
         'marker-end': `url(#${markerId})`,

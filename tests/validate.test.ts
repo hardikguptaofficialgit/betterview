@@ -3,18 +3,21 @@ import { validateSpec, resolveColor, FALLBACK_COLORS } from '../src/core/validat
 
 describe('validateSpec', () => {
   it('returns unknown type error for invalid or missing type', () => {
+    // Unknown string type now falls back to generic card (ok: true)
     const resultUnknown = validateSpec({ type: 'not_a_ui_type' });
-    expect(resultUnknown.ok).toBe(false);
-    if (!resultUnknown.ok) {
-      expect(resultUnknown.error).toBe('unknown type');
+    expect(resultUnknown.ok).toBe(true);
+    if (resultUnknown.ok) {
+      expect(resultUnknown.spec.type).toBe('generic');
     }
 
+    // null/non-object: still fails
     const resultNull = validateSpec(null);
     expect(resultNull.ok).toBe(false);
     if (!resultNull.ok) {
       expect(resultNull.error).toBe('unknown type');
     }
 
+    // empty object (no type field): still fails
     const resultEmpty = validateSpec({});
     expect(resultEmpty.ok).toBe(false);
     if (!resultEmpty.ok) {
@@ -365,5 +368,84 @@ describe('validateSpec', () => {
         expect(fiveFollowups.warnings).toContain('Followup suggestions capped at 4');
       }
     });
+  });
+
+  it('quiz tolerant parsing: letter answer (A/B), items alias, choices alias, explanation alias', () => {
+    // Letter answer "A" -> index 0
+    const letterA = validateSpec({
+      type: 'quiz',
+      questions: [{ q: 'Q?', options: ['Yes', 'No'], answer: 'A' }],
+    });
+    expect(letterA.ok).toBe(true);
+    if (letterA.ok && letterA.spec.type === 'quiz') {
+      expect(letterA.spec.questions[0].answer).toBe(0);
+    }
+
+    // Letter answer "B" -> index 1
+    const letterB = validateSpec({
+      type: 'quiz',
+      questions: [{ q: 'Q?', options: ['Yes', 'No'], answer: 'B' }],
+    });
+    expect(letterB.ok).toBe(true);
+    if (letterB.ok && letterB.spec.type === 'quiz') {
+      expect(letterB.spec.questions[0].answer).toBe(1);
+    }
+
+    // correctAnswer alias
+    const correctAnswer = validateSpec({
+      type: 'quiz',
+      questions: [{ q: 'Q?', options: ['Yes', 'No'], correctAnswer: 1 }],
+    });
+    expect(correctAnswer.ok).toBe(true);
+    if (correctAnswer.ok && correctAnswer.spec.type === 'quiz') {
+      expect(correctAnswer.spec.questions[0].answer).toBe(1);
+    }
+
+    // items alias for questions
+    const itemsAlias = validateSpec({
+      type: 'quiz',
+      items: [{ q: 'Q?', options: ['Yes', 'No'], answer: 0 }],
+    });
+    expect(itemsAlias.ok).toBe(true);
+    if (itemsAlias.ok && itemsAlias.spec.type === 'quiz') {
+      expect(itemsAlias.spec.questions).toHaveLength(1);
+    }
+
+    // explanation alias for explain
+    const explainAlias = validateSpec({
+      type: 'quiz',
+      questions: [{ q: 'Q?', options: ['Yes', 'No'], answer: 0, explanation: 'Because yes.' }],
+    });
+    expect(explainAlias.ok).toBe(true);
+    if (explainAlias.ok && explainAlias.spec.type === 'quiz') {
+      expect(explainAlias.spec.questions[0].explain).toBe('Because yes.');
+    }
+
+    // option objects with text field
+    const optionObjects = validateSpec({
+      type: 'quiz',
+      questions: [{ q: 'Q?', options: [{ text: 'Alpha' }, { text: 'Beta' }], answer: 0 }],
+    });
+    expect(optionObjects.ok).toBe(true);
+    if (optionObjects.ok && optionObjects.spec.type === 'quiz') {
+      expect(optionObjects.spec.questions[0].options).toEqual(['Alpha', 'Beta']);
+    }
+  });
+
+  it('unknown type falls back to generic card instead of failing', () => {
+    const result = validateSpec({ type: 'quiz_game', title: 'Fun quiz', data: [1, 2, 3] });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.spec.type).toBe('generic');
+      expect(result.spec.title).toBe('Fun quiz');
+    }
+
+    // No type field still fails
+    const noType = validateSpec({ foo: 'bar' });
+    expect(noType.ok).toBe(false);
+
+    // null still fails
+    const nullResult = validateSpec(null);
+    expect(nullResult.ok).toBe(false);
   });
 });

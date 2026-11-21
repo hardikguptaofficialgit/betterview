@@ -78,8 +78,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--c-ink, var(--iui-muted));
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  color: var(--c-ink, var(--iui-text));
   flex-shrink: 0;
+}
+
+.iui-followup-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .iui-followup-text {

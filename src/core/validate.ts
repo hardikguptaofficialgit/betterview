@@ -25,6 +25,7 @@ import {
   MathSpec,
   MathStep,
   CodeSpec,
+  GenericSpec,
 } from './types';
 
 export type ValidateResult =
@@ -279,7 +280,13 @@ function validateCompare(raw: Record<string, unknown>, warnings: string[]): { ok
 }
 
 function validateQuiz(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: QuizSpec } | { ok: false; error: string } {
-  let rawQuestions = Array.isArray(raw.questions) ? raw.questions : [];
+  let rawQuestions = Array.isArray(raw.questions)
+    ? raw.questions
+    : Array.isArray(raw.items)
+      ? raw.items
+      : Array.isArray(raw.quiz)
+        ? raw.quiz
+        : [];
   if (rawQuestions.length === 0) {
     return { ok: false, error: 'quiz must have 1-20 questions' };
   }
@@ -294,20 +301,54 @@ function validateQuiz(raw: Record<string, unknown>, warnings: string[]): { ok: t
       return { ok: false, error: 'Quiz question must be an object' };
     }
     const rec = qObj as Record<string, unknown>;
-    const q = cleanString(rec.q ?? rec.question);
+    const q = cleanString(rec.q ?? rec.question ?? rec.prompt ?? rec.title);
     if (!q) {
       return { ok: false, error: 'Quiz question text is required' };
     }
-    const rawOpts = Array.isArray(rec.options) ? rec.options : [];
-    const options = rawOpts.map((o) => cleanString(o)).filter(Boolean);
+    const rawOpts = Array.isArray(rec.options)
+      ? rec.options
+      : Array.isArray(rec.choices)
+        ? rec.choices
+        : Array.isArray(rec.answers)
+          ? rec.answers
+          : [];
+    const options = rawOpts
+      .map((o) => {
+        if (typeof o === 'string') return cleanString(o);
+        if (o && typeof o === 'object') {
+          const optRec = o as Record<string, unknown>;
+          return cleanString(optRec.text ?? optRec.option ?? optRec.label ?? optRec.value);
+        }
+        return '';
+      })
+      .filter(Boolean);
     if (options.length < 2 || options.length > 8) {
       return { ok: false, error: 'Quiz question must have 2 to 8 options' };
     }
-    const ans = typeof rec.answer === 'string' ? parseInt(rec.answer, 10) : rec.answer;
-    if (typeof ans !== 'number' || !Number.isInteger(ans) || ans < 0 || ans >= options.length) {
+
+    let rawAns = rec.answer ?? rec.correctAnswer ?? rec.correct ?? rec.correctIndex ?? rec.solution;
+    let ans: number | undefined;
+
+    if (typeof rawAns === 'number' && Number.isInteger(rawAns)) {
+      ans = rawAns;
+    } else if (typeof rawAns === 'string') {
+      const trimmed = rawAns.trim();
+      if (/^[a-hA-H]$/.test(trimmed)) {
+        ans = trimmed.toUpperCase().charCodeAt(0) - 65;
+      } else if (/^\d+$/.test(trimmed)) {
+        ans = parseInt(trimmed, 10);
+      } else {
+        const idx = options.findIndex((opt) => opt.toLowerCase() === trimmed.toLowerCase());
+        if (idx >= 0) {
+          ans = idx;
+        }
+      }
+    }
+
+    if (ans === undefined || typeof ans !== 'number' || !Number.isInteger(ans) || ans < 0 || ans >= options.length) {
       return { ok: false, error: `Quiz answer must be an integer between 0 and ${options.length - 1}` };
     }
-    const explain = cleanString(rec.explain);
+    const explain = cleanString(rec.explain ?? rec.explanation ?? rec.rationale ?? rec.reason);
     questions.push({ q, options, answer: ans, ...(explain ? { explain } : {}) });
   }
 
@@ -598,17 +639,44 @@ function validateCode(raw: Record<string, unknown>, _warnings: string[]): { ok: 
   };
 }
 
+function validateGeneric(raw: Record<string, unknown>, _warnings: string[]): { ok: true; spec: GenericSpec } | { ok: false; error: string } {
+  const title = cleanString(raw.title);
+  const originalType = cleanString(raw.originalType);
+  return {
+    ok: true,
+    spec: {
+      type: 'generic',
+      ...(title ? { title } : {}),
+      ...(originalType ? { originalType } : {}),
+      data: raw,
+    },
+  };
+}
+
 export function validateSpec(input: unknown): ValidateResult {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     return { ok: false, error: 'unknown type' };
   }
 
   const raw = input as Record<string, unknown>;
-  if (typeof raw.type !== 'string' || !(UI_TYPES as readonly string[]).includes(raw.type)) {
+  const warnings: string[] = [];
+
+  // If type is unknown (not in our list), fall back to generic card
+  const knownTypes = UI_TYPES.filter((t) => t !== 'generic');
+  if (typeof raw.type !== 'string' || !(knownTypes as readonly string[]).includes(raw.type)) {
+    if (typeof raw.type === 'string' && raw.type.length > 0) {
+      // Unknown type with a string type field -> render as generic
+      const rawWithType = { ...raw, originalType: raw.type };
+      const result = validateGeneric(rawWithType, warnings);
+      if (result.ok) {
+        const title = cleanString(raw.title);
+        if (title) result.spec.title = title;
+        return { ok: true, spec: result.spec, warnings };
+      }
+    }
     return { ok: false, error: 'unknown type' };
   }
 
-  const warnings: string[] = [];
   let result: { ok: true; spec: UISpec } | { ok: false; error: string };
 
   switch (raw.type as UIType) {
@@ -653,6 +721,9 @@ export function validateSpec(input: unknown): ValidateResult {
       break;
     case 'code':
       result = validateCode(raw, warnings);
+      break;
+    case 'generic':
+      result = validateGeneric(raw, warnings);
       break;
     default:
       return { ok: false, error: 'unknown type' };

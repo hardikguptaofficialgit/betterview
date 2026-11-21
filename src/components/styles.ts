@@ -11,6 +11,7 @@ import timelineCss from './styles/timeline.css?inline';
 import followupsCss from './styles/followups.css?inline';
 import mathCss from './styles/math.css?inline';
 import codeCss from './styles/code.css?inline';
+import genericCss from './styles/generic.css?inline';
 
 export const COMPONENT_STYLES: string[] = [
   tableCss,
@@ -26,4 +27,5 @@ export const COMPONENT_STYLES: string[] = [
   followupsCss,
   mathCss,
   codeCss,
+  genericCss,
 ];

@@ -73,7 +73,7 @@ export function renderFollowups(spec: FollowupsSpec, _ctx: RenderContext): HTMLE
   const container = h('div', { class: 'iui-followups-container' });
 
   for (const suggestion of suggestions) {
-    const iconSpan = h('span', { class: 'iui-followup-icon' }, iconEl('arrow-up-right', 13));
+    const iconSpan = h('span', { class: 'iui-followup-icon' }, iconEl('arrow-up-right', 18));
     const textSpan = h('span', { class: 'iui-followup-text' }, suggestion);
 
     const chip = h(

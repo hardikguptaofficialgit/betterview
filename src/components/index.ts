@@ -14,6 +14,7 @@ import { renderTimeline } from './timeline';
 import { renderFollowups } from './followups';
 import { renderMath } from './math';
 import { renderCode } from './code';
+import { renderGeneric } from './generic';
 
 export interface RenderContext {
   theme: ThemeMode;
@@ -38,4 +39,5 @@ export const RENDERERS: { [K in UIType]: RenderFn<Extract<UISpec, { type: K }>> 
   followups: renderFollowups,
   math: renderMath,
   code: renderCode,
+  generic: renderGeneric,
 };

@@ -106,17 +106,17 @@ function generateCompactCatalog(): string {
   ).join(' · ');
 }
 
-export const CURRENT_INSTRUCTION_VERSION = 3;
+export const CURRENT_INSTRUCTION_VERSION = 4;
 
-export const SETUP_INSTRUCTION = `[BetterView v3] Answer normally in text and markdown; the text answer is the main answer and must stand on its own. Only where a visual genuinely helps, add a \`\`\`ui block with ONE valid JSON object at the relevant spot (Never more than 3 per answer, none for short or casual answers, never the whole answer in ui, never invent numbers). Each block is {"type":"<one of the types>","title":"...", ...fields}; use double quotes, no comments, no trailing commas. Followups optional at the end of long answers.
+export const SETUP_INSTRUCTION = `[BetterView v4] Answer normally in text and markdown; the text answer is the main answer and must stand on its own. When the user asks for something visual, a diagram or a chart, answer in text with \`\`\`ui blocks and NEVER generate or create images unless the user explicitly says "image" or "picture". Only where a visual genuinely helps, add a \`\`\`ui block with ONE valid JSON object at the relevant spot (Never more than 3 per answer, none for short or casual answers, never the whole answer in ui, never invent numbers). Each block is {"type":"<one of the types>","title":"...", ...fields}; use double quotes, no comments, no trailing commas. Followups optional at the end of long answers.
 Types: flow{nodes[id,label,icon?],edges[from,to,label?]} stepper{steps[title,detail]} table{columns,rows} compare{items[label,tone,points]} chart{chartType,labels,datasets[label,data]} stats{items[label,value,delta?]} timeline{events[title,time,text]} callout{tone,text} tabs{tabs[label,content]} quiz{questions[q,options,answer,explain]} mermaid{code} math{latex,steps?} code{language,code} followups{suggestions}`;
 
-export const SYSTEM_INSTRUCTION = `[BetterView v3] Answer normally in plain text and markdown, exactly as you usually would. The text answer is the main answer and must stand on its own. Only where a visual genuinely adds clarity (a process or architecture, sequential steps, a comparison, tabular data, real metrics, a timeline, a formula), ALSO add a fenced code block with language ui containing ONE valid JSON object (double quotes, no comments, no trailing commas, "type" first, then "title"). Place it at the relevant spot inside your normal answer; keep the explanatory text around it. Short or simple answers, greetings and casual chat get no ui blocks. Never more than 3 ui blocks per answer. Never put the whole answer inside ui blocks. Never invent numbers. A followups block is optional and only at the very end of long answers.
+export const SYSTEM_INSTRUCTION = `[BetterView v4] Answer normally in plain text and markdown. The text answer is the main answer and must stand on its own. When asked for something visual, a diagram or a chart, answer in text with \`\`\`ui blocks; NEVER generate or create images unless the user explicitly says "image" or "picture". Only where a visual genuinely adds clarity (process, steps, trade-offs, table, metrics, timeline, formula), ALSO add a fenced code block with language ui containing ONE valid JSON object (double quotes, no comments, no trailing commas, "type" first, then "title"). Place it at the relevant spot inside your normal answer; keep text around it. Short answers and casual chat get no ui. Never more than 3 ui blocks per answer. Never put the whole answer inside ui blocks. Never invent numbers. Followups optional at the end of long answers.
 
 Type catalog:
 ${generateCatalogSection()}`;
 
-export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v3] Answer normally in markdown. Only when a visual adds clarity, add a fenced code block (lang ui, ONE JSON, "type" first, "title" second). Keep text around it. Casual chat gets no ui. Never more than 3 ui blocks per answer. Never invent numbers.
+export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v4] In markdown. For visuals/diagrams, answer in text with \`\`\`ui; NEVER generate or create images unless asked for "image" or "picture". Add ui block when helpful. Casual chat gets no ui. Never more than 3 ui blocks per answer. Never invent numbers.
 Types: ${generateCompactCatalog()}`;
 
 export function getCompactInstruction(): string {

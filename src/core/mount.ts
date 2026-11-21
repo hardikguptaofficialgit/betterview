@@ -157,12 +157,12 @@ export function mountBlock(
 
     const header = h('div', { class: 'iui-card-header' });
 
-    // Left: 28px rounded-square with Phosphor duotone icon + title group
+    // Left: 20px bare Phosphor icon + title group
     const headerLeft = h('div', { class: 'iui-header-left' });
     const iconBox = h(
       'div',
-      { class: `iui-type-iconbox c-${iconColor}` },
-      lastRenderedSpec ? typeIconEl(lastRenderedSpec.type, 16) : iconEl(meta.icon, 16),
+      { class: 'iui-type-iconbox' },
+      lastRenderedSpec ? typeIconEl(lastRenderedSpec.type, 18) : iconEl(meta.icon, 18),
     );
     headerLeft.appendChild(iconBox);
 
@@ -570,14 +570,31 @@ export function mountBlock(
   function showFallback(errorMessage: string, rawText: string): void {
     runCleanups();
     clear(root);
-    const noteText = errorMessage
-      ? `Couldn't render this UI block: ${errorMessage}`
-      : "Couldn't render this UI block";
+
+    // Build a collapsed "Show source" toggle instead of dumping raw JSON
+    let isExpanded = false;
+    const pre = h('pre', { class: 'iui-fallback-pre' }, rawText);
+    pre.style.display = 'none';
+
+    const toggleBtn = h(
+      'button',
+      {
+        type: 'button',
+        class: 'iui-show-source-btn',
+        onClick: () => {
+          isExpanded = !isExpanded;
+          pre.style.display = isExpanded ? '' : 'none';
+          toggleBtn.textContent = isExpanded ? 'Hide source' : 'Show source';
+        },
+      },
+      'Show source',
+    );
+
     const fallback = h(
       'div',
-      { class: 'iui-fallback' },
-      h('div', { class: 'iui-fallback-note' }, noteText),
-      h('pre', { class: 'iui-fallback-pre' }, rawText),
+      { class: 'iui-fallback iui-fallback-collapsed' },
+      toggleBtn,
+      pre,
     );
     root.appendChild(fallback);
     currentState = 'fallback';

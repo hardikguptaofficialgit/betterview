@@ -4,10 +4,8 @@
 
 .flow-canvas {
   position: relative;
-  overflow-x: auto;
+  overflow: hidden;
   padding: 8px 4px;
-  mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
 }
 
 .flow-inner {
@@ -136,16 +134,15 @@
 }
 
 .flow-node-iconbox {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background-color: var(--c-bg);
-  border: 1px solid var(--c-line);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--c-ink);
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  color: var(--iui-text);
 }
 
 .flow-node-text {

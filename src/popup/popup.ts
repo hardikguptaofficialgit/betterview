@@ -125,7 +125,7 @@ export function initPopup(): () => void {
       btnLabel = 'Set up';
     } else if (data.status === 'added' || data.status === 'already') {
       const ver = data.version ?? 1;
-      if (ver >= 3) {
+      if (ver >= CURRENT_INSTRUCTION_VERSION) {
         kind = 'ready';
         statusText = 'Ready';
         btnLabel = 'Redo';

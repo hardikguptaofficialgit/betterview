@@ -129,6 +129,7 @@ export const CARD_TYPE_DUOTONE: Record<UIType, string> = {
   followups: followupsDuo,
   math: functionDuo,
   code: codeBlockDuo,
+  generic: listReg,
 };
 
 export const REGULAR_ICON_MAP: Record<string, string> = {

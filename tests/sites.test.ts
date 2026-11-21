@@ -26,21 +26,23 @@ import { grokIconSvg } from '../src/core/brandIcons';
 describe('System Instruction', () => {
   it('SETUP_INSTRUCTION conforms to constraints', () => {
     expect(SETUP_INSTRUCTION.length).toBeLessThanOrEqual(1400);
-    expect(SETUP_INSTRUCTION.startsWith('[BetterView v3]')).toBe(true);
+    expect(SETUP_INSTRUCTION.startsWith('[BetterView v4]')).toBe(true);
     expect(SETUP_INSTRUCTION).toContain('ui');
     expect(SETUP_INSTRUCTION).toContain('3');
     expect(getCompactInstruction()).toBe(SETUP_INSTRUCTION);
   });
 
-  it('Instruction tests: version is 3, marker present, contains "Never more than 3", length not greater than before', () => {
-    expect(CURRENT_INSTRUCTION_VERSION).toBe(3);
+  it('Instruction tests: version is 4, marker present, contains "Never more than 3", length not greater than before', () => {
+    expect(CURRENT_INSTRUCTION_VERSION).toBe(4);
     const compact = getCompactInstruction();
-    expect(compact).toContain('[BetterView v3]');
+    expect(compact).toContain('[BetterView v4]');
     expect(compact).toContain('Never more than 3');
+    expect(compact).toContain('NEVER generate or create images');
     expect(compact.length).toBeLessThanOrEqual(1400);
     expect(SYSTEM_INSTRUCTION).toContain('Never more than 3');
+    expect(SYSTEM_INSTRUCTION).toContain('NEVER generate or create images');
     expect(SYSTEM_INSTRUCTION_SHORT).toContain('Never more than 3');
-    // Ensure total length is not greater than the v2 benchmark (2825)
+    expect(SYSTEM_INSTRUCTION_SHORT).toContain('NEVER generate or create images');
     expect(SYSTEM_INSTRUCTION.length).toBeLessThanOrEqual(2825);
     expect(SYSTEM_INSTRUCTION_SHORT.length).toBeLessThanOrEqual(1820);
   });
@@ -312,13 +314,13 @@ describe('Auto-setup append & marker logic', () => {
     const alreadyV2 = verV2 !== null && verV2 >= CURRENT_INSTRUCTION_VERSION;
     expect(alreadyV2).toBe(false);
 
-    const bodyWithV3 = 'Your instructions for Gemini\n\n[BetterView v3] latest prompt';
-    const verV3 = extractInstructionVersion(bodyWithV3);
-    expect(verV3).toBe(3);
-    const hasOldEntryV3 = hasOlderInstruction(bodyWithV3);
-    expect(hasOldEntryV3).toBe(false);
-    const alreadyV3 = verV3 !== null && verV3 >= CURRENT_INSTRUCTION_VERSION;
-    expect(alreadyV3).toBe(true);
+    const bodyWithV4 = 'Your instructions for Gemini\n\n[BetterView v4] latest prompt';
+    const verV4 = extractInstructionVersion(bodyWithV4);
+    expect(verV4).toBe(4);
+    const hasOldEntryV4 = hasOlderInstruction(bodyWithV4);
+    expect(hasOldEntryV4).toBe(false);
+    const alreadyV4 = verV4 !== null && verV4 >= CURRENT_INSTRUCTION_VERSION;
+    expect(alreadyV4).toBe(true);
   });
 
   it('detects instruction versions: highest among multiple markers, and older markers detection', () => {
@@ -332,10 +334,10 @@ describe('Auto-setup append & marker logic', () => {
     expect(extractInstructionVersion(textV3V2)).toBe(3);
     expect(hasOlderInstruction(textV3V2)).toBe(true);
 
-    // only v3 -> false
-    const textOnlyV3 = 'Your instructions for Gemini\n\n[BetterView v3] latest prompt';
-    expect(extractInstructionVersion(textOnlyV3)).toBe(3);
-    expect(hasOlderInstruction(textOnlyV3)).toBe(false);
+    // only v4 -> false
+    const textOnlyV4 = 'Your instructions for Gemini\n\n[BetterView v4] latest prompt';
+    expect(extractInstructionVersion(textOnlyV4)).toBe(4);
+    expect(hasOlderInstruction(textOnlyV4)).toBe(false);
 
     // only plain [BetterView] -> 1 and true
     const textPlain = 'Your instructions for Gemini\n\n[BetterView] original prompt';
@@ -390,7 +392,7 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
 
     await fillGeminiMemoryDialog(overlay, { waitTimeoutMs: 2000, pollIntervalMs: 50 });
 
-    expect(textarea.value.startsWith('[BetterView v3] ')).toBe(true);
+    expect(textarea.value.startsWith('[BetterView v4] ')).toBe(true);
     expect(textarea.value).toBe(getCompactInstruction());
     expect(submitClicked).toBe(true);
 

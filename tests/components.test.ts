@@ -286,6 +286,59 @@ describe('RENDERERS registry', () => {
     expect(typeof RENDERERS.followups).toBe('function');
     expect(typeof RENDERERS.math).toBe('function');
     expect(typeof RENDERERS.code).toBe('function');
+    expect(typeof RENDERERS.generic).toBe('function');
+  });
+
+  it('renders quiz component into DOM nodes with questions, options, and score', () => {
+    const ctx = { theme: 'light' as const, onCleanup: () => {} };
+    const quizEl = RENDERERS.quiz(
+      {
+        type: 'quiz',
+        title: 'Networking Basics',
+        questions: [
+          {
+            q: 'What is port 80?',
+            options: ['HTTP', 'SSH', 'FTP'],
+            answer: 0,
+            explain: 'Port 80 is used for HTTP.',
+          },
+        ],
+      },
+      ctx,
+    );
+    expect(quizEl.classList.contains('iui-card')).toBe(true);
+    expect(quizEl.textContent).toContain('What is port 80?');
+    const optButtons = quizEl.querySelectorAll<HTMLButtonElement>('.iui-quiz-opt-btn');
+    expect(optButtons).toHaveLength(3);
+
+    // Click correct option
+    optButtons[0].click();
+    expect(optButtons[0].classList.contains('is-correct')).toBe(true);
+    expect(quizEl.textContent).toContain('Score 1');
+    expect(quizEl.textContent).toContain('Port 80 is used for HTTP.');
+  });
+
+  it('renders generic fallback card into DOM with readable key-value and list layout', () => {
+    const ctx = { theme: 'light' as const, onCleanup: () => {} };
+    const genericEl = RENDERERS.generic(
+      {
+        type: 'generic',
+        title: 'User Profile',
+        data: {
+          username: 'alice',
+          active: true,
+          roles: ['admin', 'editor'],
+          metrics: { loginCount: 42 },
+        },
+      },
+      ctx,
+    );
+    expect(genericEl.classList.contains('iui-card')).toBe(true);
+    expect(genericEl.textContent).toContain('User Profile');
+    expect(genericEl.textContent).toContain('Username');
+    expect(genericEl.textContent).toContain('alice');
+    expect(genericEl.textContent).toContain('Roles');
+    expect(genericEl.textContent).toContain('admin');
   });
 
   it('renders all 5 new components into DOM nodes cleanly', () => {

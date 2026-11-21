@@ -240,4 +240,74 @@ describe('layoutFlow', () => {
     expect(res.rankOf).toEqual({});
     expect(res.backEdges.size).toBe(0);
   });
+
+  it('3-node linear chain with branch: all nodes ranked and edges routed without overlap', () => {
+    // A -> B, A -> C (branch from A)
+    const nodes = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    const edges = [{ from: 'a', to: 'b' }, { from: 'a', to: 'c' }];
+    const res = layoutFlow(nodes, edges);
+    expect(res.rankOf['a']).toBe(0);
+    expect(res.rankOf['b']).toBe(1);
+    expect(res.rankOf['c']).toBe(1);
+    expect(res.ranks[0]).toEqual(['a']);
+    expect(res.ranks[1].length).toBe(2);
+    expect(res.backEdges.size).toBe(0);
+
+    // Verify edge routing doesn't go through the other branch node
+    const boxA: BoxRect = { x: 100, y: 50, width: 120, height: 40 };
+    const boxB: BoxRect = { x: 50, y: 170, width: 120, height: 40 };
+    const boxC: BoxRect = { x: 230, y: 170, width: 120, height: 40 };
+    const allBoxes = [boxA, boxB, boxC];
+
+    const routeAB = computeEdgeRoute(boxA, boxB, false, false, 350, 0, -10, allBoxes);
+    const routeAC = computeEdgeRoute(boxA, boxC, false, false, 350, 0, 10, allBoxes);
+    assertNoIntersectionWithNonEndpoints(routeAB, boxA, boxB, allBoxes);
+    assertNoIntersectionWithNonEndpoints(routeAC, boxA, boxC, allBoxes);
+  });
+
+  it('6-node graph with branches: correct ranks and no back-edges', () => {
+    // A -> B -> D, A -> C -> D, D -> E, D -> F (diamond + branch)
+    const nodes = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }, { id: 'f' }];
+    const edges = [
+      { from: 'a', to: 'b' }, { from: 'a', to: 'c' },
+      { from: 'b', to: 'd' }, { from: 'c', to: 'd' },
+      { from: 'd', to: 'e' }, { from: 'd', to: 'f' },
+    ];
+    const res = layoutFlow(nodes, edges);
+    expect(res.rankOf['a']).toBe(0);
+    expect(res.rankOf['b']).toBe(1);
+    expect(res.rankOf['c']).toBe(1);
+    expect(res.rankOf['d']).toBe(2);
+    expect(res.rankOf['e']).toBe(3);
+    expect(res.rankOf['f']).toBe(3);
+    expect(res.backEdges.size).toBe(0);
+    // 4 ranks total
+    expect(res.ranks.length).toBe(4);
+  });
+
+  it('10-node graph with multiple branches and a back-edge: layout is stable', () => {
+    const nodes = Array.from({ length: 10 }, (_, i) => ({ id: String(i + 1) }));
+    const edges = [
+      { from: '1', to: '2' }, { from: '1', to: '3' },
+      { from: '2', to: '4' }, { from: '3', to: '4' },
+      { from: '4', to: '5' }, { from: '4', to: '6' },
+      { from: '5', to: '7' }, { from: '6', to: '7' },
+      { from: '7', to: '8' }, { from: '8', to: '9' },
+      { from: '9', to: '10' },
+      { from: '10', to: '4' }, // back-edge: creates cycle
+    ];
+    const res = layoutFlow(nodes, edges);
+    // All 10 nodes should be ranked
+    expect(Object.keys(res.rankOf)).toHaveLength(10);
+    // The back-edge '10->4' should be detected
+    expect(res.backEdges.has('10->4')).toBe(true);
+    // No other back edges (the graph is otherwise a DAG)
+    expect(res.backEdges.size).toBe(1);
+    // Node 1 should be at rank 0 (source)
+    expect(res.rankOf['1']).toBe(0);
+    // Results are deterministic
+    const res2 = layoutFlow(nodes, edges);
+    expect(res.ranks).toEqual(res2.ranks);
+    expect(res.rankOf).toEqual(res2.rankOf);
+  });
 });

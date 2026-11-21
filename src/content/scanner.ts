@@ -162,6 +162,11 @@ export function startScanner(
             restoreFallbackWrapper(block, item);
           } else if (state === 'rendered') {
             markRenderedText(item.lastText);
+            // Remove any leftover fallback note when successfully rendered
+            if (item.noteHost) {
+              item.noteHost.remove();
+              item.noteHost = undefined;
+            }
           }
         },
       });

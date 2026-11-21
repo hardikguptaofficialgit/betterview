@@ -26,6 +26,7 @@ export interface HostTypography {
   fontSize?: string;
   lineHeight?: string;
   color?: string;
+  backgroundColor?: string;
 }
 
 function createTokens(raw: {
@@ -212,11 +213,24 @@ export function readHostTypography(anchor?: Element | null): HostTypography {
       return trimmed;
     };
 
+    let bgEl: Element | null = el;
+    let bgColor: string | undefined = undefined;
+    while (bgEl && bgEl !== document.documentElement) {
+      const bgStyle = window.getComputedStyle(bgEl);
+      const bgVal = clean(bgStyle?.backgroundColor);
+      if (bgVal && bgVal !== 'transparent' && bgVal !== 'rgba(0, 0, 0, 0)') {
+        bgColor = bgVal;
+        break;
+      }
+      bgEl = bgEl.parentElement;
+    }
+
     return {
       fontFamily: clean(style.fontFamily),
       fontSize: clean(style.fontSize),
       lineHeight: clean(style.lineHeight),
       color: clean(style.color),
+      backgroundColor: bgColor,
     };
   } catch {
     return {};
@@ -288,8 +302,11 @@ export function applyHostTheme(
 ): void {
   const tokens = selectHostTheme(host, mode);
 
-  // Set CSS custom properties on root
-  root.style.setProperty('--iui-bg', tokens.bg);
+  // Background color from host if available
+  const currentBg = (typography?.backgroundColor && parseColorToRgb(typography.backgroundColor))
+    ? typography.backgroundColor
+    : tokens.bg;
+  root.style.setProperty('--iui-bg', currentBg);
   root.style.setProperty('--iui-surface', tokens.surface);
   root.style.setProperty('--iui-surface-2', tokens['surface-2']);
   root.style.setProperty('--iui-border', tokens.border);
@@ -325,8 +342,8 @@ export function applyHostTheme(
   // Text color: only when computed color has enough contrast with --iui-bg
   let textColor = tokens.text;
   if (typography?.color) {
-    const ratio = getContrastRatio(typography.color, tokens.bg);
-    if (ratio >= 3.5) {
+    const ratio = getContrastRatio(typography.color, currentBg);
+    if (ratio >= 3.0) {
       textColor = typography.color;
     }
   }

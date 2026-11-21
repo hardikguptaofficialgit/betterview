@@ -12,7 +12,8 @@ export type UIType =
   | 'timeline'
   | 'followups'
   | 'math'
-  | 'code';
+  | 'code'
+  | 'generic';
 
 export const UI_TYPES: readonly UIType[] = [
   'flow',
@@ -29,6 +30,7 @@ export const UI_TYPES: readonly UIType[] = [
   'followups',
   'math',
   'code',
+  'generic',
 ] as const;
 
 export type Color =
@@ -210,6 +212,13 @@ export interface CodeSpec {
   filename?: string;
 }
 
+export interface GenericSpec {
+  type: 'generic';
+  title?: string;
+  originalType?: string;
+  data: Record<string, unknown>;
+}
+
 export type UISpec =
   | FlowSpec
   | StepperSpec
@@ -224,4 +233,5 @@ export type UISpec =
   | TimelineSpec
   | FollowupsSpec
   | MathSpec
-  | CodeSpec;
+  | CodeSpec
+  | GenericSpec;

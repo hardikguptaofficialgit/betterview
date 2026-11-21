@@ -79,16 +79,15 @@
 }
 
 .iui-compare-iconbox {
-  width: 28px;
-  height: 28px;
-  border-radius: 9999px;
-  background-color: var(--c-bg);
-  border: 1px solid var(--c-line);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--c-ink);
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  color: var(--c-ink, var(--iui-text));
 }
 
 .iui-compare-label {
