@@ -1,4 +1,4 @@
-import { FlowSpec, TableSpec, CompareSpec, QuizSpec, StepperSpec, ChartSpec, MermaidSpec, UISpec } from '../core/types';
+import { FlowSpec, TableSpec, CompareSpec, QuizSpec, StepperSpec, ChartSpec, MermaidSpec, ChecklistSpec, FormSpec, UISpec } from '../core/types';
 
 export interface DemoItem {
   id: string;
@@ -216,5 +216,42 @@ export const FEATURE_CARDS: FeatureCardItem[] = [
         },
       ],
     } as QuizSpec,
+  },
+  {
+    type: 'checklist',
+    title: 'Interactive checklists',
+    copy: 'Track tasks with live completion progress and one-click bulk actions.',
+    pastel: 'mint',
+    icon: 'check-circle',
+    spec: {
+      type: 'checklist',
+      title: 'Launch readiness',
+      items: [
+        { text: 'Configure domain and DNS', detail: 'Verify HTTPS and redirects', checked: true },
+        { text: 'Run production smoke tests', detail: 'Check sign-in, checkout and email' },
+        { text: 'Publish release notes' },
+      ],
+    } as ChecklistSpec,
+  },
+  {
+    type: 'form',
+    title: 'Interactive forms',
+    copy: 'Collect structured answers with validation, choice controls and a copyable response summary.',
+    pastel: 'sky',
+    icon: 'list',
+    spec: {
+      type: 'form',
+      title: 'Project preferences',
+      description: 'A quick setup form with live controls and required-field validation.',
+      submitLabel: 'Review answers',
+      fields: [
+        { id: 'name', label: 'Project name', type: 'text', placeholder: 'e.g. Linkit', required: true },
+        { id: 'email', label: 'Contact email', type: 'email', placeholder: 'name@example.com', required: true },
+        { id: 'plan', label: 'Preferred plan', type: 'radio', options: ['Starter', 'Pro', 'Enterprise'], value: 'Pro' },
+        { id: 'priority', label: 'Priority', type: 'select', options: ['Speed', 'Reliability', 'Cost'], value: 'Reliability' },
+        { id: 'launch', label: 'Target launch date', type: 'date' },
+        { id: 'updates', label: 'Send me project updates', type: 'checkbox', value: true },
+      ],
+    } as FormSpec,
   },
 ];

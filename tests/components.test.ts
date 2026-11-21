@@ -289,6 +289,8 @@ describe('RENDERERS registry', () => {
     expect(typeof RENDERERS.followups).toBe('function');
     expect(typeof RENDERERS.math).toBe('function');
     expect(typeof RENDERERS.code).toBe('function');
+    expect(typeof RENDERERS.checklist).toBe('function');
+    expect(typeof RENDERERS.form).toBe('function');
     expect(typeof RENDERERS.generic).toBe('function');
   });
 
@@ -319,6 +321,65 @@ describe('RENDERERS registry', () => {
     expect(optButtons[0].classList.contains('is-correct')).toBe(true);
     expect(quizEl.textContent).toContain('Score 1');
     expect(quizEl.textContent).toContain('Port 80 is used for HTTP.');
+  });
+
+  it('renders an interactive checklist with progress and bulk completion controls', () => {
+    const checklist = RENDERERS.checklist({
+      type: 'checklist',
+      title: 'Launch checklist',
+      items: [
+        { text: 'Configure domain', detail: 'Add DNS records' },
+        { text: 'Run smoke tests', checked: true },
+      ],
+    }, { theme: 'light', onCleanup: () => {} });
+    const rows = checklist.querySelectorAll<HTMLLabelElement>('.iui-checklist-row');
+    const progress = checklist.querySelector<HTMLElement>('[role="progressbar"]')!;
+    const bulk = checklist.querySelector<HTMLButtonElement>('.iui-checklist-bulk')!;
+    expect(rows).toHaveLength(2);
+    expect(progress.getAttribute('aria-valuenow')).toBe('1');
+    expect(checklist.textContent).toContain('1 of 2 completed');
+    expect(checklist.textContent).toContain('Add DNS records');
+
+    const firstInput = rows[0].querySelector<HTMLInputElement>('input')!;
+    firstInput.checked = true;
+    firstInput.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(progress.getAttribute('aria-valuenow')).toBe('2');
+    expect(checklist.classList.contains('is-complete')).toBe(true);
+    expect(bulk.textContent).toBe('Clear all');
+
+    bulk.click();
+    expect(progress.getAttribute('aria-valuenow')).toBe('0');
+    expect(checklist.classList.contains('is-complete')).toBe(false);
+  });
+
+  it('renders an interactive form with native validation, controls and a response summary', () => {
+    const formCard = RENDERERS.form({
+      type: 'form', title: 'Project setup', submitLabel: 'Review',
+      fields: [
+        { id: 'name', label: 'Project name', type: 'text', required: true },
+        { id: 'plan', label: 'Plan', type: 'radio', options: ['Basic', 'Pro'], value: 'Pro' },
+        { id: 'updates', label: 'Updates', type: 'checkbox', value: true },
+        { id: 'budget', label: 'Budget', type: 'range', min: 0, max: 100, value: 40 },
+      ],
+    }, { theme: 'light', onCleanup: () => {} });
+    const form = formCard.querySelector('form')!;
+    expect(formCard.textContent).toContain('Project setup');
+    expect(form.querySelectorAll('.iui-form-field')).toHaveLength(4);
+    expect(form.querySelector<HTMLInputElement>('input[type="range"]')?.value).toBe('40');
+    expect(form.querySelector<HTMLInputElement>('input[type="radio"]:checked')?.value).toBe('Pro');
+    expect(form.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(true);
+
+    const name = form.querySelector<HTMLInputElement>('input[name="name"]')!;
+    name.value = 'BetterView';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    const result = formCard.querySelector<HTMLElement>('.iui-form-result')!;
+    expect(result.hidden).toBe(false);
+    expect(result.textContent).toContain('Response ready');
+    expect(result.textContent).toContain('BetterView');
+    expect(result.textContent).toContain('Pro');
+    expect(result.textContent).toContain('Yes');
+    form.dispatchEvent(new Event('reset', { bubbles: true }));
+    expect(result.hidden).toBe(true);
   });
 
   it('renders generic fallback card into DOM with readable key-value and list layout', () => {

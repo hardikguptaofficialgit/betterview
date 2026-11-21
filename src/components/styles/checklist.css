@@ -1,0 +1,114 @@
+.iui-checklist-card {
+  border-radius: var(--iui-radius-card, 18px);
+}
+
+.iui-checklist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.iui-checklist-heading { min-width: 0; }
+.iui-checklist-title { margin: 0 0 4px; }
+
+.iui-checklist-count {
+  color: var(--iui-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.iui-checklist-bulk {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  font-size: 12px;
+  border-radius: 999px;
+}
+
+.iui-checklist-progress-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  margin-bottom: 14px;
+  background: var(--iui-surface-2);
+}
+
+.iui-checklist-progress-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--c-ink, #4C3D91);
+  transition: width 180ms ease;
+}
+
+.iui-checklist-items {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.iui-checklist-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid var(--iui-border);
+  border-radius: var(--iui-radius-inner, 12px);
+  background: var(--iui-surface);
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+  animation: iui-checklist-enter 180ms ease both;
+  animation-delay: calc(var(--checklist-index, 0) * 25ms);
+}
+
+@keyframes iui-checklist-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.iui-checklist-row:hover { border-color: var(--iui-muted); }
+.iui-checklist-row:focus-within { outline: 2px solid var(--iui-text); outline-offset: 2px; }
+
+.iui-checklist-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.iui-checklist-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 19px;
+  width: 19px;
+  height: 19px;
+  margin-top: 1px;
+  border: 1.5px solid var(--iui-muted);
+  border-radius: 6px;
+  color: transparent;
+  background: var(--iui-bg);
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.iui-checklist-box svg { width: 13px; height: 13px; }
+.iui-checklist-row.is-checked .iui-checklist-box {
+  border-color: var(--c-ink, #4C3D91);
+  background: var(--c-ink, #4C3D91);
+  color: #fff;
+}
+
+.iui-checklist-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.iui-checklist-text { color: var(--iui-text); font-size: 13.5px; font-weight: 550; line-height: 1.4; }
+.iui-checklist-detail { color: var(--iui-muted); font-size: 12px; line-height: 1.45; }
+.iui-checklist-row.is-checked .iui-checklist-text { color: var(--iui-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.iui-checklist-card.is-complete .iui-checklist-progress-fill { background: #39966B; }
+
+@media (prefers-reduced-motion: reduce) {
+  .iui-checklist-row { animation: none; }
+  .iui-checklist-progress-fill, .iui-checklist-box { transition: none; }
+}

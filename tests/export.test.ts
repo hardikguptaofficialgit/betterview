@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   sanitizeCssForSvg,
   serializeCardToSvg,
+  serializeFlowToSvg,
   showCardToast,
   sanitizeFilename,
 } from '../src/core/export';
@@ -128,6 +129,30 @@ describe('Export serialization: serializeCardToSvg', () => {
     expect(svg).toContain('data-host="grok"');
     expect(svg).toContain('width: 980px');
     expect(svg).toContain('overflow: visible');
+  });
+});
+
+describe('Export serialization: serializeFlowToSvg', () => {
+  it('exports flow nodes, connectors and labels as native SVG without foreignObject', () => {
+    const card = document.createElement('div');
+    card.className = 'iui-card flow-card';
+    card.innerHTML = `
+      <div class="iui-title flow-title">Approval Flow</div>
+      <div class="flow-canvas"><div class="flow-inner">
+        <svg class="flow-svg-overlay"><path d="M 10 20 L 10 80" /></svg>
+        <div class="flow-node"><span class="flow-node-label">Start &amp; review</span><span class="flow-node-sub">Check request</span></div>
+        <span class="flow-edge-label">Yes</span>
+      </div></div>`;
+    const svg = serializeFlowToSvg(card, { theme: 'light', watermark: false });
+
+    expect(svg).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+    expect(svg).toContain('Approval Flow');
+    expect(svg).toContain('Start &amp; review');
+    expect(svg).toContain('Check request');
+    expect(svg).toContain('M 10 20 L 10 80');
+    expect(svg).toContain('>Yes</text>');
+    expect(svg).not.toContain('foreignObject');
+    expect(svg).not.toContain('BetterView AI');
   });
 });
 

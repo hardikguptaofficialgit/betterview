@@ -13,6 +13,8 @@ export type UIType =
   | 'followups'
   | 'math'
   | 'code'
+  | 'checklist'
+  | 'form'
   | 'generic';
 
 export const UI_TYPES: readonly UIType[] = [
@@ -30,6 +32,8 @@ export const UI_TYPES: readonly UIType[] = [
   'followups',
   'math',
   'code',
+  'checklist',
+  'form',
   'generic',
 ] as const;
 
@@ -212,6 +216,42 @@ export interface CodeSpec {
   filename?: string;
 }
 
+export interface ChecklistItem {
+  text: string;
+  detail?: string;
+  checked?: boolean;
+}
+
+export interface ChecklistSpec {
+  type: 'checklist';
+  title?: string;
+  items: ChecklistItem[];
+}
+
+export type FormFieldType = 'text' | 'email' | 'number' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'date' | 'range';
+
+export interface FormFieldSpec {
+  id: string;
+  label: string;
+  type: FormFieldType;
+  required?: boolean;
+  placeholder?: string;
+  help?: string;
+  options?: string[];
+  min?: number;
+  max?: number;
+  step?: number;
+  value?: string | number | boolean;
+}
+
+export interface FormSpec {
+  type: 'form';
+  title?: string;
+  description?: string;
+  submitLabel?: string;
+  fields: FormFieldSpec[];
+}
+
 export interface GenericSpec {
   type: 'generic';
   title?: string;
@@ -234,4 +274,6 @@ export type UISpec =
   | FollowupsSpec
   | MathSpec
   | CodeSpec
+  | ChecklistSpec
+  | FormSpec
   | GenericSpec;

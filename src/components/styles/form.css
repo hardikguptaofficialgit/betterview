@@ -1,0 +1,29 @@
+.iui-form-card { border-radius: var(--iui-radius-card, 18px); }
+.iui-form-title { margin-bottom: 6px; }
+.iui-form-description { margin: 0 0 18px; color: var(--iui-muted); font-size: 13px; line-height: 1.5; }
+.iui-form { display: flex; flex-direction: column; gap: 15px; }
+.iui-form-field { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
+.iui-form-label { color: var(--iui-text); font-size: 13px; font-weight: 600; }
+.iui-form-required { color: #D45B66; }
+.iui-form-control { box-sizing: border-box; width: 100%; min-height: 40px; padding: 9px 11px; border: 1px solid var(--iui-border); border-radius: 10px; outline: none; background: var(--iui-bg); color: var(--iui-text); font: inherit; font-size: 13px; }
+.iui-form-control:focus { border-color: var(--iui-text); box-shadow: 0 0 0 2px color-mix(in srgb, var(--iui-text) 12%, transparent); }
+.iui-form-field textarea.iui-form-control { min-height: 88px; resize: vertical; }
+.iui-form-help { color: var(--iui-muted); font-size: 11.5px; line-height: 1.45; }
+.iui-form-radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.iui-form-choice { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 7px 11px; border: 1px solid var(--iui-border); border-radius: 9px; color: var(--iui-text); background: var(--iui-surface); font-size: 12.5px; cursor: pointer; }
+.iui-form-choice:has(input:checked) { border-color: var(--iui-text); background: var(--iui-surface-2); }
+.iui-form-choice input { accent-color: var(--iui-text); margin: 0; }
+.iui-form-single-choice { align-self: flex-start; }
+.iui-form-range-wrap { display: flex; align-items: center; gap: 12px; }
+.iui-form-range-wrap input { flex: 1; min-width: 0; accent-color: var(--iui-text); }
+.iui-form-range-value { min-width: 34px; color: var(--iui-text); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+.iui-form-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 3px; }
+.iui-form-submit { min-width: 110px; }
+.iui-form-result { margin-top: 16px; padding: 14px; border: 1px solid var(--iui-border); border-radius: 12px; background: var(--iui-surface); }
+.iui-form-result[hidden] { display: none; }
+.iui-form-result-heading { display: flex; align-items: center; gap: 8px; color: var(--iui-text); font-size: 13px; }
+.iui-form-result-list { display: grid; grid-template-columns: minmax(100px, .7fr) minmax(0, 1.3fr); gap: 8px 12px; margin: 12px 0; font-size: 12px; }
+.iui-form-result-list dt { color: var(--iui-muted); }
+.iui-form-result-list dd { min-width: 0; margin: 0; color: var(--iui-text); overflow-wrap: anywhere; }
+.iui-form-copy { font-size: 12px; }
+@media (max-width: 480px) { .iui-form-result-list { grid-template-columns: 1fr; gap: 3px; } .iui-form-result-list dd { margin-bottom: 7px; } }

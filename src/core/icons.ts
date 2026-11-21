@@ -132,6 +132,8 @@ export const CARD_TYPE_DUOTONE: Record<UIType, string> = {
   followups: followupsDuo,
   math: functionDuo,
   code: codeBlockDuo,
+  checklist: listReg,
+  form: listReg,
   generic: listReg,
 };
 

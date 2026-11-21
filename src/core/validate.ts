@@ -25,6 +25,10 @@ import {
   MathSpec,
   MathStep,
   CodeSpec,
+  ChecklistSpec,
+  ChecklistItem,
+  FormSpec,
+  FormFieldSpec,
   GenericSpec,
 } from './types';
 
@@ -677,6 +681,95 @@ function validateCode(raw: Record<string, unknown>, _warnings: string[]): { ok: 
   };
 }
 
+function validateChecklist(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: ChecklistSpec } | { ok: false; error: string } {
+  let rawItems = Array.isArray(raw.items) ? raw.items : Array.isArray(raw.tasks) ? raw.tasks : [];
+  if (rawItems.length === 0) return { ok: false, error: 'checklist must have at least 1 item' };
+  if (rawItems.length > 40) {
+    warnings.push('Checklist items capped at 40');
+    rawItems = rawItems.slice(0, 40);
+  }
+
+  const items: ChecklistItem[] = [];
+  for (const item of rawItems) {
+    if (typeof item === 'string') {
+      const text = cleanString(item, 500);
+      if (text) items.push({ text });
+      continue;
+    }
+    if (!item || typeof item !== 'object') continue;
+    const rec = item as Record<string, unknown>;
+    const text = cleanString(rec.text ?? rec.title ?? rec.label, 500);
+    if (!text) continue;
+    const detail = cleanString(rec.detail ?? rec.description, 800);
+    items.push({ text, ...(detail ? { detail } : {}), ...(typeof rec.checked === 'boolean' ? { checked: rec.checked } : {}) });
+  }
+  if (items.length === 0) return { ok: false, error: 'checklist must have at least 1 valid item' };
+  return { ok: true, spec: { type: 'checklist', items } };
+}
+
+function validateForm(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: FormSpec } | { ok: false; error: string } {
+  let rawFields = Array.isArray(raw.fields) ? raw.fields : [];
+  if (rawFields.length === 0) return { ok: false, error: 'form must have at least 1 field' };
+  if (rawFields.length > 20) {
+    warnings.push('Form fields capped at 20');
+    rawFields = rawFields.slice(0, 20);
+  }
+  const allowed = ['text', 'email', 'number', 'textarea', 'select', 'radio', 'checkbox', 'date', 'range'];
+  const ids = new Set<string>();
+  const fields: FormFieldSpec[] = [];
+  for (let index = 0; index < rawFields.length; index++) {
+    const value = rawFields[index];
+    if (!value || typeof value !== 'object') return { ok: false, error: 'Form field must be an object' };
+    const rec = value as Record<string, unknown>;
+    const label = cleanString(rec.label ?? rec.title, 160);
+    if (!label) return { ok: false, error: 'Form field label is required' };
+    const type = cleanString(rec.type).toLowerCase();
+    if (!allowed.includes(type)) return { ok: false, error: `Unsupported form field type "${type}"` };
+    let id = cleanString(rec.id, 80).replace(/[^a-zA-Z0-9_-]/g, '-');
+    if (!id || ids.has(id)) id = `field-${index + 1}`;
+    while (ids.has(id)) id = `${id}-${index + 1}`;
+    ids.add(id);
+    const options = Array.isArray(rec.options) ? rec.options.map((option) => cleanString(option, 160)).filter(Boolean).slice(0, 30) : [];
+    if ((type === 'select' || type === 'radio') && options.length < 2) {
+      return { ok: false, error: `${type} field "${label}" must have at least 2 options` };
+    }
+    const min = typeof rec.min === 'number' && Number.isFinite(rec.min) ? rec.min : undefined;
+    const max = typeof rec.max === 'number' && Number.isFinite(rec.max) ? rec.max : undefined;
+    if (min !== undefined && max !== undefined && min > max) return { ok: false, error: `Form field "${label}" has min greater than max` };
+    const step = typeof rec.step === 'number' && Number.isFinite(rec.step) && rec.step > 0 ? rec.step : undefined;
+    if (rec.value !== undefined) {
+      if (type === 'select' || type === 'radio') {
+        if (typeof rec.value !== 'string' || !options.includes(rec.value)) return { ok: false, error: `Default value for "${label}" must match one of its options` };
+      } else if (type === 'checkbox') {
+        if (typeof rec.value !== 'boolean') return { ok: false, error: `Default value for "${label}" must be true or false` };
+      } else if (type === 'number' || type === 'range') {
+        if (typeof rec.value !== 'number' || !Number.isFinite(rec.value) || (min !== undefined && rec.value < min) || (max !== undefined && rec.value > max)) {
+          return { ok: false, error: `Default value for "${label}" must be a number within its bounds` };
+        }
+      } else if (typeof rec.value !== 'string') {
+        return { ok: false, error: `Default value for "${label}" must be text` };
+      }
+    }
+    const field: FormFieldSpec = {
+      id, label, type: type as FormFieldSpec['type'],
+      ...(rec.required === true ? { required: true } : {}),
+      ...(cleanString(rec.placeholder, 180) ? { placeholder: cleanString(rec.placeholder, 180) } : {}),
+      ...(cleanString(rec.help ?? rec.description, 300) ? { help: cleanString(rec.help ?? rec.description, 300) } : {}),
+      ...(options.length ? { options } : {}),
+      ...(min !== undefined ? { min } : {}),
+      ...(max !== undefined ? { max } : {}),
+      ...(step !== undefined ? { step } : {}),
+    };
+    if (typeof rec.value === 'string' || typeof rec.value === 'number' || typeof rec.value === 'boolean') field.value = rec.value;
+    fields.push(field);
+  }
+  return { ok: true, spec: {
+    type: 'form', fields,
+    ...(cleanString(raw.description, 500) ? { description: cleanString(raw.description, 500) } : {}),
+    ...(cleanString(raw.submitLabel, 60) ? { submitLabel: cleanString(raw.submitLabel, 60) } : {}),
+  } };
+}
+
 function validateGeneric(raw: Record<string, unknown>, _warnings: string[]): { ok: true; spec: GenericSpec } | { ok: false; error: string } {
   const title = cleanString(raw.title);
   const originalType = cleanString(raw.originalType);
@@ -759,6 +852,12 @@ export function validateSpec(input: unknown): ValidateResult {
       break;
     case 'code':
       result = validateCode(raw, warnings);
+      break;
+    case 'checklist':
+      result = validateChecklist(raw, warnings);
+      break;
+    case 'form':
+      result = validateForm(raw, warnings);
       break;
     case 'generic':
       result = validateGeneric(raw, warnings);

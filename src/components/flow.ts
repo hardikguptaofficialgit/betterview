@@ -56,7 +56,7 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
     const logicalX = (canvas.scrollLeft + x) / previous;
     const logicalY = (canvas.scrollTop + y) / previous;
     flowInner.style.zoom = String(zoom);
-    const surfaceScale = Math.min(zoom, 1);
+    const surfaceScale = zoom;
     zoomSurface.style.width = `${contentWidth * surfaceScale}px`;
     zoomSurface.style.height = `${contentHeight * surfaceScale}px`;
     zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
@@ -447,7 +447,7 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
 
     contentWidth = scrollW;
     contentHeight = scrollH;
-    const surfaceScale = Math.min(zoom, 1);
+    const surfaceScale = zoom;
     zoomSurface.style.width = `${contentWidth * surfaceScale}px`;
     zoomSurface.style.height = `${contentHeight * surfaceScale}px`;
 

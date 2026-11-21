@@ -518,10 +518,31 @@ function routeAStar(
   }
 
   if (!foundEndKey) {
-    // Direct step fallback if grid is over-constrained
-    const midY = (start.y + goal.y) / 2;
-    const fallbackPts = [start, { x: start.x, y: midY }, { x: goal.x, y: midY }, goal];
-    return simplifyCollinear(fallbackPts);
+    // If the visibility grid is over-constrained, try clear channels outside
+    // the obstacle bounds. Never fall back to a direct line through a node.
+    const minY = Math.min(...allBoxes.map((box) => box.y), start.y, goal.y) - padding - 24;
+    const maxY = Math.max(...allBoxes.map((box) => box.y + box.height), start.y, goal.y) + padding + 24;
+    const minX = Math.min(...allBoxes.map((box) => box.x), start.x, goal.x) - padding - 24;
+    const maxX = Math.max(...allBoxes.map((box) => box.x + box.width), start.x, goal.x) + padding + 24;
+    const candidates: Point[][] = [
+      [start, { x: start.x, y: minY }, { x: goal.x, y: minY }, goal],
+      [start, { x: start.x, y: maxY }, { x: goal.x, y: maxY }, goal],
+      [start, { x: minX, y: start.y }, { x: minX, y: goal.y }, goal],
+      [start, { x: maxX, y: start.y }, { x: maxX, y: goal.y }, goal],
+    ];
+    const clearRoutes = candidates.filter((points) => points.slice(1).every((point, index) =>
+      !obstacles.some((box) => segmentIntersectsBox(points[index], point, box, 2)),
+    ));
+    if (clearRoutes.length > 0) {
+      return simplifyCollinear(clearRoutes.sort((a, b) => {
+        const length = (route: Point[]) => route.slice(1).reduce((sum, point, index) =>
+          sum + Math.abs(point.x - route[index].x) + Math.abs(point.y - route[index].y), 0);
+        return length(a) - length(b);
+      })[0]);
+    }
+
+    // This is only reachable for fully enclosed/overlapping input geometry.
+    return [start, goal];
   }
 
   // Reconstruct path

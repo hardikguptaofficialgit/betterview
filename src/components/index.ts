@@ -15,6 +15,8 @@ import { renderFollowups } from './followups';
 import { renderMath } from './math';
 import { renderCode } from './code';
 import { renderGeneric } from './generic';
+import { renderChecklist } from './checklist';
+import { renderForm } from './form';
 
 export interface RenderContext {
   theme: ThemeMode;
@@ -39,5 +41,7 @@ export const RENDERERS: { [K in UIType]: RenderFn<Extract<UISpec, { type: K }>> 
   followups: renderFollowups,
   math: renderMath,
   code: renderCode,
+  checklist: renderChecklist,
+  form: renderForm,
   generic: renderGeneric,
 };

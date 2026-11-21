@@ -125,6 +125,78 @@ export function serializeCardToSvg(card: HTMLElement, opts: ExportOptions = {}):
 </svg>`;
 }
 
+/** Export flowcharts as native SVG primitives. This avoids browser-specific
+ * foreignObject rendering failures and keeps connectors crisp at any size. */
+export function serializeFlowToSvg(card: HTMLElement, opts: ExportOptions = {}): string {
+  const isDark = opts.theme === 'dark';
+  const background = isDark ? '#0A0A0A' : '#FFFFFF';
+  const foreground = isDark ? '#FAFAFA' : '#202124';
+  const muted = isDark ? '#A3A3A3' : '#6B7280';
+  const border = isDark ? '#454545' : '#D8DDE5';
+  const padding = 28;
+  const inner = card.querySelector<HTMLElement>('.flow-inner');
+  const canvas = card.querySelector<HTMLElement>('.flow-canvas');
+  if (!inner || !canvas) throw new Error('The flowchart is still being laid out');
+
+  const zoom = Math.max(0.01, Number.parseFloat(inner.style.zoom || '1') || 1);
+  const width = Math.max(320, Math.ceil(Math.max(inner.scrollWidth, inner.clientWidth) / zoom));
+  const height = Math.max(180, Math.ceil(Math.max(inner.scrollHeight, inner.clientHeight) / zoom));
+  const title = card.querySelector('.flow-title')?.textContent?.trim() || opts.title || '';
+  const titleHeight = title ? 34 : 0;
+  const totalWidth = width + padding * 2;
+  const totalHeight = height + titleHeight + padding * 2;
+  const innerRect = inner.getBoundingClientRect();
+  const esc = escapeXml;
+
+  const edgePaths = Array.from(inner.querySelectorAll<SVGPathElement>('.flow-svg-overlay path'))
+    .map((path) => {
+      const stroke = getComputedStyle(path).stroke || muted;
+      return `<path d="${esc(path.getAttribute('d') || '')}" fill="none" stroke="${esc(stroke)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#flow-export-arrow)"/>`;
+    }).join('');
+
+  const nodes = Array.from(inner.querySelectorAll<HTMLElement>('.flow-node')).map((node) => {
+    const rect = node.getBoundingClientRect();
+    const x = (rect.left - innerRect.left) / zoom + padding;
+    const y = (rect.top - innerRect.top) / zoom + padding + titleHeight;
+    const w = rect.width / zoom;
+    const h = rect.height / zoom;
+    const style = getComputedStyle(node);
+    const fill = style.backgroundColor && style.backgroundColor !== 'rgba(0, 0, 0, 0)' ? style.backgroundColor : (isDark ? '#202124' : '#FFFFFF');
+    const stroke = style.borderColor || border;
+    const label = node.querySelector('.flow-node-label')?.textContent?.trim() || '';
+    const sub = node.querySelector('.flow-node-sub')?.textContent?.trim() || '';
+    const labelColor = getComputedStyle(node.querySelector('.flow-node-label') || node).color || foreground;
+    const subColor = getComputedStyle(node.querySelector('.flow-node-sub') || node).color || muted;
+    const labelY = y + (sub ? h / 2 - 3 : h / 2 + 5);
+    const labelX = x + 48;
+    const icon = node.querySelector<SVGElement>('.flow-node-iconbox svg');
+    let iconSvg = '';
+    if (icon) {
+      const iconClone = icon.cloneNode(true) as SVGElement;
+      iconClone.setAttribute('x', String(x + 16));
+      iconClone.setAttribute('y', String(y + h / 2 - 9));
+      iconClone.setAttribute('width', '18');
+      iconClone.setAttribute('height', '18');
+      iconClone.setAttribute('color', getComputedStyle(node.querySelector('.flow-node-iconbox') || node).color || foreground);
+      iconSvg = iconClone.outerHTML;
+    }
+    return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="11" fill="${esc(fill)}" stroke="${esc(stroke)}"/>${iconSvg}<text x="${labelX}" y="${labelY}" font-family="Arial,sans-serif" font-size="13.5" font-weight="600" fill="${esc(labelColor)}">${esc(label)}</text>${sub ? `<text x="${labelX}" y="${labelY + 19}" font-family="Arial,sans-serif" font-size="11.5" fill="${esc(subColor)}">${esc(sub)}</text>` : ''}</g>`;
+  }).join('');
+
+  const labels = Array.from(inner.querySelectorAll<HTMLElement>('.flow-edge-label')).map((label) => {
+    const rect = label.getBoundingClientRect();
+    const x = (rect.left + rect.width / 2 - innerRect.left) / zoom + padding;
+    const y = (rect.top + rect.height / 2 - innerRect.top) / zoom + padding + titleHeight;
+    const text = label.textContent?.trim() || '';
+    const w = Math.max(44, text.length * 7 + 20);
+    return `<g><rect x="${x - w / 2}" y="${y - 12}" width="${w}" height="24" rx="12" fill="${background}" stroke="${border}"/><text x="${x}" y="${y + 4}" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="${foreground}">${esc(text)}</text></g>`;
+  }).join('');
+
+  const titleSvg = title ? `<text x="${padding}" y="${padding + 18}" font-family="Arial,sans-serif" font-size="16" font-weight="600" fill="${foreground}">${esc(title)}</text>` : '';
+  const watermark = opts.watermark === false ? '' : `<text x="${totalWidth - padding}" y="${totalHeight - 10}" text-anchor="end" font-family="Arial,sans-serif" font-size="12" fill="${muted}">BetterView AI</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}"><defs><marker id="flow-export-arrow" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 2 L6 4 L1 6 Z" fill="${muted}"/></marker></defs><rect width="100%" height="100%" fill="${background}"/>${titleSvg}<g transform="translate(${padding} ${padding + titleHeight})">${edgePaths}</g>${nodes}${labels}${watermark}</svg>`;
+}
+
 /**
  * Renders an SVG string onto a 2x pixel ratio canvas.
  */
@@ -134,12 +206,13 @@ export async function renderSvgToCanvas(
   height: number,
 ): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas');
-  canvas.width = width * 2;
-  canvas.height = height * 2;
+  const scale = Math.min(2, 16384 / Math.max(width, height), Math.sqrt(64000000 / Math.max(1, width * height)));
+  canvas.width = Math.max(1, Math.floor(width * scale));
+  canvas.height = Math.max(1, Math.floor(height * scale));
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not get canvas 2d context');
 
-  ctx.scale(2, 2);
+  ctx.scale(scale, scale);
 
   const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(svgBlob);
@@ -244,7 +317,7 @@ function downloadBlob(blob: Blob, filename: string): void {
   a.click();
   a.remove();
   // Chrome may not have started consuming the download URL when click() returns.
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  window.setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 /**
@@ -317,7 +390,9 @@ export async function exportCard(
       // Keep SVG exports self-contained with the card's host theme and styles.
       const svgContent = chartInstance && typeof chartInstance.toBase64Image === 'function'
         ? serializeChartToSvg(card, chartInstance, opts)
-        : serializeCardToSvg(card, opts);
+        : card.classList.contains('flow-card')
+          ? serializeFlowToSvg(card, opts)
+          : serializeCardToSvg(card, opts);
       const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
       downloadBlob(blob, `${baseName}.svg`);
       showCardToast(card, 'SVG downloaded');
@@ -328,9 +403,15 @@ export async function exportCard(
     if (chartInstance && typeof chartInstance.toBase64Image === 'function') {
       canvas = await renderChartToCanvas(card, chartInstance, opts);
     } else {
-      const svgString = serializeCardToSvg(card, opts);
+      const isFlow = card.classList.contains('flow-card');
+      const svgString = isFlow ? serializeFlowToSvg(card, opts) : serializeCardToSvg(card, opts);
       const { width: cardWidth, height: cardHeight } = getCardExportSize(card);
-      canvas = await renderSvgToCanvas(svgString, cardWidth + 48, cardHeight + 48);
+      const svgSize = isFlow ? svgString.match(/<svg[^>]*width="(\d+)"[^>]*height="(\d+)"/) : null;
+      canvas = await renderSvgToCanvas(
+        svgString,
+        svgSize ? Number(svgSize[1]) : cardWidth + 48,
+        svgSize ? Number(svgSize[2]) : cardHeight + 48,
+      );
     }
 
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
@@ -351,6 +432,6 @@ export async function exportCard(
     }
   } catch (error) {
     console.warn('[IUI] Image export failed:', error);
-    showCardToast(card, 'Export failed. Try again.');
+    showCardToast(card, `Export failed: ${error instanceof Error ? error.message.slice(0, 90) : 'Unknown error'}`);
   }
 }

@@ -13,6 +13,8 @@ import mathCss from './styles/math.css?inline';
 import codeCss from './styles/code.css?inline';
 import genericCss from './styles/generic.css?inline';
 import chartCss from './styles/chart.css?inline';
+import checklistCss from './styles/checklist.css?inline';
+import formCss from './styles/form.css?inline';
 
 export const COMPONENT_STYLES: string[] = [
   tableCss,
@@ -30,4 +32,6 @@ export const COMPONENT_STYLES: string[] = [
   codeCss,
   genericCss,
   chartCss,
+  checklistCss,
+  formCss,
 ];

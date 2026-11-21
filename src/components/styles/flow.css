@@ -100,6 +100,8 @@
 }
 
 .flow-body {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -107,18 +109,18 @@
 }
 
 .flow-body.flow-ungrouped-body {
-  gap: 92px;
+  gap: 112px;
 }
 
 .flow-body.flow-grouped-body {
-  gap: 84px;
+  gap: 104px;
 }
 
 .flow-rank-row {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 96px;
+  gap: 116px;
   width: max-content;
   min-width: 100%;
   padding: 8px 22px;
@@ -153,21 +155,21 @@
 .flow-group-rows {
   display: flex;
   flex-direction: column;
-  gap: 88px;
+  gap: 104px;
   width: 100%;
 }
 
 .flow-ungrouped-section {
   display: flex;
   flex-direction: column;
-  gap: 76px;
+  gap: 96px;
   width: 100%;
 }
 
 /* Node cards stay comfortably readable instead of collapsing in chat columns. */
 .flow-node {
-  min-width: 210px;
-  max-width: 300px;
+  min-width: 220px;
+  max-width: 320px;
   width: auto;
   height: auto;
   border-radius: var(--iui-radius-inner, 12px);
@@ -280,7 +282,7 @@
   inset: 0;
   pointer-events: none;
   overflow: visible;
-  z-index: 1;
+  z-index: 0;
 }
 
 /* Edge labels layer */
@@ -335,8 +337,8 @@
 
 @media (max-width: 600px) {
   .flow-canvas { min-height: 280px; padding: 24px; }
-  .flow-rank-row { gap: 68px; }
-  .flow-node { min-width: 190px; }
+  .flow-rank-row { gap: 84px; }
+  .flow-node { min-width: 200px; }
 }
 
 .flow-edge-label.c-mint {

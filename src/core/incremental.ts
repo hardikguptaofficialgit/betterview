@@ -23,6 +23,8 @@ export const TYPE_META: Record<UIType, TypeMeta> = {
   followups: { icon: 'sparkle', color: 'mint', label: 'Suggestions' },
   math: { icon: 'function', color: 'purple', label: 'Math' },
   code: { icon: 'code', color: 'sky', label: 'Code' },
+  checklist: { icon: 'check', color: 'green', label: 'Checklist' },
+  form: { icon: 'list', color: 'blue', label: 'Form' },
   generic: { icon: 'sparkle', color: 'stone', label: 'Details' },
 };
 

@@ -368,6 +368,50 @@ describe('validateSpec', () => {
         expect(fiveFollowups.warnings).toContain('Followup suggestions capped at 4');
       }
     });
+
+    it('validates checklist items, aliases, details and completion state', () => {
+      const valid = validateSpec({
+        type: 'checklist',
+        title: 'Release prep',
+        items: [
+          'Write release notes',
+          { text: 'Run tests', detail: 'Unit and integration', checked: true },
+          { label: 'Deploy', checked: false },
+        ],
+      });
+      expect(valid.ok).toBe(true);
+      if (valid.ok && valid.spec.type === 'checklist') {
+        expect(valid.spec.items).toEqual([
+          { text: 'Write release notes' },
+          { text: 'Run tests', detail: 'Unit and integration', checked: true },
+          { text: 'Deploy', checked: false },
+        ]);
+      }
+      const empty = validateSpec({ type: 'checklist', items: [] });
+      expect(empty.ok).toBe(false);
+    });
+
+    it('validates form field types, options, required state and safe ids', () => {
+      const valid = validateSpec({
+        type: 'form', title: 'Preferences', description: 'Choose a plan',
+        fields: [
+          { id: 'name', label: 'Name', type: 'text', required: true },
+          { id: 'plan', label: 'Plan', type: 'select', options: ['Free', 'Pro'], value: 'Pro' },
+          { id: 'range', label: 'Budget', type: 'range', min: 1, max: 10, step: 1 },
+        ],
+      });
+      expect(valid.ok).toBe(true);
+      if (valid.ok && valid.spec.type === 'form') {
+        expect(valid.spec.fields).toHaveLength(3);
+        expect(valid.spec.fields[0].required).toBe(true);
+        expect(valid.spec.fields[1].options).toEqual(['Free', 'Pro']);
+        expect(valid.spec.fields[2].max).toBe(10);
+      }
+      expect(validateSpec({ type: 'form', fields: [{ label: 'Plan', type: 'select', options: ['Only one'] }] }).ok).toBe(false);
+      expect(validateSpec({ type: 'form', fields: [{ label: 'Bad', type: 'password' }] }).ok).toBe(false);
+      expect(validateSpec({ type: 'form', fields: [{ label: 'Bad range', type: 'range', min: 9, max: 2 }] }).ok).toBe(false);
+      expect(validateSpec({ type: 'form', fields: [{ label: 'Plan', type: 'radio', options: ['Free', 'Pro'], value: 'Ultra' }] }).ok).toBe(false);
+    });
   });
 
   it('quiz tolerant parsing: letter answer (A/B), items alias, choices alias, explanation alias', () => {

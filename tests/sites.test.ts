@@ -28,16 +28,16 @@ import { grokIconSvg } from '../src/core/brandIcons';
 describe('System Instruction', () => {
   it('SETUP_INSTRUCTION conforms to constraints', () => {
     expect(SETUP_INSTRUCTION.length).toBeLessThanOrEqual(1400);
-    expect(SETUP_INSTRUCTION.startsWith('[BetterView v4]')).toBe(true);
+    expect(SETUP_INSTRUCTION.startsWith('[BetterView v6]')).toBe(true);
     expect(SETUP_INSTRUCTION).toContain('ui');
     expect(SETUP_INSTRUCTION).toContain('3');
     expect(getCompactInstruction()).toBe(SETUP_INSTRUCTION);
   });
 
-  it('Instruction tests: version is 4, marker present, contains "Never more than 3", length not greater than before', () => {
-    expect(CURRENT_INSTRUCTION_VERSION).toBe(4);
+  it('Instruction tests: version is 6, marker present, contains "Never more than 3", length not greater than before', () => {
+    expect(CURRENT_INSTRUCTION_VERSION).toBe(6);
     const compact = getCompactInstruction();
-    expect(compact).toContain('[BetterView v4]');
+    expect(compact).toContain('[BetterView v6]');
     expect(compact).toContain('Never more than 3');
     expect(compact).toContain('NEVER generate or create images');
     expect(compact.length).toBeLessThanOrEqual(1400);
@@ -45,8 +45,8 @@ describe('System Instruction', () => {
     expect(SYSTEM_INSTRUCTION).toContain('NEVER generate or create images');
     expect(SYSTEM_INSTRUCTION_SHORT).toContain('Never more than 3');
     expect(SYSTEM_INSTRUCTION_SHORT).toContain('NEVER generate or create images');
-    expect(SYSTEM_INSTRUCTION.length).toBeLessThanOrEqual(2825);
-    expect(SYSTEM_INSTRUCTION_SHORT.length).toBeLessThanOrEqual(1820);
+    expect(SYSTEM_INSTRUCTION.length).toBeLessThanOrEqual(3100);
+    expect(SYSTEM_INSTRUCTION_SHORT.length).toBeLessThanOrEqual(2100);
   });
 });
 
@@ -320,9 +320,9 @@ describe('Auto-setup append & marker logic', () => {
     const verV4 = extractInstructionVersion(bodyWithV4);
     expect(verV4).toBe(4);
     const hasOldEntryV4 = hasOlderInstruction(bodyWithV4);
-    expect(hasOldEntryV4).toBe(false);
+    expect(hasOldEntryV4).toBe(true);
     const alreadyV4 = verV4 !== null && verV4 >= CURRENT_INSTRUCTION_VERSION;
-    expect(alreadyV4).toBe(true);
+    expect(alreadyV4).toBe(false);
   });
 
   it('detects instruction versions: highest among multiple markers, and older markers detection', () => {
@@ -339,7 +339,7 @@ describe('Auto-setup append & marker logic', () => {
     // only v4 -> false
     const textOnlyV4 = 'Your instructions for Gemini\n\n[BetterView v4] latest prompt';
     expect(extractInstructionVersion(textOnlyV4)).toBe(4);
-    expect(hasOlderInstruction(textOnlyV4)).toBe(false);
+    expect(hasOlderInstruction(textOnlyV4)).toBe(true);
 
     // only plain [BetterView] -> 1 and true
     const textPlain = 'Your instructions for Gemini\n\n[BetterView] original prompt';
@@ -394,7 +394,7 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
 
     await fillGeminiMemoryDialog(overlay, { waitTimeoutMs: 2000, pollIntervalMs: 50 });
 
-    expect(textarea.value.startsWith('[BetterView v4] ')).toBe(true);
+    expect(textarea.value.startsWith('[BetterView v6] ')).toBe(true);
     expect(textarea.value).toBe(getCompactInstruction());
     expect(submitClicked).toBe(true);
 
@@ -1041,7 +1041,7 @@ describe('runGrokSetup', () => {
 
     const result = await runGrokSetup();
     expect(result.status).toBe('added');
-    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value.startsWith('[BetterView v4]')).toBe(true);
+    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value.startsWith('[BetterView v6]')).toBe(true);
     document.body.replaceChildren();
   });
 
@@ -1059,7 +1059,7 @@ describe('runGrokSetup', () => {
     const result = await runGrokSetup();
     const textarea = region.querySelector('textarea')!;
     expect(result.status).toBe('added');
-    expect(textarea.value.startsWith('[BetterView v4]')).toBe(true);
+    expect(textarea.value.startsWith('[BetterView v6]')).toBe(true);
 
     region.remove();
   });
@@ -1070,14 +1070,14 @@ describe('runGrokSetup', () => {
     region.setAttribute('aria-label', 'Customize');
     region.innerHTML = `
       <button role="combobox">Custom</button>
-      <textarea aria-label="Instructions">[BetterView v4] current instruction</textarea>
+      <textarea aria-label="Instructions">[BetterView v6] current instruction</textarea>
       <button>Save</button>
     `;
     document.body.appendChild(region);
 
     const result = await runGrokSetup();
     expect(result.status).toBe('already');
-    expect(region.querySelector('textarea')?.value).toBe('[BetterView v4] current instruction');
+    expect(region.querySelector('textarea')?.value).toBe('[BetterView v6] current instruction');
 
     region.remove();
   });
