@@ -1,5 +1,5 @@
 .iui-stats-card {
-  border-radius: 18px;
+  border-radius: var(--iui-radius-card, 18px);
 }
 
 .iui-stats-grid {
@@ -11,13 +11,27 @@
 .iui-stat-item {
   background-color: var(--iui-surface);
   border: 1px solid var(--iui-border);
-  border-radius: 12px;
+  border-radius: var(--iui-radius-inner, 12px);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
   box-sizing: border-box;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.iui-root[data-host="gemini"] .iui-stat-item {
+  border-radius: 12px;
+  background-color: var(--iui-surface-2);
+  border: none;
+  box-shadow: none;
+}
+
+.iui-root[data-host="grok"] .iui-stat-item {
+  border-radius: 8px;
+  background-color: var(--iui-surface);
+  border: 1px solid var(--iui-border);
+  box-shadow: none;
 }
 
 .iui-stat-label-row {

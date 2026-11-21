@@ -1,5 +1,5 @@
 .iui-compare-card {
-  border-radius: 18px;
+  border-radius: var(--iui-radius-card, 18px);
 }
 
 .iui-compare-grid {
@@ -9,13 +9,27 @@
 }
 
 .iui-compare-panel {
-  border-radius: 12px;
+  border-radius: var(--iui-radius-inner, 12px);
   padding: 16px;
   background-color: var(--iui-surface);
   border: 1px solid var(--iui-border);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
+}
+
+.iui-root[data-host="gemini"] .iui-compare-panel {
+  border-radius: 12px;
+  background-color: var(--iui-surface-2);
+  border: none;
+  box-shadow: none;
+}
+
+.iui-root[data-host="grok"] .iui-compare-panel {
+  border-radius: 8px;
+  background-color: var(--iui-surface);
+  border: 1px solid var(--iui-border);
+  box-shadow: none;
 }
 
 .iui-compare-panel.is-col-left {

@@ -1,6 +1,6 @@
 import './popup.css';
 import { loadSettings, saveSettings, onSettingsChange, Settings } from '../shared/settings';
-import { SYSTEM_INSTRUCTION, CURRENT_INSTRUCTION_VERSION } from '../shared/systemInstruction';
+import { SETUP_INSTRUCTION, CURRENT_INSTRUCTION_VERSION } from '../shared/systemInstruction';
 import { h, clear } from '../core/dom';
 import { iconEl } from '../core/icons';
 import { geminiIconSvg, grokIconSvg } from '../core/brandIcons';
@@ -55,7 +55,7 @@ export function initPopup(): () => void {
     logoGrok.prepend(grkSvg);
   }
 
-  // Backwards compatibility with tests looking inside icon-gemini / icon-grok
+  // Backwards compatibility with tests looking inside icon-gemini / icon-grok / check / chevron
   if (iconGemini && !iconGemini.hasChildNodes()) {
     iconGemini.appendChild(geminiIconSvg(14));
   }
@@ -72,82 +72,112 @@ export function initPopup(): () => void {
     manualChevron.appendChild(iconEl('caret-down', 14));
   }
 
-  // Populate system instruction preview
+  // Populate system instruction preview with SETUP_INSTRUCTION
   if (instructionEl) {
-    instructionEl.textContent = SYSTEM_INSTRUCTION;
+    instructionEl.textContent = SETUP_INSTRUCTION;
     if ('value' in instructionEl) {
-      (instructionEl as HTMLTextAreaElement).value = SYSTEM_INSTRUCTION;
+      (instructionEl as HTMLTextAreaElement).value = SETUP_INSTRUCTION;
     }
   }
 
-  // Status text helper with crossfade animation
+  // Set version in footer
+  const versionTag = document.querySelector<HTMLElement>('.version-tag');
+  if (versionTag) {
+    const version =
+      (typeof chrome !== 'undefined' && chrome.runtime?.getManifest?.()?.version) || '0.1.0';
+    versionTag.textContent = `v${version}`;
+  }
+
+  // Hidden status text helper for screen reader / test compatibility
   function setStatusText(text: string, type: 'muted' | 'success' | 'error' = 'muted'): void {
     if (setupStatusEl) {
       setupStatusEl.textContent = text;
-      setupStatusEl.className = `setup-status-line status-${type}`;
-      setupStatusEl.classList.remove('crossfade');
-      void setupStatusEl.offsetWidth;
-      setupStatusEl.classList.add('crossfade');
+      setupStatusEl.className = `setup-status-line sr-only status-${type}`;
     }
   }
 
-  // Render setup status for a site
+  type StatusKind = 'ready' | 'needs-update' | 'not-set-up' | 'failed';
+
+  // Render per-site setup status
   function renderSetupStatus(
     site: 'gemini' | 'grok',
-    data?: { status: string; version?: number; error?: string; hasOldEntry?: boolean },
+    data?: { status?: string; version?: number; error?: string; hasOldEntry?: boolean },
   ): void {
     const btn = site === 'gemini' ? setupGeminiBtn : setupGrokBtn;
     const label = site === 'gemini' ? labelGemini : labelGrok;
-    const statusLine = site === 'gemini' ? setupGeminiStatus : setupGrokStatus;
+    const statusTextEl = site === 'gemini' ? setupGeminiStatus : setupGrokStatus;
     const spinner = site === 'gemini' ? spinnerGemini : spinnerGrok;
-
-    if (!data) {
-      if (statusLine) statusLine.textContent = 'Not set up';
-      if (label) label.textContent = 'Set up';
-      btn?.classList.remove('is-done');
-      return;
-    }
+    const rowEl = document.getElementById(`row-${site}`);
+    const dot = rowEl?.querySelector<HTMLElement>('.site-status-dot');
 
     spinner?.classList.add('hidden');
     label?.classList.remove('hidden');
 
-    if (data.status === 'added' || data.status === 'already') {
-      const isOlder = (data.version || 1) < CURRENT_INSTRUCTION_VERSION;
-      if (isOlder) {
-        if (statusLine) {
-          statusLine.textContent = 'Update available';
-          statusLine.className = 'site-status-text status-warning';
-        }
-        if (label) label.textContent = 'Update';
-        btn?.classList.remove('is-done');
-        if (site === 'gemini' && geminiUpdateHint) {
-          geminiUpdateHint.classList.remove('hidden');
-        }
-        setStatusText(data.status === 'added' ? 'Added \u2713' : 'Already set up \u2713', 'success');
+    let kind: StatusKind = 'not-set-up';
+    let statusText = 'Not set up';
+    let btnLabel = 'Set up';
+    let isGhost = false;
+    let title = '';
+
+    if (!data || !data.status) {
+      kind = 'not-set-up';
+      statusText = 'Not set up';
+      btnLabel = 'Set up';
+    } else if (data.status === 'added' || data.status === 'already') {
+      const ver = data.version ?? 1;
+      if (ver >= 3) {
+        kind = 'ready';
+        statusText = 'Ready';
+        btnLabel = 'Redo';
+        isGhost = true;
       } else {
-        btn?.classList.add('is-done');
-        if (statusLine) {
-          statusLine.textContent = 'Set up \u2713';
-          statusLine.className = 'site-status-text status-success';
-        }
-        if (label) label.textContent = 'Redo';
-        if (site === 'gemini' && geminiUpdateHint) {
-          if (data.hasOldEntry) {
-            geminiUpdateHint.classList.remove('hidden');
-          } else {
-            geminiUpdateHint.classList.add('hidden');
-          }
-        }
-        setStatusText(data.status === 'added' ? 'Added \u2713' : 'Already set up \u2713', 'success');
+        kind = 'needs-update';
+        statusText = 'Needs update';
+        btnLabel = 'Update';
       }
     } else if (data.status === 'failed') {
-      btn?.classList.remove('is-done');
-      if (statusLine) {
-        statusLine.textContent = 'Failed';
-        statusLine.className = 'site-status-text status-error';
+      kind = 'failed';
+      statusText = "Setup didn't finish";
+      btnLabel = 'Retry';
+      title = data.error || "Setup didn't finish";
+    }
+
+    if (statusTextEl) {
+      statusTextEl.textContent = statusText;
+      statusTextEl.className = `site-status-text status-${kind}`;
+      if (title) {
+        statusTextEl.setAttribute('title', title);
+      } else {
+        statusTextEl.removeAttribute('title');
       }
-      if (label) label.textContent = 'Set up';
-      setStatusText(data.error || "Couldn't do it, use Copy", 'error');
+    }
+
+    if (dot) {
+      dot.className = `site-status-dot dot-${kind}`;
+    }
+
+    if (label) {
+      label.textContent = btnLabel;
+    }
+
+    if (btn) {
+      if (isGhost) {
+        btn.classList.add('btn-ghost');
+        btn.classList.remove('btn-primary');
+        btn.classList.add('is-done');
+      } else {
+        btn.classList.remove('btn-ghost');
+        btn.classList.add('btn-primary');
+        btn.classList.remove('is-done');
+      }
+    }
+
+    if (site === 'gemini' && geminiUpdateHint) {
+      if (data?.hasOldEntry) {
+        geminiUpdateHint.classList.remove('hidden');
+      } else {
+        geminiUpdateHint.classList.add('hidden');
+      }
     }
   }
 
@@ -157,15 +187,16 @@ export function initPopup(): () => void {
       ['gemini_setup_status', 'grok_setup_status', 'hasUpdateDot', 'lastSeenVersion'],
       (items) => {
         const gemini = items.gemini_setup_status as
-          | { status: string; version?: number; error?: string; timestamp?: number }
+          | { status: string; version?: number; error?: string; hasOldEntry?: boolean; timestamp?: number }
           | undefined;
         const grok = items.grok_setup_status as
-          | { status: string; version?: number; error?: string; timestamp?: number }
+          | { status: string; version?: number; error?: string; hasOldEntry?: boolean; timestamp?: number }
           | undefined;
 
         if (gemini) renderSetupStatus('gemini', gemini);
         if (grok) renderSetupStatus('grok', grok);
 
+        // Keep setupStatusEl text updated for screen readers / tests
         if (gemini && grok) {
           const geminiTime = gemini.timestamp || 0;
           const grokTime = grok.timestamp || 0;
@@ -193,20 +224,36 @@ export function initPopup(): () => void {
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'local') {
         if (changes.gemini_setup_status) {
-          renderSetupStatus(
-            'gemini',
-            changes.gemini_setup_status.newValue as
-              | { status: string; version?: number; error?: string }
-              | undefined,
-          );
+          const val = changes.gemini_setup_status.newValue as
+            | { status: string; version?: number; error?: string; hasOldEntry?: boolean }
+            | undefined;
+          renderSetupStatus('gemini', val);
+          if (val) {
+            setStatusText(
+              val.status === 'added'
+                ? 'Added \u2713'
+                : val.status === 'already'
+                  ? 'Already set up \u2713'
+                  : (val.error || 'Failed'),
+              val.status === 'failed' ? 'error' : 'success',
+            );
+          }
         }
         if (changes.grok_setup_status) {
-          renderSetupStatus(
-            'grok',
-            changes.grok_setup_status.newValue as
-              | { status: string; version?: number; error?: string }
-              | undefined,
-          );
+          const val = changes.grok_setup_status.newValue as
+            | { status: string; version?: number; error?: string; hasOldEntry?: boolean }
+            | undefined;
+          renderSetupStatus('grok', val);
+          if (val) {
+            setStatusText(
+              val.status === 'added'
+                ? 'Added \u2713'
+                : val.status === 'already'
+                  ? 'Already set up \u2713'
+                  : (val.error || 'Failed'),
+              val.status === 'failed' ? 'error' : 'success',
+            );
+          }
         }
         if (changes.hasUpdateDot) {
           if (changes.hasUpdateDot.newValue) {
@@ -224,6 +271,7 @@ export function initPopup(): () => void {
     setupGeminiBtn.addEventListener('click', () => {
       setStatusText('Setting up\u2026', 'muted');
       spinnerGemini?.classList.remove('hidden');
+      if (labelGemini) labelGemini.textContent = 'Setting up';
       if (setupGeminiStatus) setupGeminiStatus.textContent = 'Setting up...';
       if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
         chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'gemini' });
@@ -235,6 +283,7 @@ export function initPopup(): () => void {
     setupGrokBtn.addEventListener('click', () => {
       setStatusText('Setting up\u2026', 'muted');
       spinnerGrok?.classList.remove('hidden');
+      if (labelGrok) labelGrok.textContent = 'Setting up';
       if (setupGrokStatus) setupGrokStatus.textContent = 'Setting up...';
       if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
         chrome.runtime.sendMessage({ type: 'START_AUTO_SETUP', site: 'grok' });
@@ -257,7 +306,7 @@ export function initPopup(): () => void {
         tryItBtn.classList.add('is-copied');
         if (tryItTimeoutId !== null) window.clearTimeout(tryItTimeoutId);
         tryItTimeoutId = window.setTimeout(() => {
-          if (tryItLabel) tryItLabel.textContent = 'Copy sample';
+          if (tryItLabel) tryItLabel.textContent = 'Copy prompt';
           tryItBtn.classList.remove('is-copied');
           tryItTimeoutId = null;
         }, 1500);
@@ -275,23 +324,19 @@ export function initPopup(): () => void {
     if (!statusLine) return;
     clear(statusLine);
     if (site === 'gemini') {
-      statusLine.className = 'status-pill status-active';
-      const miniLogo = geminiIconSvg(13);
-      statusLine.appendChild(miniLogo);
-      statusLine.appendChild(document.createTextNode('Active on Gemini'));
+      statusLine.className = 'status-line status-active';
       const dot = h('span', { class: 'status-dot' });
       statusLine.appendChild(dot);
+      statusLine.appendChild(document.createTextNode('Active on Gemini'));
       enableTourLink(true);
     } else if (site === 'grok') {
-      statusLine.className = 'status-pill status-active';
-      const miniLogo = grokIconSvg(13);
-      statusLine.appendChild(miniLogo);
-      statusLine.appendChild(document.createTextNode('Active on Grok'));
+      statusLine.className = 'status-line status-active';
       const dot = h('span', { class: 'status-dot' });
       statusLine.appendChild(dot);
+      statusLine.appendChild(document.createTextNode('Active on Grok'));
       enableTourLink(true);
     } else {
-      statusLine.className = 'status-pill status-muted';
+      statusLine.className = 'status-line status-muted';
       statusLine.appendChild(document.createTextNode('Open Gemini or Grok'));
       enableTourLink(false);
     }
@@ -339,7 +384,6 @@ export function initPopup(): () => void {
     welcomeTourLink.addEventListener('click', (e) => {
       e.preventDefault();
       if (!activeTabSite) {
-        // Disabled on other sites with tooltip
         return;
       }
       if (typeof chrome !== 'undefined' && chrome.tabs?.sendMessage && activeTabId !== undefined) {
@@ -375,7 +419,7 @@ export function initPopup(): () => void {
     copyBtn.addEventListener('click', async () => {
       try {
         if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(SYSTEM_INSTRUCTION);
+          await navigator.clipboard.writeText(SETUP_INSTRUCTION);
         }
         copyBtn.classList.add('is-copied');
         const copyLabel = copyBtn.querySelector('.copy-label') as HTMLElement | null;
@@ -418,7 +462,33 @@ export function initPopup(): () => void {
   }
 
   // Appearance & Theme settings
+  let currentThemeSetting: Settings['theme'] = 'auto';
+
+  const mql =
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-color-scheme: dark)')
+      : null;
+
+  function resolveTheme(setting: Settings['theme']): 'light' | 'dark' {
+    if (setting === 'auto') {
+      return mql && mql.matches ? 'dark' : 'light';
+    }
+    return setting;
+  }
+
   function updateThemeUI(theme: Settings['theme']): void {
+    currentThemeSetting = theme;
+    const resolved = resolveTheme(theme);
+
+    document.documentElement.setAttribute('data-theme', resolved);
+
+    if (logoImg) {
+      logoImg.src = resolved === 'dark' ? '/brand/mark-white.png' : '/brand/mark-black.png';
+    }
+    if (logoSource) {
+      logoSource.srcset = resolved === 'dark' ? '/brand/mark-white.png' : '/brand/mark-black.png';
+    }
+
     if (themeSegmented) {
       themeSegmented.setAttribute('data-value', theme);
       const buttons = themeSegmented.querySelectorAll<HTMLButtonElement>('.segmented-btn');
@@ -437,20 +507,14 @@ export function initPopup(): () => void {
     if (themeSelect) {
       themeSelect.value = theme;
     }
+  }
 
-    if (theme === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
-      if (logoImg) logoImg.src = '/brand/mark-black.png';
-      if (logoSource) logoSource.srcset = '/brand/mark-black.png';
-    } else if (theme === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      if (logoImg) logoImg.src = '/brand/mark-white.png';
-      if (logoSource) logoSource.srcset = '/brand/mark-white.png';
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      if (logoImg) logoImg.src = '/brand/mark-black.png';
-      if (logoSource) logoSource.srcset = '/brand/mark-white.png';
-    }
+  if (mql && mql.addEventListener) {
+    mql.addEventListener('change', () => {
+      if (currentThemeSetting === 'auto') {
+        updateThemeUI('auto');
+      }
+    });
   }
 
   function applySettingsToUI(s: Settings): void {

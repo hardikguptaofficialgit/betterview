@@ -17,6 +17,7 @@ import { renderCode } from './code';
 
 export interface RenderContext {
   theme: ThemeMode;
+  host?: 'gemini' | 'grok';
   onCleanup(fn: () => void): void;
 }
 

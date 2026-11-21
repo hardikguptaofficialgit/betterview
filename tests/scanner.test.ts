@@ -221,6 +221,39 @@ describe('Gemini live DOM code block detection (Bug #2)', () => {
     scanner.stop();
     container.remove();
   });
+
+  it('mounts card toolbar with 3 icon buttons (Copy data, Export card, View source) and sets data-host on .iui-root', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <code-block id="tb-wrap">
+        <div class="code-block-decoration">ui</div>
+        <pre><code class="language-ui">{"type":"callout","tone":"tip","title":"Tip","text":"Hi"}</code></pre>
+      </code-block>
+    `;
+    document.body.appendChild(container);
+
+    const scanner = startScanner(GEMINI_ADAPTER, () => 'light', container);
+    const host = container.querySelector('.iui-host') as HTMLElement;
+    expect(host).not.toBeNull();
+    const shadow = host?.shadowRoot;
+    expect(shadow).not.toBeNull();
+
+    const root = shadow?.querySelector('.iui-root') as HTMLElement;
+    expect(root).not.toBeNull();
+    expect(root.getAttribute('data-host')).toBe('gemini');
+
+    const toolbar = shadow?.querySelector('.iui-card-toolbar');
+    expect(toolbar).not.toBeNull();
+
+    const buttons = toolbar?.querySelectorAll('button');
+    expect(buttons?.length).toBe(3);
+
+    const ariaLabels = Array.from(buttons || []).map((b) => b.getAttribute('aria-label'));
+    expect(ariaLabels).toEqual(['Copy data', 'Export card', 'View source']);
+
+    scanner.stop();
+    container.remove();
+  });
 });
 
 describe('M15: Safe wrapper, prose preservation, and flicker-free streaming', () => {
@@ -422,6 +455,39 @@ describe('M15: Safe wrapper, prose preservation, and flicker-free streaming', ()
     expect(message.querySelector('.iui-host')).toBeNull();
     expect(message.innerHTML).toBe(initialInnerHtml);
 
+    container.remove();
+  });
+
+  it('mounts card toolbar with 3 icon buttons (Copy data, Export card, View source) and sets data-host on .iui-root', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <code-block id="tb-wrap">
+        <div class="code-block-decoration">ui</div>
+        <pre><code class="language-ui">{"type":"callout","tone":"tip","title":"Tip","text":"Hi"}</code></pre>
+      </code-block>
+    `;
+    document.body.appendChild(container);
+
+    const scanner = startScanner(GEMINI_ADAPTER, () => 'light', container);
+    const host = container.querySelector('.iui-host') as HTMLElement;
+    expect(host).not.toBeNull();
+    const shadow = host?.shadowRoot;
+    expect(shadow).not.toBeNull();
+
+    const root = shadow?.querySelector('.iui-root') as HTMLElement;
+    expect(root).not.toBeNull();
+    expect(root.getAttribute('data-host')).toBe('gemini');
+
+    const toolbar = shadow?.querySelector('.iui-card-toolbar');
+    expect(toolbar).not.toBeNull();
+
+    const buttons = toolbar?.querySelectorAll('button');
+    expect(buttons?.length).toBe(3);
+
+    const ariaLabels = Array.from(buttons || []).map((b) => b.getAttribute('aria-label'));
+    expect(ariaLabels).toEqual(['Copy data', 'Export card', 'View source']);
+
+    scanner.stop();
     container.remove();
   });
 });

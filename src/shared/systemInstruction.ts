@@ -108,6 +108,9 @@ function generateCompactCatalog(): string {
 
 export const CURRENT_INSTRUCTION_VERSION = 3;
 
+export const SETUP_INSTRUCTION = `[BetterView v3] Answer normally in text and markdown; the text answer is the main answer and must stand on its own. Only where a visual genuinely helps, add a \`\`\`ui block with ONE valid JSON object at the relevant spot (Never more than 3 per answer, none for short or casual answers, never the whole answer in ui, never invent numbers). Each block is {"type":"<one of the types>","title":"...", ...fields}; use double quotes, no comments, no trailing commas. Followups optional at the end of long answers.
+Types: flow{nodes[id,label,icon?],edges[from,to,label?]} stepper{steps[title,detail]} table{columns,rows} compare{items[label,tone,points]} chart{chartType,labels,datasets[label,data]} stats{items[label,value,delta?]} timeline{events[title,time,text]} callout{tone,text} tabs{tabs[label,content]} quiz{questions[q,options,answer,explain]} mermaid{code} math{latex,steps?} code{language,code} followups{suggestions}`;
+
 export const SYSTEM_INSTRUCTION = `[BetterView v3] Answer normally in plain text and markdown, exactly as you usually would. The text answer is the main answer and must stand on its own. Only where a visual genuinely adds clarity (a process or architecture, sequential steps, a comparison, tabular data, real metrics, a timeline, a formula), ALSO add a fenced code block with language ui containing ONE valid JSON object (double quotes, no comments, no trailing commas, "type" first, then "title"). Place it at the relevant spot inside your normal answer; keep the explanatory text around it. Short or simple answers, greetings and casual chat get no ui blocks. Never more than 3 ui blocks per answer. Never put the whole answer inside ui blocks. Never invent numbers. A followups block is optional and only at the very end of long answers.
 
 Type catalog:
@@ -117,5 +120,5 @@ export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v3] Answer normally in mark
 Types: ${generateCompactCatalog()}`;
 
 export function getCompactInstruction(): string {
-  return SYSTEM_INSTRUCTION;
+  return SETUP_INSTRUCTION;
 }

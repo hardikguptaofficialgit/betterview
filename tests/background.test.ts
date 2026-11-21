@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleInstalled } from '../src/background';
+import { handleInstalled, handleMessage } from '../src/background';
 
 describe('Background onInstalled handler', () => {
   let localStore: Record<string, unknown> = {};
@@ -79,5 +79,42 @@ describe('Background onInstalled handler', () => {
     expect(chrome.tabs.create).not.toHaveBeenCalled();
     expect(badgeText).toBe('');
     expect(Object.keys(localStore).length).toBe(0);
+  });
+});
+
+describe('Background onMessage START_AUTO_SETUP handler', () => {
+  it('stores pendingSetup before creating the tab', () => {
+    let storedBeforeTab = false;
+    let pendingData: Record<string, unknown> | null = null;
+    let tabCreated = false;
+
+    (globalThis as unknown as { chrome: any }).chrome = {
+      storage: {
+        local: {
+          set: vi.fn((data: Record<string, unknown>, cb?: () => void) => {
+            if (data.pendingSetup) {
+              pendingData = data.pendingSetup as Record<string, unknown>;
+              storedBeforeTab = !tabCreated;
+            }
+            cb?.();
+          }),
+        },
+      },
+      tabs: {
+        create: vi.fn(() => {
+          tabCreated = true;
+        }),
+      },
+    };
+
+    handleMessage({ type: 'START_AUTO_SETUP', site: 'gemini' }, {}, () => {});
+
+    expect(storedBeforeTab).toBe(true);
+    expect(pendingData).not.toBeNull();
+    expect((pendingData as any)?.site).toBe('gemini');
+    expect(typeof (pendingData as any)?.ts).toBe('number');
+    expect(chrome.tabs.create).toHaveBeenCalledWith({
+      url: 'https://gemini.google.com/saved-info#betterview-setup',
+    });
   });
 });

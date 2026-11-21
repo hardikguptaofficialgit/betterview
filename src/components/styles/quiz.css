@@ -1,5 +1,5 @@
 .iui-quiz-card {
-  border-radius: 18px;
+  border-radius: var(--iui-radius-card, 18px);
 }
 
 .iui-quiz-header {
@@ -29,7 +29,7 @@
 
 .iui-quiz-q-card {
   border: 1px solid var(--iui-border);
-  border-radius: 12px;
+  border-radius: var(--iui-radius-inner, 12px);
   padding: 16px;
   background-color: var(--iui-surface);
 }

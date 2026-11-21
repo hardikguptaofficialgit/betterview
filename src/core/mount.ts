@@ -1,4 +1,5 @@
 import { ThemeMode } from './theme';
+import { readHostTypography, applyHostTheme } from './hostTheme';
 import { UISpec, UIType, UI_TYPES } from './types';
 import { tryParse, sniffType } from './parse';
 import { parsePartialJson } from './partialJson';
@@ -9,7 +10,7 @@ import { TYPE_META } from './incremental';
 import { RENDERERS, RenderContext } from '../components/index';
 import baseCss from './styles/base.css?inline';
 import { COMPONENT_STYLES } from '../components/styles';
-import { exportCard } from './export';
+import { exportCard, showCardToast } from './export';
 import { loadSettings, onSettingsChange } from '../shared/settings';
 
 export interface BlockHandle {
@@ -51,6 +52,7 @@ export function mountBlock(
   anchor: HTMLElement,
   opts: {
     theme: ThemeMode;
+    host?: 'gemini' | 'grok';
     insert?: 'after' | 'inside' | 'before';
     onStateChange?: (state: 'skeleton' | 'rendered' | 'fallback') => void;
     initialText?: string;
@@ -78,8 +80,18 @@ export function mountBlock(
   applyStylesToShadowRoot(shadowRoot);
 
   let currentTheme: ThemeMode = opts.theme;
-  const root = h('div', { class: 'iui-root', 'data-theme': currentTheme });
+  const rootAttrs: Record<string, string> = {
+    class: 'iui-root',
+    'data-theme': currentTheme,
+  };
+  if (opts.host) {
+    rootAttrs['data-host'] = opts.host;
+  }
+  const root = h('div', rootAttrs);
   shadowRoot.appendChild(root);
+
+  const initialTypography = readHostTypography(anchor);
+  applyHostTheme(root, opts.host, currentTheme, initialTypography);
 
   let currentState: 'skeleton' | 'rendered' | 'fallback' = 'skeleton';
   let cleanups: (() => void)[] = [];
@@ -169,7 +181,38 @@ export function mountBlock(
     // Right: hover toolbar
     const toolbar = h('div', { class: 'iui-card-toolbar' });
 
-    // Export button and dropdown menu
+    // 1. Copy data button
+    const copyTooltip = h('span', { class: 'iui-tooltip', role: 'tooltip' }, 'Copy data');
+    const copyBtn = h(
+      'button',
+      {
+        class: 'iui-tool-btn',
+        type: 'button',
+        'aria-label': 'Copy data',
+        onClick: async (e: Event) => {
+          e.stopPropagation();
+          try {
+            await navigator.clipboard.writeText(lastRawText);
+            clear(copyBtn);
+            copyBtn.appendChild(iconEl('check', 16));
+            copyTooltip.textContent = 'Copied';
+            copyBtn.appendChild(copyTooltip);
+            setTimeout(() => {
+              clear(copyBtn);
+              copyBtn.appendChild(iconEl('copy', 16));
+              copyTooltip.textContent = 'Copy data';
+              copyBtn.appendChild(copyTooltip);
+            }, 1500);
+          } catch {
+            // ignore clipboard errors
+          }
+        },
+      },
+      iconEl('copy', 16),
+      copyTooltip,
+    );
+
+    // 2. Export button and dropdown menu
     const exportWrap = h('div', { class: 'iui-export-wrap' });
     const exportMenu = h('div', { class: 'iui-export-menu is-hidden', role: 'menu' });
 
@@ -208,7 +251,7 @@ export function mountBlock(
               }
             },
           },
-          iconEl('image', 14, 'iui-export-item-icon'),
+          iconEl('image', 16, 'iui-export-item-icon'),
           document.createTextNode('Copy as image'),
         );
 
@@ -233,12 +276,35 @@ export function mountBlock(
               }
             },
           },
-          iconEl('download-simple', 14, 'iui-export-item-icon'),
+          iconEl('download-simple', 16, 'iui-export-item-icon'),
           document.createTextNode('Download PNG'),
+        );
+
+        const jsonItem = h(
+          'button',
+          {
+            class: 'iui-export-item',
+            type: 'button',
+            role: 'menuitem',
+            onClick: async (e: Event) => {
+              e.stopPropagation();
+              closeExportMenu();
+              try {
+                await navigator.clipboard.writeText(lastRawText);
+                const cardEl = getCardEl();
+                if (cardEl) {
+                  showCardToast(cardEl, 'JSON copied \u2713');
+                }
+              } catch {}
+            },
+          },
+          iconEl('code', 16, 'iui-export-item-icon'),
+          document.createTextNode('Copy JSON'),
         );
 
         exportMenu.appendChild(copyItem);
         exportMenu.appendChild(pngItem);
+        exportMenu.appendChild(jsonItem);
 
         if (canSvg) {
           const svgItem = h(
@@ -262,7 +328,7 @@ export function mountBlock(
                 }
               },
             },
-            iconEl('code', 14, 'iui-export-item-icon'),
+            iconEl('code', 16, 'iui-export-item-icon'),
             document.createTextNode('Download SVG'),
           );
           exportMenu.appendChild(svgItem);
@@ -279,12 +345,12 @@ export function mountBlock(
       }
     }
 
+    const exportTooltip = h('span', { class: 'iui-tooltip', role: 'tooltip' }, 'Export card');
     const exportBtn = h(
       'button',
       {
         class: 'iui-tool-btn',
         type: 'button',
-        title: 'Export card',
         'aria-label': 'Export card',
         'aria-haspopup': 'menu',
         'aria-expanded': 'false',
@@ -293,47 +359,20 @@ export function mountBlock(
           toggleExportMenu();
         },
       },
-      iconEl('export', 15),
+      iconEl('export', 16),
+      exportTooltip,
     );
 
     exportWrap.appendChild(exportBtn);
     exportWrap.appendChild(exportMenu);
 
-    // 1. Copy data button
-    const copyBtn = h(
-      'button',
-      {
-        class: 'iui-tool-btn',
-        type: 'button',
-        title: 'Copy data',
-        'aria-label': 'Copy data',
-        onClick: async (e: Event) => {
-          e.stopPropagation();
-          try {
-            await navigator.clipboard.writeText(lastRawText);
-            clear(copyBtn);
-            copyBtn.appendChild(iconEl('check', 15));
-            copyBtn.setAttribute('title', 'Copied!');
-            setTimeout(() => {
-              clear(copyBtn);
-              copyBtn.appendChild(iconEl('copy', 15));
-              copyBtn.setAttribute('title', 'Copy data');
-            }, 1500);
-          } catch {
-            // ignore clipboard errors
-          }
-        },
-      },
-      iconEl('copy', 15),
-    );
-
-    // 2. View source button
+    // 3. View source button
+    const sourceTooltip = h('span', { class: 'iui-tooltip', role: 'tooltip' }, 'View source');
     const sourceBtn = h(
       'button',
       {
         class: 'iui-tool-btn',
         type: 'button',
-        title: 'View source',
         'aria-label': 'View source',
         onClick: (e: Event) => {
           e.stopPropagation();
@@ -347,29 +386,13 @@ export function mountBlock(
           }
         },
       },
-      iconEl('code', 15),
+      iconEl('code', 16),
+      sourceTooltip,
     );
 
-    // 3. Expand modal button
-    const expandBtn = h(
-      'button',
-      {
-        class: 'iui-tool-btn',
-        type: 'button',
-        title: 'Expand',
-        'aria-label': 'Expand',
-        onClick: (e: Event) => {
-          e.stopPropagation();
-          openExpandModal(expandBtn, getSpec);
-        },
-      },
-      iconEl('corners-out', 15),
-    );
-
-    toolbar.appendChild(exportWrap);
     toolbar.appendChild(copyBtn);
+    toolbar.appendChild(exportWrap);
     toolbar.appendChild(sourceBtn);
-    toolbar.appendChild(expandBtn);
     header.appendChild(toolbar);
 
     // Source panel
@@ -426,6 +449,7 @@ export function mountBlock(
     try {
       const modalCtx: RenderContext = {
         theme: currentTheme,
+        host: opts.host,
         onCleanup: () => {},
       };
       const renderer = RENDERERS[currentSpec.type];
@@ -565,6 +589,7 @@ export function mountBlock(
     try {
       const ctx: RenderContext = {
         theme: currentTheme,
+        host: opts.host,
         onCleanup(fn: () => void) {
           cleanups.push(fn);
         },
@@ -597,10 +622,6 @@ export function mountBlock(
 
       const wrapper = h('div', { class: 'iui-rendered-wrap' });
       wrapper.appendChild(componentEl);
-
-      // Legacy toggle button kept in DOM for backward test compatibility
-      const toggleBtn = h('button', { class: 'iui-source-toggle' }, '{ } View source');
-      wrapper.appendChild(toggleBtn);
 
       clear(root);
       root.appendChild(wrapper);
@@ -828,6 +849,8 @@ export function mountBlock(
     setTheme(t: ThemeMode) {
       currentTheme = t;
       root.setAttribute('data-theme', t);
+      const typography = readHostTypography(anchor);
+      applyHostTheme(root, opts.host, t, typography);
       if (currentState === 'rendered' && lastRenderedSpec) {
         renderSpec(lastRenderedSpec, lastRawText);
       }

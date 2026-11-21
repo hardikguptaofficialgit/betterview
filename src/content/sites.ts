@@ -308,7 +308,7 @@ export const GROK_SETUP_SELECTORS = {
   customizeButton: 'button',
   dropdown: 'button[aria-label="Customize Grok\'s Response"]',
   menuitemRadio: '[role="menuitemradio"]',
-  textarea: 'textarea[aria-label="Instructions"]',
+  textarea: 'textarea[aria-label="Instructions"], textarea',
   saveButton: 'button',
 };
 
@@ -509,22 +509,42 @@ export async function fillGeminiMemoryDialog(
   }
 }
 
+function findGeminiAddButton(): HTMLButtonElement | null {
+  const buttons = document.querySelectorAll(GEMINI_SETUP_SELECTORS.addButton);
+  for (const b of Array.from(buttons)) {
+    const label = b.querySelector('span.mdc-button__label');
+    const txt = (label?.textContent || b.textContent || '').trim().toLowerCase();
+    if (txt === 'add') {
+      return b as HTMLButtonElement;
+    }
+  }
+  return null;
+}
+
 export async function runGeminiSetup(): Promise<SetupResult> {
   try {
-    let headingFound = false;
+    let headingOrAddFound = false;
     const startHeading = Date.now();
     while (Date.now() - startHeading < 10000) {
-      const headings = document.querySelectorAll(GEMINI_SETUP_SELECTORS.heading);
+      const headings = document.querySelectorAll('h1, h2, h3, [role="heading"]');
       for (const h of Array.from(headings)) {
-        if (h.textContent?.includes('Your instructions for Gemini')) {
-          headingFound = true;
+        const text = (h.textContent || '').toLowerCase().replace(/\s+/g, ' ');
+        if (
+          text.includes('your instructions for gemini') ||
+          text.includes('saved info') ||
+          text.includes('instructions for gemini')
+        ) {
+          headingOrAddFound = true;
           break;
         }
       }
-      if (headingFound) break;
+      if (headingOrAddFound || findGeminiAddButton()) {
+        headingOrAddFound = true;
+        break;
+      }
       await new Promise((r) => setTimeout(r, 200));
     }
-    if (!headingFound) {
+    if (!headingOrAddFound) {
       const msg = "Couldn't find instructions section";
       console.warn('[BetterView]', msg);
       return { status: 'failed', error: msg };
@@ -540,15 +560,7 @@ export async function runGeminiSetup(): Promise<SetupResult> {
       return res;
     }
 
-    const buttons = document.querySelectorAll(GEMINI_SETUP_SELECTORS.addButton);
-    let addBtn: HTMLButtonElement | null = null;
-    for (const b of Array.from(buttons)) {
-      const label = b.querySelector('span.mdc-button__label');
-      if (label?.textContent?.trim() === 'Add' || b.textContent?.trim() === 'Add') {
-        addBtn = b as HTMLButtonElement;
-        break;
-      }
-    }
+    const addBtn = findGeminiAddButton();
     if (!addBtn) {
       const msg = "Couldn't find Add button";
       console.warn('[BetterView]', msg);
@@ -569,11 +581,30 @@ export async function runGeminiSetup(): Promise<SetupResult> {
     let entryAppeared = false;
     const startConfirm = Date.now();
     while (Date.now() - startConfirm < 10000) {
-      const ver = extractInstructionVersion(document.body.textContent ?? '');
-      if (ver !== null && ver >= CURRENT_INSTRUCTION_VERSION) {
+      const normalizedBody = (document.body.textContent ?? '').replace(/\s+/g, ' ');
+      if (/wasn't saved|something went wrong/i.test(normalizedBody)) {
+        const msg = 'Gemini rejected the entry';
+        console.warn('[BetterView]', msg);
+        const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
+        recordSetupResult('gemini', res);
+        return res;
+      }
+
+      if (/\[BetterView\s+v3/i.test(normalizedBody)) {
         entryAppeared = true;
         break;
       }
+
+      const inputs = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
+      for (const input of Array.from(inputs)) {
+        const val = (input.value ?? '').replace(/\s+/g, ' ');
+        if (/\[BetterView\s+v3/i.test(val)) {
+          entryAppeared = true;
+          break;
+        }
+      }
+      if (entryAppeared) break;
+
       await new Promise((r) => setTimeout(r, 200));
     }
 
@@ -690,6 +721,16 @@ export async function runGrokSetup(): Promise<SetupResult> {
     }
 
     const nextVal = appendInstruction(textarea.value, getCompactInstruction());
+
+    if (textarea.maxLength > 0 && nextVal.length > textarea.maxLength) {
+      showGrokFallbackToast();
+      const msg = "Not enough room in Grok's custom instructions";
+      console.warn('[BetterView]', msg);
+      const res: SetupResult = { status: 'failed', error: msg };
+      recordSetupResult('grok', res);
+      return res;
+    }
+
     const desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
     if (desc?.set) {
       desc.set.call(textarea, nextVal);
@@ -711,7 +752,9 @@ export async function runGrokSetup(): Promise<SetupResult> {
       showGrokFallbackToast();
       const msg = "Couldn't find Save button";
       console.warn('[BetterView]', msg);
-      return { status: 'failed', error: msg };
+      const res: SetupResult = { status: 'failed', error: msg };
+      recordSetupResult('grok', res);
+      return res;
     }
 
     for (let i = 0; i < 10; i++) {
@@ -722,17 +765,45 @@ export async function runGrokSetup(): Promise<SetupResult> {
       showGrokFallbackToast();
       const msg = "Save button remained disabled";
       console.warn('[BetterView]', msg);
-      return { status: 'failed', error: msg };
+      const res: SetupResult = { status: 'failed', error: msg };
+      recordSetupResult('grok', res);
+      return res;
     }
     saveBtn.click();
 
-    await new Promise((r) => setTimeout(r, 800));
-    return { status: 'added', version: CURRENT_INSTRUCTION_VERSION, hasOldEntry: hasOlderInstruction(textarea.value) };
+    let saved = false;
+    const startWait = Date.now();
+    while (Date.now() - startWait < 3000) {
+      await new Promise((r) => setTimeout(r, 200));
+      if (textarea.value.includes('[BetterView v3')) {
+        saved = true;
+        break;
+      }
+    }
+
+    if (!saved) {
+      showGrokFallbackToast();
+      const msg = "Grok didn't save";
+      console.warn('[BetterView]', msg);
+      const res: SetupResult = { status: 'failed', error: msg };
+      recordSetupResult('grok', res);
+      return res;
+    }
+
+    const res: SetupResult = {
+      status: 'added',
+      version: CURRENT_INSTRUCTION_VERSION,
+      hasOldEntry: hasOlderInstruction(textarea.value),
+    };
+    recordSetupResult('grok', res);
+    return res;
   } catch (err: unknown) {
     showGrokFallbackToast();
     const msg = err instanceof Error ? err.message : String(err);
     console.warn('[BetterView]', 'Grok setup error:', msg);
-    return { status: 'failed', error: msg };
+    const res: SetupResult = { status: 'failed', error: msg };
+    recordSetupResult('grok', res);
+    return res;
   }
 }
 

@@ -1,5 +1,5 @@
 .iui-stepper-card {
-  border-radius: 18px;
+  border-radius: var(--iui-radius-card, 18px);
 }
 
 .iui-stepper-list {

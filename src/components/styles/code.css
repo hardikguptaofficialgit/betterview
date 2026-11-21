@@ -2,6 +2,39 @@
 .iui-code-card {
   padding: 0;
   overflow: hidden;
+  border-radius: var(--iui-radius-card, 18px);
+}
+
+.iui-root[data-host="gemini"] .iui-code-card {
+  background-color: var(--iui-surface);
+  border: none;
+  border-radius: 16px;
+}
+
+.iui-root[data-host="gemini"] .iui-code-inner-header {
+  background-color: var(--iui-surface-2);
+  border-bottom: 1px solid var(--iui-border);
+}
+
+.iui-root[data-host="gemini"] .iui-code-wrap {
+  background-color: var(--iui-surface);
+  font-family: var(--iui-mono, "Google Sans Mono", monospace);
+}
+
+.iui-root[data-host="grok"] .iui-code-card {
+  background-color: var(--iui-surface-2);
+  border: 1px solid var(--iui-border);
+  border-radius: 8px;
+}
+
+.iui-root[data-host="grok"] .iui-code-inner-header {
+  background-color: var(--iui-surface);
+  border-bottom: 1px solid var(--iui-border);
+}
+
+.iui-root[data-host="grok"] .iui-code-wrap {
+  background-color: var(--iui-surface-2);
+  font-family: var(--iui-mono, ui-monospace, monospace);
 }
 
 .iui-code-inner-header {
@@ -89,7 +122,7 @@
   position: relative;
   overflow-x: auto;
   background-color: var(--iui-bg);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--iui-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
   font-size: 12.5px;
   line-height: 1.6;
 }

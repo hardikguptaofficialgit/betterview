@@ -12,8 +12,28 @@ async function init(): Promise<void> {
   if (!matched) return;
   const adapter: SiteAdapter = matched;
 
-  // Handle auto-setup hash if opened with #betterview-setup
-  if (window.location.hash.includes('betterview-setup')) {
+  // Handle auto-setup if opened with #betterview-setup or pendingSetup storage
+  let shouldRunSetup = window.location.hash.includes('betterview-setup');
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    try {
+      const items = await new Promise<Record<string, unknown>>((resolve) => {
+        chrome.storage.local.get(['pendingSetup'], (res) => resolve(res || {}));
+      });
+      const pending = items.pendingSetup as { site?: string; ts?: number } | undefined;
+      if (pending && pending.site === adapter.id && typeof pending.ts === 'number') {
+        if (Date.now() - pending.ts < 90000) {
+          shouldRunSetup = true;
+        }
+      }
+    } catch {
+      // storage get failed
+    }
+  }
+
+  if (shouldRunSetup) {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      chrome.storage.local.remove('pendingSetup');
+    }
     if (adapter.id === 'gemini') {
       runGeminiSetup()
         .then((res) => recordSetupResult('gemini', res))

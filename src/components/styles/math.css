@@ -12,12 +12,26 @@
   padding: 20px 16px;
   background-color: var(--iui-surface);
   border: 1px solid var(--iui-border);
-  border-radius: 12px;
+  border-radius: var(--iui-radius-inner, 12px);
   overflow-x: auto;
   font-size: 18px;
   line-height: 1.4;
   color: var(--iui-text);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.iui-root[data-host="gemini"] .iui-math-main {
+  border-radius: 12px;
+  background-color: var(--iui-surface-2);
+  border: none;
+  box-shadow: none;
+}
+
+.iui-root[data-host="grok"] .iui-math-main {
+  border-radius: 8px;
+  background-color: var(--iui-surface-2);
+  border: 1px solid var(--iui-border);
+  box-shadow: none;
 }
 
 .iui-math-steps {

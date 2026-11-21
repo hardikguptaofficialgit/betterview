@@ -1,5 +1,5 @@
 .iui-tabs-card {
-  border-radius: 18px;
+  border-radius: var(--iui-radius-card, 18px);
 }
 
 .iui-tabs-nav {
@@ -66,7 +66,7 @@
 .iui-tabs-panel {
   background-color: var(--iui-bg);
   border: 1px solid var(--iui-border);
-  border-radius: 12px;
+  border-radius: var(--iui-radius-inner, 12px);
   padding: 14px 16px;
   min-height: 48px;
   line-height: 1.5;

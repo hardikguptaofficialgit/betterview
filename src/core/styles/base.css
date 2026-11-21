@@ -6,9 +6,9 @@
 
 .iui-root {
   box-sizing: border-box;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-family: var(--iui-font, Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-size: var(--iui-fs, 13.5px);
+  line-height: var(--iui-lh, 1.55);
   color: var(--iui-text);
   background: transparent;
 }
@@ -19,23 +19,106 @@
   box-sizing: border-box;
 }
 
+/* Default / Neutral BetterView theme */
 .iui-root[data-theme="light"],
 .iui-root:not([data-theme="dark"]) {
   --iui-bg: #FFFFFF;
   --iui-surface: #FAFAFA;
+  --iui-surface-2: #F4F4F5;
   --iui-border: rgba(0, 0, 0, 0.08);
   --iui-text: #0A0A0A;
   --iui-muted: #6B6B6B;
   --iui-subtle: #A3A3A3;
+  --iui-accent: #0A0A0A;
+  --iui-accent-bg: #F4F4F5;
+  --iui-radius-card: 18px;
+  --iui-radius-inner: 12px;
+  --iui-font: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --iui-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .iui-root[data-theme="dark"] {
   --iui-bg: #0f0f10;
   --iui-surface: #18181A;
+  --iui-surface-2: #222225;
   --iui-border: rgba(255, 255, 255, 0.08);
   --iui-text: #FAFAFA;
   --iui-muted: #A3A3A3;
   --iui-subtle: #71717A;
+  --iui-accent: #FAFAFA;
+  --iui-accent-bg: #27272A;
+  --iui-radius-card: 18px;
+  --iui-radius-inner: 12px;
+  --iui-font: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --iui-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Gemini Tokens */
+.iui-root[data-host="gemini"][data-theme="light"],
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) {
+  --iui-bg: #FFFFFF;
+  --iui-surface: #F0F4F9;
+  --iui-surface-2: #E9EEF6;
+  --iui-border: #E1E3E1;
+  --iui-text: #1F1F1F;
+  --iui-muted: #444746;
+  --iui-subtle: #747775;
+  --iui-accent: #0B57D0;
+  --iui-accent-bg: #D3E3FD;
+  --iui-radius-card: 16px;
+  --iui-radius-inner: 12px;
+  --iui-font: "Google Sans Text", "Google Sans", Roboto, Arial, sans-serif;
+  --iui-mono: "Google Sans Mono", "Roboto Mono", ui-monospace, monospace;
+}
+
+.iui-root[data-host="gemini"][data-theme="dark"] {
+  --iui-bg: #131314;
+  --iui-surface: #1E1F20;
+  --iui-surface-2: #282A2C;
+  --iui-border: #3C4043;
+  --iui-text: #E3E3E3;
+  --iui-muted: #C4C7C5;
+  --iui-subtle: #8E918F;
+  --iui-accent: #A8C7FA;
+  --iui-accent-bg: rgba(8,66,160,.4);
+  --iui-radius-card: 16px;
+  --iui-radius-inner: 12px;
+  --iui-font: "Google Sans Text", "Google Sans", Roboto, Arial, sans-serif;
+  --iui-mono: "Google Sans Mono", "Roboto Mono", ui-monospace, monospace;
+}
+
+/* Grok Tokens */
+.iui-root[data-host="grok"][data-theme="light"],
+.iui-root[data-host="grok"]:not([data-theme="dark"]) {
+  --iui-bg: #FFFFFF;
+  --iui-surface: #FAFAFA;
+  --iui-surface-2: #F2F2F2;
+  --iui-border: rgba(0,0,0,.08);
+  --iui-text: #0D0D0D;
+  --iui-muted: #6B6B6B;
+  --iui-subtle: #9A9A9A;
+  --iui-accent: #0D0D0D;
+  --iui-accent-bg: #F2F2F2;
+  --iui-radius-card: 12px;
+  --iui-radius-inner: 8px;
+  --iui-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --iui-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.iui-root[data-host="grok"][data-theme="dark"] {
+  --iui-bg: #141414;
+  --iui-surface: #1C1C1C;
+  --iui-surface-2: #242424;
+  --iui-border: rgba(255,255,255,.08);
+  --iui-text: #F5F5F5;
+  --iui-muted: #A3A3A3;
+  --iui-subtle: #737373;
+  --iui-accent: #F5F5F5;
+  --iui-accent-bg: #262626;
+  --iui-radius-card: 12px;
+  --iui-radius-inner: 8px;
+  --iui-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --iui-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 /* Light pastel palette */
@@ -184,11 +267,279 @@
   --c-solid: #8F8F8B;
 }
 
-/* Card: 18px radius, 18px padding, 14px header to body gap */
+/* Gemini Light Tonal Containers */
+.iui-root[data-host="gemini"][data-theme="light"] .c-blue,
+.iui-root[data-host="gemini"][data-theme="light"] .c-sky,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-blue,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-sky {
+  --c-bg: #D3E3FD;
+  --c-line: #B4C8F5;
+  --c-ink: #041E49;
+  --c-solid: #A8C7FA;
+}
+
+.iui-root[data-host="gemini"][data-theme="light"] .c-green,
+.iui-root[data-host="gemini"][data-theme="light"] .c-teal,
+.iui-root[data-host="gemini"][data-theme="light"] .c-mint,
+.iui-root[data-host="gemini"][data-theme="light"] .c-good,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-green,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-teal,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-mint,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-good {
+  --c-bg: #C4EED0;
+  --c-line: #A3E0B5;
+  --c-ink: #072711;
+  --c-solid: #6DD58C;
+}
+
+.iui-root[data-host="gemini"][data-theme="light"] .c-amber,
+.iui-root[data-host="gemini"][data-theme="light"] .c-butter,
+.iui-root[data-host="gemini"][data-theme="light"] .c-warning,
+.iui-root[data-host="gemini"][data-theme="light"] .c-orange,
+.iui-root[data-host="gemini"][data-theme="light"] .c-peach,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-amber,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-butter,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-warning,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-orange,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-peach {
+  --c-bg: rgba(255, 224, 130, 0.4);
+  --c-line: #FFE082;
+  --c-ink: #3F2E00;
+  --c-solid: #FFE082;
+}
+
+.iui-root[data-host="gemini"][data-theme="light"] .c-red,
+.iui-root[data-host="gemini"][data-theme="light"] .c-pink,
+.iui-root[data-host="gemini"][data-theme="light"] .c-rose,
+.iui-root[data-host="gemini"][data-theme="light"] .c-bad,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-red,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-pink,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-rose,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-bad {
+  --c-bg: #F9DEDC;
+  --c-line: #F2B8B5;
+  --c-ink: #410E0B;
+  --c-solid: #E46962;
+}
+
+.iui-root[data-host="gemini"][data-theme="light"] .c-purple,
+.iui-root[data-host="gemini"][data-theme="light"] .c-lavender,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-purple,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-lavender {
+  --c-bg: #E8DEF8;
+  --c-line: #D0BCFF;
+  --c-ink: #21005D;
+  --c-solid: #D0BCFF;
+}
+
+.iui-root[data-host="gemini"][data-theme="light"] .c-gray,
+.iui-root[data-host="gemini"][data-theme="light"] .c-stone,
+.iui-root[data-host="gemini"][data-theme="light"] .c-neutral,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-gray,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-stone,
+.iui-root[data-host="gemini"]:not([data-theme="dark"]) .c-neutral {
+  --c-bg: #E9EEF6;
+  --c-line: #E1E3E1;
+  --c-ink: #1F1F1F;
+  --c-solid: #C4C7C5;
+}
+
+/* Gemini Dark Tonal Containers */
+.iui-root[data-host="gemini"][data-theme="dark"] .c-blue,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-sky {
+  --c-bg: #0842A0;
+  --c-line: #0B57D0;
+  --c-ink: #D3E3FD;
+  --c-solid: #A8C7FA;
+}
+
+.iui-root[data-host="gemini"][data-theme="dark"] .c-green,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-teal,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-mint,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-good {
+  --c-bg: #0F5223;
+  --c-line: #137333;
+  --c-ink: #C4EED0;
+  --c-solid: #81C995;
+}
+
+.iui-root[data-host="gemini"][data-theme="dark"] .c-amber,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-butter,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-warning,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-orange,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-peach {
+  --c-bg: rgba(255, 224, 130, 0.15);
+  --c-line: #544000;
+  --c-ink: #FFE082;
+  --c-solid: #FDD663;
+}
+
+.iui-root[data-host="gemini"][data-theme="dark"] .c-red,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-pink,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-rose,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-bad {
+  --c-bg: #8C1D18;
+  --c-line: #B3261E;
+  --c-ink: #F9DEDC;
+  --c-solid: #F28B82;
+}
+
+.iui-root[data-host="gemini"][data-theme="dark"] .c-purple,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-lavender {
+  --c-bg: #4A4458;
+  --c-line: #605D62;
+  --c-ink: #E8DEF8;
+  --c-solid: #CCC2DC;
+}
+
+.iui-root[data-host="gemini"][data-theme="dark"] .c-gray,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-stone,
+.iui-root[data-host="gemini"][data-theme="dark"] .c-neutral {
+  --c-bg: #282A2C;
+  --c-line: #3C4043;
+  --c-ink: #E3E3E3;
+  --c-solid: #8E918F;
+}
+
+/* Grok Light Near-Monochrome Tints */
+.iui-root[data-host="grok"][data-theme="light"] .c-blue,
+.iui-root[data-host="grok"][data-theme="light"] .c-sky,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-blue,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-sky {
+  --c-bg: rgba(0, 0, 0, 0.05);
+  --c-line: rgba(0, 0, 0, 0.1);
+  --c-ink: #0D0D0D;
+  --c-solid: rgba(0, 0, 0, 0.12);
+}
+
+.iui-root[data-host="grok"][data-theme="light"] .c-green,
+.iui-root[data-host="grok"][data-theme="light"] .c-teal,
+.iui-root[data-host="grok"][data-theme="light"] .c-mint,
+.iui-root[data-host="grok"][data-theme="light"] .c-good,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-green,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-teal,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-mint,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-good {
+  --c-bg: rgba(16, 185, 129, 0.08);
+  --c-line: rgba(16, 185, 129, 0.16);
+  --c-ink: #0D0D0D;
+  --c-solid: rgba(16, 185, 129, 0.2);
+}
+
+.iui-root[data-host="grok"][data-theme="light"] .c-amber,
+.iui-root[data-host="grok"][data-theme="light"] .c-butter,
+.iui-root[data-host="grok"][data-theme="light"] .c-warning,
+.iui-root[data-host="grok"][data-theme="light"] .c-orange,
+.iui-root[data-host="grok"][data-theme="light"] .c-peach,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-amber,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-butter,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-warning,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-orange,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-peach {
+  --c-bg: rgba(245, 158, 11, 0.08);
+  --c-line: rgba(245, 158, 11, 0.16);
+  --c-ink: #0D0D0D;
+  --c-solid: rgba(245, 158, 11, 0.2);
+}
+
+.iui-root[data-host="grok"][data-theme="light"] .c-red,
+.iui-root[data-host="grok"][data-theme="light"] .c-pink,
+.iui-root[data-host="grok"][data-theme="light"] .c-rose,
+.iui-root[data-host="grok"][data-theme="light"] .c-bad,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-red,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-pink,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-rose,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-bad {
+  --c-bg: rgba(239, 68, 68, 0.08);
+  --c-line: rgba(239, 68, 68, 0.16);
+  --c-ink: #0D0D0D;
+  --c-solid: rgba(239, 68, 68, 0.2);
+}
+
+.iui-root[data-host="grok"][data-theme="light"] .c-purple,
+.iui-root[data-host="grok"][data-theme="light"] .c-lavender,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-purple,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-lavender {
+  --c-bg: rgba(139, 92, 246, 0.08);
+  --c-line: rgba(139, 92, 246, 0.16);
+  --c-ink: #0D0D0D;
+  --c-solid: rgba(139, 92, 246, 0.2);
+}
+
+.iui-root[data-host="grok"][data-theme="light"] .c-gray,
+.iui-root[data-host="grok"][data-theme="light"] .c-stone,
+.iui-root[data-host="grok"][data-theme="light"] .c-neutral,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-gray,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-stone,
+.iui-root[data-host="grok"]:not([data-theme="dark"]) .c-neutral {
+  --c-bg: rgba(0, 0, 0, 0.04);
+  --c-line: rgba(0, 0, 0, 0.08);
+  --c-ink: #0D0D0D;
+  --c-solid: rgba(0, 0, 0, 0.1);
+}
+
+/* Grok Dark Near-Monochrome Tints */
+.iui-root[data-host="grok"][data-theme="dark"] .c-blue,
+.iui-root[data-host="grok"][data-theme="dark"] .c-sky {
+  --c-bg: rgba(255, 255, 255, 0.06);
+  --c-line: rgba(255, 255, 255, 0.1);
+  --c-ink: #F5F5F5;
+  --c-solid: rgba(255, 255, 255, 0.15);
+}
+
+.iui-root[data-host="grok"][data-theme="dark"] .c-green,
+.iui-root[data-host="grok"][data-theme="dark"] .c-teal,
+.iui-root[data-host="grok"][data-theme="dark"] .c-mint,
+.iui-root[data-host="grok"][data-theme="dark"] .c-good {
+  --c-bg: rgba(16, 185, 129, 0.1);
+  --c-line: rgba(16, 185, 129, 0.2);
+  --c-ink: #F5F5F5;
+  --c-solid: rgba(16, 185, 129, 0.25);
+}
+
+.iui-root[data-host="grok"][data-theme="dark"] .c-amber,
+.iui-root[data-host="grok"][data-theme="dark"] .c-butter,
+.iui-root[data-host="grok"][data-theme="dark"] .c-warning,
+.iui-root[data-host="grok"][data-theme="dark"] .c-orange,
+.iui-root[data-host="grok"][data-theme="dark"] .c-peach {
+  --c-bg: rgba(245, 158, 11, 0.1);
+  --c-line: rgba(245, 158, 11, 0.2);
+  --c-ink: #F5F5F5;
+  --c-solid: rgba(245, 158, 11, 0.25);
+}
+
+.iui-root[data-host="grok"][data-theme="dark"] .c-red,
+.iui-root[data-host="grok"][data-theme="dark"] .c-pink,
+.iui-root[data-host="grok"][data-theme="dark"] .c-rose,
+.iui-root[data-host="grok"][data-theme="dark"] .c-bad {
+  --c-bg: rgba(239, 68, 68, 0.1);
+  --c-line: rgba(239, 68, 68, 0.2);
+  --c-ink: #F5F5F5;
+  --c-solid: rgba(239, 68, 68, 0.25);
+}
+
+.iui-root[data-host="grok"][data-theme="dark"] .c-purple,
+.iui-root[data-host="grok"][data-theme="dark"] .c-lavender {
+  --c-bg: rgba(139, 92, 246, 0.1);
+  --c-line: rgba(139, 92, 246, 0.2);
+  --c-ink: #F5F5F5;
+  --c-solid: rgba(139, 92, 246, 0.25);
+}
+
+.iui-root[data-host="grok"][data-theme="dark"] .c-gray,
+.iui-root[data-host="grok"][data-theme="dark"] .c-stone,
+.iui-root[data-host="grok"][data-theme="dark"] .c-neutral {
+  --c-bg: rgba(255, 255, 255, 0.04);
+  --c-line: rgba(255, 255, 255, 0.08);
+  --c-ink: #F5F5F5;
+  --c-solid: rgba(255, 255, 255, 0.12);
+}
+
+/* Card: base */
 .iui-card {
   background-color: var(--iui-bg);
   border: 1px solid var(--iui-border);
-  border-radius: 18px;
+  border-radius: var(--iui-radius-card, 18px);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -196,6 +547,24 @@
   box-sizing: border-box;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   animation: iui-card-rise 240ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+/* Gemini Cards: tonal surfaces instead of borders where possible */
+.iui-root[data-host="gemini"] .iui-card {
+  background-color: var(--iui-surface);
+  border: none;
+  border-radius: var(--iui-radius-card, 16px);
+  box-shadow: none;
+  padding: 18px;
+}
+
+/* Grok Cards: hairline borders, flat surfaces, tight density */
+.iui-root[data-host="grok"] .iui-card {
+  background-color: var(--iui-bg);
+  border: 1px solid var(--iui-border);
+  border-radius: var(--iui-radius-card, 12px);
+  box-shadow: none;
+  padding: 14px;
 }
 
 .iui-card.tinted {
@@ -222,6 +591,8 @@
   justify-content: space-between;
   gap: 12px;
   min-height: 28px;
+  overflow: visible;
+  position: relative;
 }
 
 .iui-header-left {
@@ -250,6 +621,31 @@
   background-color: color-mix(in srgb, var(--c-ink) 14%, transparent);
 }
 
+/* Gemini: 28px circle tonal */
+.iui-root[data-host="gemini"] .iui-type-iconbox {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background-color: var(--c-bg, var(--iui-surface-2));
+  color: var(--c-ink, var(--iui-accent));
+  border: none;
+}
+
+/* Grok: 24px, 6px radius, monochrome */
+.iui-root[data-host="grok"] .iui-type-iconbox {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background-color: var(--iui-surface);
+  color: var(--iui-text);
+  border: 1px solid var(--iui-border);
+}
+
+.iui-root[data-host="grok"] .iui-type-iconbox svg {
+  width: 14px;
+  height: 14px;
+}
+
 .iui-title-group {
   display: flex;
   flex-direction: column;
@@ -259,12 +655,24 @@
 
 /* Typography */
 .iui-title {
-  font-size: 15px;
+  font-family: var(--iui-font, inherit);
+  font-size: calc(var(--iui-fs, 14px) * 1.07);
   font-weight: 600;
   margin: 0;
   color: var(--iui-text);
   line-height: 1.35;
   animation: iui-title-wipe 300ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+.iui-root[data-host="gemini"] .iui-title {
+  font-family: "Google Sans", var(--iui-font, inherit);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.iui-root[data-host="grok"] .iui-title {
+  font-size: 14px;
+  font-weight: 600;
 }
 
 @keyframes iui-title-wipe {
@@ -277,10 +685,28 @@
 }
 
 .iui-sub {
-  font-size: 12px;
+  font-size: calc(var(--iui-fs, 14px) * 0.85);
   font-weight: 400;
   color: var(--iui-muted);
   line-height: 1.3;
+}
+
+/* Both hosts: no shadows, no glow */
+.iui-root[data-host="gemini"] .iui-card,
+.iui-root[data-host="gemini"] .iui-stat-item,
+.iui-root[data-host="gemini"] .iui-compare-panel,
+.iui-root[data-host="gemini"] .flow-node,
+.iui-root[data-host="gemini"] .flow-edge-label,
+.iui-root[data-host="gemini"] .iui-followup-chip,
+.iui-root[data-host="gemini"] .iui-math-main,
+.iui-root[data-host="grok"] .iui-card,
+.iui-root[data-host="grok"] .iui-stat-item,
+.iui-root[data-host="grok"] .iui-compare-panel,
+.iui-root[data-host="grok"] .flow-node,
+.iui-root[data-host="grok"] .flow-edge-label,
+.iui-root[data-host="grok"] .iui-followup-chip,
+.iui-root[data-host="grok"] .iui-math-main {
+  box-shadow: none !important;
 }
 
 .tabular-nums {
@@ -291,16 +717,17 @@
 .iui-card-toolbar {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+  position: relative;
+  overflow: visible;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 160ms cubic-bezier(.2,.8,.2,1);
+  transition: opacity 120ms ease;
   flex-shrink: 0;
 }
 
 .iui-card:hover .iui-card-toolbar,
 .iui-card:focus-within .iui-card-toolbar,
-.iui-card-toolbar:focus-within,
 .iui-card-toolbar.is-open {
   opacity: 1;
   pointer-events: auto;
@@ -313,29 +740,98 @@
   }
 }
 
+/* Base tool button: default (grok sizing) */
 .iui-tool-btn {
-  all: unset;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--iui-muted);
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 9999px;
-  color: var(--iui-muted);
-  cursor: pointer;
+  position: relative;
   box-sizing: border-box;
-  background: transparent;
-  transition: background-color 160ms cubic-bezier(.2,.8,.2,1), color 160ms cubic-bezier(.2,.8,.2,1);
+  transition: background-color 120ms ease, color 120ms ease;
 }
 
-.iui-tool-btn:hover {
-  background-color: var(--iui-surface);
+.iui-tool-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.iui-tool-btn:hover,
+.iui-tool-btn:focus-visible {
+  background-color: color-mix(in srgb, var(--iui-text) 8%, transparent);
   color: var(--iui-text);
 }
 
 .iui-tool-btn:focus-visible {
   outline: 2px solid var(--iui-text);
   outline-offset: 1px;
+}
+
+/* Host sizing: Gemini (32px circular, 18px icons, 4px gap) */
+.iui-root[data-host="gemini"] .iui-card-toolbar {
+  gap: 4px;
+}
+
+.iui-root[data-host="gemini"] .iui-tool-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+}
+
+.iui-root[data-host="gemini"] .iui-tool-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Host sizing: Grok (28px buttons, 8px radius, 16px icons, 2px gap) */
+.iui-root[data-host="grok"] .iui-card-toolbar {
+  gap: 2px;
+}
+
+.iui-root[data-host="grok"] .iui-tool-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.iui-root[data-host="grok"] .iui-tool-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Custom Tooltip */
+.iui-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--iui-text);
+  color: var(--iui-bg);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 4px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  transition-delay: 0ms;
+  z-index: 1000;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.iui-tool-btn:hover .iui-tooltip,
+.iui-tool-btn:focus-visible .iui-tooltip {
+  opacity: 1;
+  transition-delay: 300ms;
 }
 
 /* Export dropdown menu */
@@ -354,7 +850,7 @@
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 4px;
-  min-width: 140px;
+  min-width: 150px;
   display: flex;
   flex-direction: column;
   gap: 2px;

@@ -1,5 +1,43 @@
 .iui-followups-card {
-  border-radius: 18px;
+  border-radius: var(--iui-radius-card, 18px);
+}
+
+/* Gemini: Material assist chips (32px high, 8px radius, 1px --iui-border outline, 14px text) */
+.iui-root[data-host="gemini"] .iui-followup-chip {
+  height: 32px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid var(--iui-border);
+  background-color: var(--iui-surface);
+  color: var(--iui-text);
+  font-size: 14px;
+  padding: 0 12px;
+  box-shadow: none;
+}
+
+.iui-root[data-host="gemini"] .iui-followup-chip:hover {
+  background-color: var(--iui-surface-2);
+  border-color: var(--iui-border);
+  color: var(--iui-text);
+}
+
+/* Grok: pill buttons with hairline border (tight density) */
+.iui-root[data-host="grok"] .iui-followup-chip {
+  height: 28px;
+  box-sizing: border-box;
+  border-radius: 9999px;
+  border: 1px solid var(--iui-border);
+  background-color: var(--iui-surface);
+  color: var(--iui-text);
+  font-size: 13px;
+  padding: 0 12px;
+  box-shadow: none;
+}
+
+.iui-root[data-host="grok"] .iui-followup-chip:hover {
+  background-color: var(--iui-surface-2);
+  border-color: var(--iui-border);
+  color: var(--iui-text);
 }
 
 .iui-followups-container {

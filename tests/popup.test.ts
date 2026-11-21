@@ -1,7 +1,11 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { initPopup } from '../src/popup/popup';
-import { SYSTEM_INSTRUCTION, CURRENT_INSTRUCTION_VERSION } from '../src/shared/systemInstruction';
+import {
+  SETUP_INSTRUCTION,
+  SYSTEM_INSTRUCTION,
+  CURRENT_INSTRUCTION_VERSION,
+} from '../src/shared/systemInstruction';
 
 describe('BetterView Popup', () => {
   let storageListeners: Array<(changes: Record<string, { newValue?: unknown }>, area: string) => void> = [];
@@ -93,7 +97,7 @@ describe('BetterView Popup', () => {
               <source id="logo-source" media="(prefers-color-scheme: dark)" srcset="/brand/mark-white.png" />
               <img id="logo-img" src="/brand/mark-black.png" alt="BetterView" width="20" height="20" />
             </picture>
-            <span class="brand-title">BetterView</span>
+            <span class="brand-title">BetterView AI</span>
           </div>
           <div id="status-line" class="status-pill status-muted">Open Gemini or Grok</div>
         </header>
@@ -139,7 +143,7 @@ describe('BetterView Popup', () => {
               </div>
             </div>
           </div>
-          <div id="setup-status" class="setup-status-line"></div>
+          <div id="setup-status" class="setup-status-line sr-only"></div>
         </section>
 
         <section class="card appearance-card" id="appearance-card">
@@ -207,7 +211,7 @@ describe('BetterView Popup', () => {
       expect(autoBtn.classList.contains('is-active')).toBe(true);
       expect(lightBtn.getAttribute('aria-checked')).toBe('false');
       expect(darkBtn.getAttribute('aria-checked')).toBe('false');
-      expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
+      expect(document.documentElement.getAttribute('data-theme')).toMatch(/^(light|dark)$/);
     });
 
     it('updates state and settings when Light is clicked', async () => {
@@ -301,7 +305,7 @@ describe('BetterView Popup', () => {
       cleanupPopup = initPopup();
 
       const instructionEl = document.getElementById('system-instruction')!;
-      expect(instructionEl.textContent).toBe(SYSTEM_INSTRUCTION);
+      expect(instructionEl.textContent).toBe(SETUP_INSTRUCTION);
     });
   });
 
@@ -315,7 +319,7 @@ describe('BetterView Popup', () => {
       copyBtn.click();
       await Promise.resolve(); // flush async clipboard promise
 
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(SYSTEM_INSTRUCTION);
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(SETUP_INSTRUCTION);
       expect(copyLabel.textContent).toContain('Copied');
       expect(copyBtn.classList.contains('is-copied')).toBe(true);
 
@@ -342,63 +346,100 @@ describe('BetterView Popup', () => {
       expect(statusEl.textContent).toBe('Setting up\u2026');
     });
 
-    it('handles status updates from chrome.storage for Gemini and Grok', () => {
+    it('handles status updates from chrome.storage for Gemini and Grok and maps 4 states', () => {
       cleanupPopup = initPopup();
 
       const geminiBtn = document.getElementById('setup-gemini-btn')!;
       const grokBtn = document.getElementById('setup-grok-btn')!;
+      const geminiStatus = document.getElementById('setup-gemini-status')!;
+      const grokStatus = document.getElementById('setup-grok-status')!;
+      const geminiLabel = document.getElementById('label-gemini')!;
+      const grokLabel = document.getElementById('label-grok')!;
       const statusEl = document.getElementById('setup-status')!;
 
-      // Simulate Gemini setup success
+      // Default missing state: Not set up / Set up
+      expect(geminiStatus.textContent).toBe('Not set up');
+      expect(geminiLabel.textContent).toBe('Set up');
+      expect(grokStatus.textContent).toBe('Not set up');
+      expect(grokLabel.textContent).toBe('Set up');
+
+      // State 1: Added v3 -> Ready / Redo
       for (const listener of storageListeners) {
         listener(
           { gemini_setup_status: { newValue: { status: 'added', version: CURRENT_INSTRUCTION_VERSION } } },
           'local',
         );
       }
-
-      expect(statusEl.textContent).toBe('Added \u2713');
+      expect(geminiStatus.textContent).toBe('Ready');
+      expect(geminiLabel.textContent).toBe('Redo');
       expect(geminiBtn.classList.contains('is-done')).toBe(true);
+
+      // Grok is still Not set up, and the global #setup-status is visually hidden (.sr-only)
+      expect(grokStatus.textContent).toBe('Not set up');
+      expect(statusEl.classList.contains('sr-only')).toBe(true);
+
+      // State 2: Already v2 -> Needs update / Update
+      for (const listener of storageListeners) {
+        listener(
+          { grok_setup_status: { newValue: { status: 'already', version: 2 } } },
+          'local',
+        );
+      }
+      expect(grokStatus.textContent).toBe('Needs update');
+      expect(grokLabel.textContent).toBe('Update');
       expect(grokBtn.classList.contains('is-done')).toBe(false);
 
-      // Simulate Grok setup already
+      // State 3: Failed -> Setup didn't finish / Retry with error in title
       for (const listener of storageListeners) {
         listener(
-          { grok_setup_status: { newValue: { status: 'already', version: CURRENT_INSTRUCTION_VERSION } } },
+          { gemini_setup_status: { newValue: { status: 'failed', error: 'Gemini rejected the entry' } } },
           'local',
         );
       }
-
-      expect(statusEl.textContent).toBe('Already set up \u2713');
-      expect(grokBtn.classList.contains('is-done')).toBe(true);
-
-      // Simulate failure
-      for (const listener of storageListeners) {
-        listener(
-          { gemini_setup_status: { newValue: { status: 'failed', error: 'Network error' } } },
-          'local',
-        );
-      }
-      expect(statusEl.textContent).toBe('Network error');
+      expect(geminiStatus.textContent).toBe("Setup didn't finish");
+      expect(geminiStatus.getAttribute('title')).toBe('Gemini rejected the entry');
+      expect(geminiLabel.textContent).toBe('Retry');
       expect(geminiBtn.classList.contains('is-done')).toBe(false);
     });
 
-    it('shows Update available and hint when site was set up with an older version', () => {
+    it('shows Gemini update hint only when hasOldEntry is true', () => {
       cleanupPopup = initPopup();
 
-      const geminiBtn = document.getElementById('setup-gemini-btn')!;
       const geminiStatus = document.getElementById('setup-gemini-status')!;
+      const geminiBtn = document.getElementById('setup-gemini-btn')!;
       const geminiUpdateHint = document.getElementById('gemini-update-hint')!;
 
-      // Simulate older v1 setup
+      // Older version without old entry -> hint is hidden
       for (const listener of storageListeners) {
-        listener({ gemini_setup_status: { newValue: { status: 'added', version: 1 } } }, 'local');
+        listener(
+          { gemini_setup_status: { newValue: { status: 'added', version: 1, hasOldEntry: false } } },
+          'local',
+        );
       }
-
-      expect(geminiStatus.textContent).toBe('Update available');
+      expect(geminiStatus.textContent).toBe('Needs update');
       expect(geminiBtn.textContent).toContain('Update');
-      expect(geminiBtn.classList.contains('is-done')).toBe(false);
+      expect(geminiUpdateHint.classList.contains('hidden')).toBe(true);
+
+      // Older version with old entry -> hint is shown
+      for (const listener of storageListeners) {
+        listener(
+          { gemini_setup_status: { newValue: { status: 'added', version: 2, hasOldEntry: true } } },
+          'local',
+        );
+      }
+      expect(geminiStatus.textContent).toBe('Needs update');
       expect(geminiUpdateHint.classList.contains('hidden')).toBe(false);
+    });
+
+    it('has no version text in header and contains version in footer once', () => {
+      cleanupPopup = initPopup();
+
+      const header = document.querySelector('.header-row')!;
+      expect(header.textContent).not.toContain('0.1.0');
+
+      const footerVersions = document.querySelectorAll('.popup-footer .version-tag');
+      expect(footerVersions.length).toBe(1);
+      expect(footerVersions[0].textContent).toContain('0.1.0');
     });
   });
 

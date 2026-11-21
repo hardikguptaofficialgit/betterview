@@ -1,5 +1,5 @@
 .iui-callout-card {
-  border-radius: 18px;
+  border-radius: var(--iui-radius-card, 18px);
 }
 
 .iui-callout-box {
@@ -7,7 +7,7 @@
   align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
-  border-radius: 12px;
+  border-radius: var(--iui-radius-inner, 12px);
   border: 1px solid var(--c-line, var(--iui-border));
   background-color: var(--c-bg, var(--iui-surface));
   color: var(--c-ink, var(--iui-text));

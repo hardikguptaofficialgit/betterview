@@ -77,15 +77,49 @@ export function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export function buildChartConfig(spec: ChartSpec, theme: ThemeMode, animated = false): ChartConfiguration {
+export function buildChartConfig(
+  spec: ChartSpec,
+  theme: ThemeMode,
+  animated = false,
+  host?: 'gemini' | 'grok',
+): ChartConfiguration {
   const isDark = theme === 'dark';
-  const solids = isDark ? DARK_SOLIDS : LIGHT_SOLIDS;
-  const inks = isDark ? DARK_INKS : LIGHT_INKS;
-  const cardBg = isDark ? '#0A0A0A' : '#FFFFFF';
-  const mutedColor = isDark ? '#A3A3A3' : '#6B6B6B';
-  const borderColor = isDark ? '#262626' : '#E7E7E7';
-  const tooltipBg = isDark ? '#FAFAFA' : '#0A0A0A';
-  const tooltipText = isDark ? '#0A0A0A' : '#FAFAFA';
+  let solids = isDark ? DARK_SOLIDS : LIGHT_SOLIDS;
+  let inks = isDark ? DARK_INKS : LIGHT_INKS;
+  let cardBg = isDark ? '#0A0A0A' : '#FFFFFF';
+  let mutedColor = isDark ? '#A3A3A3' : '#6B6B6B';
+  let borderColor = isDark ? '#262626' : '#E7E7E7';
+  let tooltipBg = isDark ? '#FAFAFA' : '#0A0A0A';
+  let tooltipText = isDark ? '#0A0A0A' : '#FAFAFA';
+  let fontStack = FONT_STACK;
+
+  if (host === 'gemini') {
+    solids = isDark
+      ? ['#A8C7FA', '#81C995', '#FDD663', '#F28B82', '#0B57D0', '#137333', '#C4C7C5']
+      : ['#0B57D0', '#1E8E3E', '#A8C7FA', '#F9AB00', '#D93025', '#81C995', '#747775'];
+    inks = isDark
+      ? ['#D3E3FD', '#C4EED0', '#FFE082', '#F9DEDC', '#A8C7FA', '#81C995', '#E3E3E3']
+      : ['#041E49', '#072711', '#0B57D0', '#3F2E00', '#410E0B', '#137333', '#1F1F1F'];
+    cardBg = isDark ? '#1E1F20' : '#F0F4F9';
+    mutedColor = isDark ? '#C4C7C5' : '#444746';
+    borderColor = isDark ? '#3C4043' : '#E1E3E1';
+    tooltipBg = isDark ? '#E3E3E3' : '#1F1F1F';
+    tooltipText = isDark ? '#131314' : '#FFFFFF';
+    fontStack = '"Google Sans Text", "Google Sans", Roboto, Arial, sans-serif';
+  } else if (host === 'grok') {
+    solids = isDark
+      ? ['#F5F5F5', '#A3A3A3', '#737373', '#525252', '#383838', '#262626']
+      : ['#0D0D0D', '#525252', '#737373', '#9A9A9A', '#C4C4C4', '#E0E0E0'];
+    inks = isDark
+      ? ['#FFFFFF', '#D4D4D4', '#A3A3A3', '#737373', '#525252', '#404040']
+      : ['#0D0D0D', '#262626', '#404040', '#525252', '#737373', '#8A8A8A'];
+    cardBg = isDark ? '#141414' : '#FFFFFF';
+    mutedColor = isDark ? '#A3A3A3' : '#6B6B6B';
+    borderColor = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.08)';
+    tooltipBg = isDark ? '#F5F5F5' : '#0D0D0D';
+    tooltipText = isDark ? '#141414' : '#FFFFFF';
+    fontStack = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  }
 
   const isPieOrDoughnut = spec.chartType === 'pie' || spec.chartType === 'doughnut';
 
@@ -151,7 +185,7 @@ export function buildChartConfig(spec: ChartSpec, theme: ThemeMode, animated = f
         ticks: {
           color: mutedColor,
           font: {
-            family: FONT_STACK,
+            family: fontStack,
             size: 12,
           },
         },
@@ -168,7 +202,7 @@ export function buildChartConfig(spec: ChartSpec, theme: ThemeMode, animated = f
         ticks: {
           color: mutedColor,
           font: {
-            family: FONT_STACK,
+            family: fontStack,
             size: 12,
           },
         },
@@ -192,14 +226,14 @@ export function buildChartConfig(spec: ChartSpec, theme: ThemeMode, animated = f
           color: mutedColor,
           backdropColor: 'transparent',
           font: {
-            family: FONT_STACK,
+            family: fontStack,
             size: 11,
           },
         },
         pointLabels: {
           color: mutedColor,
           font: {
-            family: FONT_STACK,
+            family: fontStack,
             size: 12,
           },
         },
@@ -235,7 +269,7 @@ export function buildChartConfig(spec: ChartSpec, theme: ThemeMode, animated = f
             pointStyle: 'circle',
             color: mutedColor,
             font: {
-              family: FONT_STACK,
+              family: fontStack,
               size: 12,
             },
             padding: 16,
@@ -253,12 +287,12 @@ export function buildChartConfig(spec: ChartSpec, theme: ThemeMode, animated = f
           cornerRadius: 8,
           padding: 10,
           titleFont: {
-            family: FONT_STACK,
+            family: fontStack,
             size: 12,
             weight: 600,
           },
           bodyFont: {
-            family: FONT_STACK,
+            family: fontStack,
             size: 12,
           },
           callbacks: {
@@ -315,7 +349,7 @@ export function renderChart(spec: ChartSpec, ctx: RenderContext): HTMLElement {
     window.matchMedia &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const config = buildChartConfig(spec, ctx.theme, !prefersReduced);
+  const config = buildChartConfig(spec, ctx.theme, !prefersReduced, ctx.host);
 
   let disposed = false;
   let chartInstance: any = null;

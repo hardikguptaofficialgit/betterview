@@ -12,20 +12,24 @@ import {
   hasOlderInstruction,
   fillGeminiMemoryDialog,
   runGeminiSetup,
+  runGrokSetup,
 } from '../src/content/sites';
 import {
+  SETUP_INSTRUCTION,
   getCompactInstruction,
   SYSTEM_INSTRUCTION,
   SYSTEM_INSTRUCTION_SHORT,
   CURRENT_INSTRUCTION_VERSION,
 } from '../src/shared/systemInstruction';
+import { grokIconSvg } from '../src/core/brandIcons';
 
 describe('System Instruction', () => {
-  it('getCompactInstruction starts with marker and is under 2900 characters', () => {
-    const compact = getCompactInstruction();
-    expect(compact.startsWith('[BetterView v3] ')).toBe(true);
-    expect(compact.length).toBeLessThanOrEqual(2900);
-    expect(compact).toContain(SYSTEM_INSTRUCTION);
+  it('SETUP_INSTRUCTION conforms to constraints', () => {
+    expect(SETUP_INSTRUCTION.length).toBeLessThanOrEqual(1400);
+    expect(SETUP_INSTRUCTION.startsWith('[BetterView v3]')).toBe(true);
+    expect(SETUP_INSTRUCTION).toContain('ui');
+    expect(SETUP_INSTRUCTION).toContain('3');
+    expect(getCompactInstruction()).toBe(SETUP_INSTRUCTION);
   });
 
   it('Instruction tests: version is 3, marker present, contains "Never more than 3", length not greater than before', () => {
@@ -33,7 +37,7 @@ describe('System Instruction', () => {
     const compact = getCompactInstruction();
     expect(compact).toContain('[BetterView v3]');
     expect(compact).toContain('Never more than 3');
-    expect(compact.length).toBeLessThanOrEqual(2900);
+    expect(compact.length).toBeLessThanOrEqual(1400);
     expect(SYSTEM_INSTRUCTION).toContain('Never more than 3');
     expect(SYSTEM_INSTRUCTION_SHORT).toContain('Never more than 3');
     // Ensure total length is not greater than the v2 benchmark (2825)
@@ -468,5 +472,45 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
     );
 
     overlay.remove();
+  });
+});
+
+describe('Brand Icons', () => {
+  it('grokIconSvg returns an svg containing a path with fill-rule evenodd (not a circle+line)', () => {
+    const svg = grokIconSvg();
+    expect(svg.tagName.toLowerCase()).toBe('svg');
+    const path = svg.querySelector('path');
+    expect(path).not.toBeNull();
+    expect(path?.getAttribute('fill-rule')).toBe('evenodd');
+    expect(svg.querySelector('circle')).toBeNull();
+    expect(svg.querySelector('line')).toBeNull();
+  });
+});
+
+describe('runGrokSetup', () => {
+  it("returns failed when the textarea value doesn't contain the marker after save", async () => {
+    const region = document.createElement('div');
+    region.setAttribute('role', 'region');
+    region.setAttribute('aria-label', 'Customize');
+    region.innerHTML = `
+      <button role="combobox">Custom</button>
+      <textarea aria-label="Instructions"></textarea>
+      <button>Save</button>
+    `;
+    document.body.appendChild(region);
+
+    const textarea = region.querySelector('textarea')!;
+    const saveBtn = region.querySelector<HTMLButtonElement>('button:last-of-type')!;
+
+    // When Save is clicked, simulate failure by reverting textarea to empty/old text
+    saveBtn.addEventListener('click', () => {
+      textarea.value = 'Failed to persist';
+    });
+
+    const result = await runGrokSetup();
+    expect(result.status).toBe('failed');
+    expect(result.error).toBe("Grok didn't save");
+
+    region.remove();
   });
 });

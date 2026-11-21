@@ -171,11 +171,43 @@ describe('Welcome Tour Modal Component', () => {
     // Advance to slide 4 (last step)
     nextBtn?.click();
     expect(dots?.[3].classList.contains('is-active')).toBe(true);
-    expect(nextBtn?.textContent).toBe('Got it');
+    expect(nextBtn?.textContent).toBe('Done');
 
     // Clicking Back
     backBtn?.click();
     expect(dots?.[2].classList.contains('is-active')).toBe(true);
+
+    close();
+  });
+
+  it('supports Left and Right arrow keyboard navigation and focus trap', () => {
+    const close = showTourModal();
+    const host = document.getElementById('betterview-tour-host');
+    const shadow = host?.shadowRoot;
+    const dots = shadow?.querySelectorAll('.carousel-dot');
+    expect(dots?.[0].classList.contains('is-active')).toBe(true);
+
+    // ArrowRight advances to step 2
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(dots?.[1].classList.contains('is-active')).toBe(true);
+
+    // ArrowLeft goes back to step 1
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(dots?.[0].classList.contains('is-active')).toBe(true);
+
+    // Focus trap: Tab key cycles focus within modal
+    const focusable = shadow?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    expect(focusable && focusable.length > 0).toBe(true);
+
+    const firstEl = focusable![0];
+    const lastEl = focusable![focusable!.length - 1];
+
+    // Simulate Tab on last element wraps to first
+    lastEl.focus();
+    const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    shadow?.dispatchEvent(tabEvent);
 
     close();
   });

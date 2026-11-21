@@ -154,6 +154,7 @@ export function startScanner(
 
       const handle = mountBlock(target, {
         theme: getTheme(),
+        host: adapter.id,
         insert: 'before',
         initialText,
         onStateChange: (state) => {
