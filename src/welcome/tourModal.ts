@@ -11,6 +11,51 @@ import { getNextStep, getPrevStep, clampStep, TOTAL_TOUR_STEPS } from './tourSta
 let activeHostEl: HTMLElement | null = null;
 let activeEscapeListener: ((e: KeyboardEvent) => void) | null = null;
 
+function getBrandAssetUrl(path: string): string {
+  if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
+    return chrome.runtime.getURL(path);
+  }
+  return '/' + path;
+}
+
+export function createBrandMarkEl(size = 36, themeMode?: ThemeMode): HTMLElement {
+  const darkSrc = getBrandAssetUrl('brand/mark-white.png');
+  const lightSrc = getBrandAssetUrl('brand/mark-black.png');
+
+  const wrap = h('div', {
+    class: 'bv-modal-mark-wrap',
+    style: `width: ${size}px; height: ${size}px;`,
+  });
+
+  const darkImg = h('img', {
+    class: 'bv-mark-dark',
+    src: darkSrc,
+    alt: 'BetterView AI',
+    width: size,
+    height: size,
+  });
+
+  const lightImg = h('img', {
+    class: 'bv-mark-light',
+    src: lightSrc,
+    alt: 'BetterView AI',
+    width: size,
+    height: size,
+  });
+
+  if (themeMode === 'dark') {
+    darkImg.style.display = 'block';
+    lightImg.style.display = 'none';
+  } else if (themeMode === 'light') {
+    darkImg.style.display = 'none';
+    lightImg.style.display = 'block';
+  }
+
+  wrap.appendChild(darkImg);
+  wrap.appendChild(lightImg);
+  return wrap;
+}
+
 export function closeAnyActiveModal(): void {
   if (activeEscapeListener) {
     document.removeEventListener('keydown', activeEscapeListener, true);
@@ -166,6 +211,57 @@ const MODAL_CSS = `
 
 [data-theme="dark"] .welcome-logo-wrap {
   background: #16212B;
+}
+
+.bv-modal-mark-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.bv-modal-mark-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.bv-modal-mark-wrap .bv-mark-dark {
+  display: none;
+}
+.bv-modal-mark-wrap .bv-mark-light {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :host(:not([data-theme="light"])) .bv-modal-mark-wrap .bv-mark-dark,
+  .modal-card:not([data-theme="light"]) .bv-modal-mark-wrap .bv-mark-dark {
+    display: block;
+  }
+  :host(:not([data-theme="light"])) .bv-modal-mark-wrap .bv-mark-light,
+  .modal-card:not([data-theme="light"]) .bv-modal-mark-wrap .bv-mark-light {
+    display: none;
+  }
+}
+
+[data-theme="dark"] .bv-modal-mark-wrap .bv-mark-dark,
+.modal-card[data-theme="dark"] .bv-modal-mark-wrap .bv-mark-dark {
+  display: block !important;
+}
+[data-theme="dark"] .bv-modal-mark-wrap .bv-mark-light,
+.modal-card[data-theme="dark"] .bv-modal-mark-wrap .bv-mark-light {
+  display: none !important;
+}
+
+[data-theme="light"] .bv-modal-mark-wrap .bv-mark-dark,
+.modal-card[data-theme="light"] .bv-modal-mark-wrap .bv-mark-dark {
+  display: none !important;
+}
+[data-theme="light"] .bv-modal-mark-wrap .bv-mark-light,
+.modal-card[data-theme="light"] .bv-modal-mark-wrap .bv-mark-light {
+  display: block !important;
 }
 
 .welcome-title-row {
@@ -585,7 +681,7 @@ export function showWelcomeTourModal(opts: {
   const slide1 = h(
     'div',
     { class: 'carousel-slide slide-welcome' },
-    h('div', { class: 'welcome-logo-wrap' }, betterviewMarkSvg(36)),
+    h('div', { class: 'welcome-logo-wrap' }, createBrandMarkEl(36, themeMode)),
     h(
       'div',
       { class: 'welcome-title-row' },
@@ -967,7 +1063,7 @@ export function showWhatsNewModal(opts: {
   const headRow = h(
     'div',
     { style: 'display: flex; align-items: center; gap: 8px;' },
-    betterviewMarkSvg(24),
+    createBrandMarkEl(24, themeMode),
     h('h3', { style: 'font-size: 16px; font-weight: 600;' }, `What's new in BetterView AI`),
     h('span', { class: 'version-chip' }, opts.version || CHANGELOG[0]?.version || 'v0.1.0'),
   );

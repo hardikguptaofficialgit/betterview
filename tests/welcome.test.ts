@@ -228,4 +228,32 @@ describe('Welcome Tour Modal Component', () => {
     expect(completed).toBe(true);
     expect(document.getElementById('betterview-whatsnew-host')).toBeNull();
   });
+
+  it('renders new brand mark elements with dark and light variants in tour and whats-new modals', () => {
+    showTourModal({ theme: 'dark' });
+    const tourHost = document.getElementById('betterview-tour-host');
+    const tourShadow = tourHost?.shadowRoot;
+    const tourMarkWrap = tourShadow?.querySelector('.bv-modal-mark-wrap');
+    expect(tourMarkWrap).not.toBeNull();
+    const tourDarkImg = tourMarkWrap?.querySelector<HTMLImageElement>('.bv-mark-dark');
+    const tourLightImg = tourMarkWrap?.querySelector<HTMLImageElement>('.bv-mark-light');
+    expect(tourDarkImg?.src).toContain('brand/mark-white.png');
+    expect(tourLightImg?.src).toContain('brand/mark-black.png');
+    expect(tourDarkImg?.style.display).toBe('block');
+    expect(tourLightImg?.style.display).toBe('none');
+    closeAnyActiveModal();
+
+    showWhatsNewModal({ theme: 'light' });
+    const wnHost = document.getElementById('betterview-whatsnew-host');
+    const wnShadow = wnHost?.shadowRoot;
+    const wnMarkWrap = wnShadow?.querySelector('.bv-modal-mark-wrap');
+    expect(wnMarkWrap).not.toBeNull();
+    const wnDarkImg = wnMarkWrap?.querySelector<HTMLImageElement>('.bv-mark-dark');
+    const wnLightImg = wnMarkWrap?.querySelector<HTMLImageElement>('.bv-mark-light');
+    expect(wnDarkImg?.src).toContain('brand/mark-white.png');
+    expect(wnLightImg?.src).toContain('brand/mark-black.png');
+    expect(wnDarkImg?.style.display).toBe('none');
+    expect(wnLightImg?.style.display).toBe('block');
+    closeAnyActiveModal();
+  });
 });

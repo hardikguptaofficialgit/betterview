@@ -1,6 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
+import { updateStoreAssets } from './update-store-assets.mjs';
+
+// Update store assets (store icon 128 and 1280x800 promo tiles)
+try {
+  updateStoreAssets();
+} catch (err) {
+  console.warn('[package] Could not update store assets:', err);
+}
 
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const version = pkg.version || '0.1.0';
