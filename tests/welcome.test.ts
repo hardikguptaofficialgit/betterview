@@ -180,6 +180,21 @@ describe('Welcome Tour Modal Component', () => {
     close();
   });
 
+  it('offers setup for both Gemini and Grok and copies the OAuth teaching prompt', async () => {
+    showTourModal({ site: 'gemini' });
+
+    const shadow = document.getElementById('betterview-tour-host')?.shadowRoot;
+    expect(shadow?.querySelectorAll('.setup-action-card').length).toBe(2);
+    expect(shadow?.querySelector('.slide-setup')?.textContent).toContain('Gemini');
+    expect(shadow?.querySelector('.slide-setup')?.textContent).toContain('Grok');
+
+    shadow?.querySelector<HTMLButtonElement>('.prompt-copy-btn')?.click();
+    await Promise.resolve();
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('Teach me how OAuth 2.0 works'),
+    );
+  });
+
   it('supports Left and Right arrow keyboard navigation and focus trap', () => {
     const close = showTourModal();
     const host = document.getElementById('betterview-tour-host');

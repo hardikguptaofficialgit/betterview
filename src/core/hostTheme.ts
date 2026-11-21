@@ -237,45 +237,65 @@ export function readHostTypography(anchor?: Element | null): HostTypography {
   }
 }
 
-function parseColorToRgb(col: string): { r: number; g: number; b: number } | null {
+type ParsedColor = { r: number; g: number; b: number; a: number };
+
+function parseColorToRgb(col: string): ParsedColor | null {
   if (!col) return null;
-  col = col.trim().toLowerCase();
-  if (col === 'transparent') return null;
-  if (col === 'white') return { r: 255, g: 255, b: 255 };
-  if (col === 'black') return { r: 0, g: 0, b: 0 };
+  const value = col.trim().toLowerCase();
+  if (value === 'transparent') return { r: 0, g: 0, b: 0, a: 0 };
+  if (value === 'white') return { r: 255, g: 255, b: 255, a: 1 };
+  if (value === 'black') return { r: 0, g: 0, b: 0, a: 1 };
 
-  if (col.startsWith('#')) {
-    const hex = col.slice(1);
-    if (hex.length === 3) {
-      return {
-        r: parseInt(hex[0] + hex[0], 16),
-        g: parseInt(hex[1] + hex[1], 16),
-        b: parseInt(hex[2] + hex[2], 16),
-      };
+  if (value.startsWith('#')) {
+    const hex = value.slice(1);
+    if (hex.length === 3 || hex.length === 4) {
+      const channels = [0, 1, 2].map((index) => parseInt(hex[index] + hex[index], 16));
+      if (channels.some((channel) => !Number.isFinite(channel))) return null;
+      const alpha = hex.length === 4 ? parseInt(hex[3] + hex[3], 16) / 255 : 1;
+      return { r: channels[0], g: channels[1], b: channels[2], a: alpha };
     }
-    if (hex.length >= 6) {
-      return {
-        r: parseInt(hex.slice(0, 2), 16),
-        g: parseInt(hex.slice(2, 4), 16),
-        b: parseInt(hex.slice(4, 6), 16),
-      };
+    if (hex.length === 6 || hex.length === 8) {
+      const channels = [0, 2, 4].map((index) => parseInt(hex.slice(index, index + 2), 16));
+      if (channels.some((channel) => !Number.isFinite(channel))) return null;
+      const alpha = hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1;
+      return { r: channels[0], g: channels[1], b: channels[2], a: alpha };
     }
+    return null;
   }
 
-  const m = col.match(
-    /rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)(?:\s*,\s*([0-9.]+))?\s*\)/,
-  );
-  if (m) {
-    const a = m[4] !== undefined ? parseFloat(m[4]) : 1;
-    if (a === 0) return null;
-    return {
-      r: Math.round(parseFloat(m[1])),
-      g: Math.round(parseFloat(m[2])),
-      b: Math.round(parseFloat(m[3])),
-    };
+  const match = value.match(/^rgba?\((.*)\)$/);
+  if (!match) return null;
+
+  const slashParts = match[1].split('/');
+  if (slashParts.length > 2) return null;
+  const channelParts = slashParts[0].includes(',')
+    ? slashParts[0].split(',').map((part) => part.trim())
+    : slashParts[0].trim().split(/\s+/);
+  let alphaPart = slashParts[1]?.trim();
+  if (channelParts.length === 4 && !alphaPart) {
+    const legacyAlpha = channelParts.pop();
+    if (legacyAlpha === undefined) return null;
+    alphaPart = legacyAlpha;
+  }
+  if (channelParts.length !== 3) return null;
+
+  const parseChannel = (part: string): number | null => {
+    const raw = Number.parseFloat(part);
+    if (!Number.isFinite(raw)) return null;
+    const value = part.endsWith('%') ? (raw * 255) / 100 : raw;
+    return Math.max(0, Math.min(255, value));
+  };
+  const channels = channelParts.map(parseChannel);
+  if (channels.some((channel) => channel === null)) return null;
+
+  let alpha = 1;
+  if (alphaPart !== undefined) {
+    const rawAlpha = Number.parseFloat(alphaPart);
+    if (!Number.isFinite(rawAlpha)) return null;
+    alpha = Math.max(0, Math.min(1, alphaPart.endsWith('%') ? rawAlpha / 100 : rawAlpha));
   }
 
-  return null;
+  return { r: channels[0]!, g: channels[1]!, b: channels[2]!, a: alpha };
 }
 
 function getLuminance(rgb: { r: number; g: number; b: number }): number {
@@ -285,12 +305,23 @@ function getLuminance(rgb: { r: number; g: number; b: number }): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function getContrastRatio(col1: string, col2: string): number {
-  const rgb1 = parseColorToRgb(col1);
-  const rgb2 = parseColorToRgb(col2);
-  if (!rgb1 || !rgb2) return 1;
-  const l1 = getLuminance(rgb1);
-  const l2 = getLuminance(rgb2);
+function compositeOver(color: ParsedColor, backdrop: ParsedColor): { r: number; g: number; b: number } {
+  return {
+    r: color.r * color.a + backdrop.r * (1 - color.a),
+    g: color.g * color.a + backdrop.g * (1 - color.a),
+    b: color.b * color.a + backdrop.b * (1 - color.a),
+  };
+}
+
+function getContrastRatio(col1: string, col2: string, backdrop = '#FFFFFF'): number {
+  const foreground = parseColorToRgb(col1);
+  const background = parseColorToRgb(col2);
+  const backdropColor = parseColorToRgb(backdrop);
+  if (!foreground || !background || !backdropColor) return 1;
+  const opaqueBackground = compositeOver(background, backdropColor);
+  const opaqueForeground = compositeOver(foreground, { ...opaqueBackground, a: 1 });
+  const l1 = getLuminance(opaqueForeground);
+  const l2 = getLuminance(opaqueBackground);
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 }
 
@@ -303,8 +334,10 @@ export function applyHostTheme(
   const tokens = selectHostTheme(host, mode);
 
   // Background color from host if available
-  const currentBg = (typography?.backgroundColor && parseColorToRgb(typography.backgroundColor))
-    ? typography.backgroundColor
+  const hostBackground = typography?.backgroundColor;
+  const parsedHostBackground = hostBackground ? parseColorToRgb(hostBackground) : null;
+  const currentBg = hostBackground && parsedHostBackground && parsedHostBackground.a > 0
+    ? hostBackground
     : tokens.bg;
   root.style.setProperty('--iui-bg', currentBg);
   root.style.setProperty('--iui-surface', tokens.surface);
@@ -344,8 +377,8 @@ export function applyHostTheme(
   let textColor = tokens.text;
   if (typography?.color) {
     const textSurface = host === 'gemini' ? tokens.surface : currentBg;
-    const ratio = getContrastRatio(typography.color, textSurface);
-    if (ratio >= 3.0) {
+    const ratio = getContrastRatio(typography.color, textSurface, tokens.bg);
+    if (ratio >= 4.5) {
       textColor = typography.color;
     }
   }

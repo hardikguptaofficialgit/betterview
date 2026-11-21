@@ -1370,6 +1370,120 @@
   width: 100%;
 }
 
+/* Conversation-safe polish: inherit each host's palette while containing long content. */
+:host {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 12px 0;
+  box-sizing: border-box;
+}
+
+.iui-root {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  container-name: iui;
+  container-type: inline-size;
+}
+
+.iui-root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+.iui-root:not([data-theme="dark"]) {
+  color-scheme: light;
+}
+
+.iui-root .iui-rendered-wrap,
+.iui-root .iui-card {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.iui-root[data-host="gemini"] .iui-card,
+.iui-root[data-host="grok"] .iui-card {
+  padding: 16px;
+}
+
+.iui-root .iui-card-header {
+  gap: 12px;
+  min-height: 34px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--iui-border);
+}
+
+.iui-root .iui-type-iconbox {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border: 1px solid var(--c-line, var(--iui-border));
+  border-radius: 10px;
+  background: var(--c-bg, var(--iui-accent-bg));
+  color: var(--c-ink, var(--iui-accent));
+}
+
+.iui-root[data-host="gemini"] .iui-type-iconbox,
+.iui-root[data-host="grok"] .iui-type-iconbox {
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
+  border: 1px solid var(--c-line, var(--iui-border));
+  background: var(--c-bg, var(--iui-accent-bg));
+  color: var(--c-ink, var(--iui-accent));
+}
+
+.iui-root[data-host="gemini"] .iui-type-iconbox {
+  border-radius: 10px;
+}
+
+.iui-root[data-host="grok"] .iui-type-iconbox {
+  border-radius: 8px;
+}
+
+.iui-root .iui-title,
+.iui-root .iui-sub {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.iui-root :focus-visible {
+  outline-color: var(--iui-accent);
+}
+
+@container iui (max-width: 520px) {
+  .iui-root[data-host="gemini"] .iui-card,
+  .iui-root[data-host="grok"] .iui-card {
+    padding: 12px;
+  }
+
+  .iui-root .iui-card-header {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .iui-root .iui-card-toolbar {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .iui-root .iui-modal-overlay {
+    padding: 12px;
+  }
+
+  .iui-root .iui-modal-container {
+    max-height: calc(100vh - 24px);
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .iui-root .iui-skel-compare-wrap {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Visually hidden screen reader utility */
 .iui-sr-only {
   position: absolute;

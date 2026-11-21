@@ -332,7 +332,7 @@ describe('BetterView Popup', () => {
   });
 
   describe('Auto Setup Buttons and Status', () => {
-    it('sends START_AUTO_SETUP message and updates status text to Setting up…', () => {
+    it('sends START_AUTO_SETUP message and updates status text to Adding prompt…', () => {
       cleanupPopup = initPopup();
 
       const geminiBtn = document.getElementById('setup-gemini-btn')!;
@@ -343,7 +343,7 @@ describe('BetterView Popup', () => {
         type: 'START_AUTO_SETUP',
         site: 'gemini',
       });
-      expect(statusEl.textContent).toBe('Setting up\u2026');
+      expect(statusEl.textContent).toBe('Adding prompt\u2026');
     });
 
     it('handles status updates from chrome.storage for Gemini and Grok and maps 4 states', () => {
@@ -363,29 +363,29 @@ describe('BetterView Popup', () => {
       expect(grokStatus.textContent).toBe('Not set up');
       expect(grokLabel.textContent).toBe('Set up');
 
-      // State 1: Added v3 -> Ready / Redo
+      // State 1: Current version -> Prompt added / Refresh
       for (const listener of storageListeners) {
         listener(
           { gemini_setup_status: { newValue: { status: 'added', version: CURRENT_INSTRUCTION_VERSION } } },
           'local',
         );
       }
-      expect(geminiStatus.textContent).toBe('Ready');
-      expect(geminiLabel.textContent).toBe('Redo');
+      expect(geminiStatus.textContent).toBe('Prompt added');
+      expect(geminiLabel.textContent).toBe('Refresh');
       expect(geminiBtn.classList.contains('is-done')).toBe(true);
 
       // Grok is still Not set up, and the global #setup-status is visually hidden (.sr-only)
       expect(grokStatus.textContent).toBe('Not set up');
       expect(statusEl.classList.contains('sr-only')).toBe(true);
 
-      // State 2: Already v2 -> Needs update / Update
+      // State 2: Older version -> Update available / Update
       for (const listener of storageListeners) {
         listener(
           { grok_setup_status: { newValue: { status: 'already', version: 2 } } },
           'local',
         );
       }
-      expect(grokStatus.textContent).toBe('Needs update');
+      expect(grokStatus.textContent).toBe('Update available');
       expect(grokLabel.textContent).toBe('Update');
       expect(grokBtn.classList.contains('is-done')).toBe(false);
 
@@ -416,7 +416,7 @@ describe('BetterView Popup', () => {
           'local',
         );
       }
-      expect(geminiStatus.textContent).toBe('Needs update');
+      expect(geminiStatus.textContent).toBe('Update available');
       expect(geminiBtn.textContent).toContain('Update');
       expect(geminiUpdateHint.classList.contains('hidden')).toBe(true);
 
@@ -427,7 +427,7 @@ describe('BetterView Popup', () => {
           'local',
         );
       }
-      expect(geminiStatus.textContent).toBe('Needs update');
+      expect(geminiStatus.textContent).toBe('Update available');
       expect(geminiUpdateHint.classList.contains('hidden')).toBe(false);
     });
 

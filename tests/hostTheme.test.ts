@@ -64,6 +64,22 @@ describe('hostTheme', () => {
     expect(root.style.getPropertyValue('--iui-text')).toBe('rgb(10, 10, 10)');
   });
 
+  it('composites translucent text, accepts modern rgb syntax, and ignores transparent host backgrounds', () => {
+    const root = document.createElement('div');
+
+    applyHostTheme(root, 'grok', 'light', { color: 'rgba(0, 0, 0, 0.2)' });
+    expect(root.style.getPropertyValue('--iui-text')).toBe(HOST_THEMES.grok.light.text);
+
+    applyHostTheme(root, 'grok', 'light', { color: 'rgb(70 70 70 / 100%)' });
+    expect(root.style.getPropertyValue('--iui-text')).toBe('rgb(70 70 70 / 100%)');
+
+    applyHostTheme(root, 'grok', 'dark', {
+      color: 'rgb(245 245 245 / 100%)',
+      backgroundColor: 'rgba(0, 0, 0, 0)',
+    });
+    expect(root.style.getPropertyValue('--iui-bg')).toBe(HOST_THEMES.grok.dark.bg);
+  });
+
   it('rejects host text colors that contrast with the page but disappear on Gemini cards', () => {
     const root = document.createElement('div');
     applyHostTheme(root, 'gemini', 'light', {
@@ -102,6 +118,44 @@ describe('hostTheme', () => {
     expect(root.style.getPropertyValue('--iui-bg')).toBe('#131314');
     expect(root.style.getPropertyValue('--iui-surface')).toBe('#1E1F20');
     expect(root.style.getPropertyValue('--iui-text')).toBe('#E3E3E3');
+
+    handle.destroy();
+    container.remove();
+  });
+
+  it('uses the current rendered type and callout tone for the card header on first and later renders', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const target = document.createElement('div');
+    container.appendChild(target);
+
+    const initialText = JSON.stringify({
+      type: 'callout',
+      title: 'Heads up',
+      tone: 'warning',
+      text: 'Check this before continuing.',
+    });
+    const handle = mountBlock(target, {
+      theme: 'light',
+      host: 'gemini',
+      initialText,
+    });
+    const root = container.querySelector('.iui-host')?.shadowRoot?.querySelector('.iui-root');
+
+    expect(root?.querySelector('.iui-type-iconbox')?.classList.contains('c-amber')).toBe(true);
+    expect(root?.querySelector('.iui-type-iconbox')?.getAttribute('aria-hidden')).toBe('true');
+    expect(root?.querySelector('.iui-title')?.textContent).toBe('Heads up');
+    expect(root?.querySelector('.iui-title')?.getAttribute('role')).toBe('heading');
+
+    handle.update(JSON.stringify({
+      type: 'callout',
+      title: 'All clear',
+      tone: 'success',
+      text: 'You can continue.',
+    }));
+
+    expect(root?.querySelector('.iui-type-iconbox')?.classList.contains('c-mint')).toBe(true);
+    expect(root?.querySelector('.iui-title')?.textContent).toBe('All clear');
 
     handle.destroy();
     container.remove();

@@ -132,6 +132,7 @@ export function mountBlock(
 
 
   function createHeaderToolbar(
+    spec: UISpec,
     titleText: string,
     getSpec: () => UISpec | null,
     getCardEl: () => HTMLElement | null,
@@ -140,15 +141,15 @@ export function mountBlock(
     sourcePanel: HTMLElement;
     sourcePre: HTMLElement;
   } {
-    const meta = (lastRenderedSpec && TYPE_META[lastRenderedSpec.type]) || {
+    const meta = TYPE_META[spec.type] || {
       icon: 'sparkle',
       color: 'stone',
       label: 'UI',
     };
 
     let iconColor = meta.color;
-    if (lastRenderedSpec && lastRenderedSpec.type === 'callout') {
-      const tone = (lastRenderedSpec as any).tone;
+    if (spec.type === 'callout') {
+      const tone = spec.tone;
       if (tone === 'success') iconColor = 'mint';
       else if (tone === 'warning') iconColor = 'amber';
       else if (tone === 'tip') iconColor = 'purple';
@@ -161,17 +162,22 @@ export function mountBlock(
     const headerLeft = h('div', { class: 'iui-header-left' });
     const iconBox = h(
       'div',
-      { class: 'iui-type-iconbox' },
-      lastRenderedSpec ? typeIconEl(lastRenderedSpec.type, 18) : iconEl(meta.icon, 18),
+      { class: `iui-type-iconbox c-${iconColor}`, 'aria-hidden': 'true' },
+      typeIconEl(spec.type, 18),
     );
     headerLeft.appendChild(iconBox);
 
     const titleGroup = h('div', { class: 'iui-title-group' });
-    const titleEl = h('div', { class: 'iui-title' }, titleText || meta.label);
+    const titleEl = h(
+      'div',
+      { class: 'iui-title', role: 'heading', 'aria-level': '3' },
+      titleText || meta.label,
+    );
     titleGroup.appendChild(titleEl);
 
     // Optional subtitle
-    const subText = (lastRenderedSpec as any)?.subtitle || (lastRenderedSpec as any)?.sub;
+    const displaySpec = spec as UISpec & { subtitle?: string; sub?: string };
+    const subText = displaySpec.subtitle || displaySpec.sub;
     if (subText) {
       titleGroup.appendChild(h('div', { class: 'iui-sub' }, String(subText)));
     }
@@ -630,6 +636,7 @@ export function mountBlock(
       }
 
       const { header, sourcePanel, sourcePre } = createHeaderToolbar(
+        spec,
         titleText,
         () => lastRenderedSpec,
         () => componentEl,

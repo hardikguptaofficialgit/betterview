@@ -809,44 +809,51 @@ export function showWelcomeTourModal(opts: {
     grid,
   );
 
-  // Slide 4: Set up in one click
-  const siteId = opts.site || (window.location.hostname.includes('grok') ? 'grok' : 'gemini');
-  const siteName = siteId === 'grok' ? 'Grok' : 'Gemini';
-  const siteLogo = siteId === 'grok' ? grokIconSvg(22) : geminiIconSvg(22);
-
-  const setupBtn = h(
-    'button',
-    {
-      class: 'setup-action-btn',
-      type: 'button',
-      onClick: async () => {
-        setupBtn.textContent = 'Setting up...';
-        try {
-          if (siteId === 'grok') {
-            const res = await runGrokSetup();
-            recordSetupResult('grok', res);
-          } else {
-            if (window.location.pathname.replace(/\/+$/, '') !== '/saved-info') {
-              const ts = Date.now();
-              chrome.storage.local.set({ pendingSetup: { site: 'gemini', ts } }, () => {
-                window.location.assign('https://gemini.google.com/saved-info');
-              });
-              return;
+  // Slide 4: Set up on either supported platform.
+  const setupActionCards = (['gemini', 'grok'] as const).map((siteId) => {
+    const siteName = siteId === 'grok' ? 'Grok' : 'Gemini';
+    const siteLogo = siteId === 'grok' ? grokIconSvg(22) : geminiIconSvg(22);
+    const setupBtn = h(
+      'button',
+      {
+        class: 'setup-action-btn',
+        type: 'button',
+        onClick: async () => {
+          setupBtn.textContent = 'Setting up...';
+          try {
+            if (siteId === 'grok') {
+              const res = await runGrokSetup();
+              recordSetupResult('grok', res);
+            } else {
+              if (window.location.pathname.replace(/\/+$/, '') !== '/saved-info') {
+                const ts = Date.now();
+                chrome.storage.local.set({ pendingSetup: { site: 'gemini', ts } }, () => {
+                  window.location.assign('https://gemini.google.com/saved-info');
+                });
+                return;
+              }
+              const res = await runGeminiSetup();
+              recordSetupResult('gemini', res);
             }
-            const res = await runGeminiSetup();
-            recordSetupResult('gemini', res);
+            clear(setupBtn);
+            setupBtn.classList.add('is-success');
+            setupBtn.appendChild(iconEl('check', 14));
+            setupBtn.appendChild(document.createTextNode("You're all set \u2713"));
+          } catch {
+            setupBtn.textContent = 'Setup ready';
           }
-          clear(setupBtn);
-          setupBtn.classList.add('is-success');
-          setupBtn.appendChild(iconEl('check', 14));
-          setupBtn.appendChild(document.createTextNode("You're all set \u2713"));
-        } catch {
-          setupBtn.textContent = 'Setup ready';
-        }
+        },
       },
-    },
-    document.createTextNode('Enable on ' + siteName),
-  );
+      document.createTextNode('Enable on ' + siteName),
+    );
+
+    return h(
+      'div',
+      { class: 'setup-action-card' },
+      h('div', { class: 'setup-site-info' }, siteLogo, h('span', { class: 'setup-site-name' }, siteName)),
+      setupBtn,
+    );
+  });
 
   const samplePromptBtn = h(
     'button',
@@ -856,7 +863,7 @@ export function showWelcomeTourModal(opts: {
       onClick: async () => {
         try {
           await navigator.clipboard.writeText(
-            'Create a flow diagram of OAuth 2.0 authorization code grant with token refresh',
+            'Teach me how OAuth 2.0 works, from the moment I click “Sign in with Google” to the app receiving an access token. Explain each step in simple language, show the authorization code flow with a clear diagram, and explain where access tokens and refresh tokens fit in with a practical example.',
           );
           clear(samplePromptBtn);
           samplePromptBtn.appendChild(iconEl('check', 14));
@@ -877,13 +884,8 @@ export function showWelcomeTourModal(opts: {
     'div',
     { class: 'carousel-slide slide-setup' },
     h('h3', { class: 'slide-heading' }, 'Set up in one click'),
-    h('p', { class: 'slide-sub' }, 'Enables BetterView AI instructions for your account.'),
-    h(
-      'div',
-      { class: 'setup-action-card' },
-      h('div', { class: 'setup-site-info' }, siteLogo, h('span', { class: 'setup-site-name' }, siteName)),
-      setupBtn,
-    ),
+    h('p', { class: 'slide-sub' }, 'Choose where you want to enable BetterView AI.'),
+    ...setupActionCards,
     samplePromptBtn,
   );
 
