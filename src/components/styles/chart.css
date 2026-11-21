@@ -1,0 +1,21 @@
+.iui-chart-card {
+  overflow: hidden;
+}
+
+.iui-chart-plot {
+  width: 100%;
+  min-width: 0;
+  border-radius: 12px;
+  padding: 6px 2px 0;
+}
+
+.iui-chart-plot canvas {
+  display: block;
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .iui-chart-plot {
+    padding-inline: 0;
+  }
+}

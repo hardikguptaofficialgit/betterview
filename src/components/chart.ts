@@ -132,19 +132,23 @@ export function buildChartConfig(
       backgroundColor: solids[idx % solids.length],
       borderColor: inks[idx % inks.length],
       borderWidth: 1,
-      borderRadius: 4,
+      borderRadius: 8,
+      borderSkipped: false,
+      maxBarThickness: 48,
     }));
   } else if (spec.chartType === 'line') {
     chartDatasets = spec.datasets.map((ds, idx) => ({
       label: ds.label,
       data: ds.data,
       borderColor: inks[idx % inks.length],
-      borderWidth: 2,
-      tension: 0.3,
-      pointRadius: 3,
+      borderWidth: 2.5,
+      tension: 0.35,
+      pointRadius: 2.5,
+      pointHoverRadius: 6,
       pointBackgroundColor: solids[idx % solids.length],
       pointBorderColor: inks[idx % inks.length],
       pointBorderWidth: 1,
+      pointHoverBorderWidth: 2,
       fill: false,
     }));
   } else if (isPieOrDoughnut) {
@@ -155,6 +159,8 @@ export function buildChartConfig(
       backgroundColor: sliceSolids,
       borderColor: cardBg,
       borderWidth: 2,
+      borderRadius: 4,
+      hoverOffset: 8,
     }));
   } else if (spec.chartType === 'radar') {
     chartDatasets = spec.datasets.map((ds, idx) => ({
@@ -176,14 +182,17 @@ export function buildChartConfig(
     scales = {
       x: {
         grid: {
-          color: borderColor,
-          lineWidth: 1,
+          display: false,
         },
         border: {
           display: false,
         },
         ticks: {
           color: mutedColor,
+          maxRotation: 0,
+          minRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: 8,
           font: {
             family: fontStack,
             size: 12,
@@ -195,12 +204,14 @@ export function buildChartConfig(
         grid: {
           color: borderColor,
           lineWidth: 1,
+          drawTicks: false,
         },
         border: {
           display: false,
         },
         ticks: {
           color: mutedColor,
+          padding: 10,
           font: {
             family: fontStack,
             size: 12,
@@ -272,7 +283,7 @@ export function buildChartConfig(
               family: fontStack,
               size: 12,
             },
-            padding: 16,
+            padding: 18,
             boxWidth: 8,
             boxHeight: 8,
           },
@@ -286,6 +297,9 @@ export function buildChartConfig(
           bodyColor: tooltipText,
           cornerRadius: 8,
           padding: 10,
+          displayColors: true,
+          boxPadding: 4,
+          caretSize: 5,
           titleFont: {
             family: fontStack,
             size: 12,
@@ -312,6 +326,13 @@ export function buildChartConfig(
         },
       },
       ...(scales ? { scales } : {}),
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      layout: {
+        padding: { top: 8, right: 8, bottom: 4, left: 4 },
+      },
     },
   };
 }
@@ -337,6 +358,7 @@ export function renderChart(spec: ChartSpec, ctx: RenderContext): HTMLElement {
   const container = h(
     'div',
     {
+      class: 'iui-chart-plot',
       style: `position: relative; height: ${height};`,
     },
     canvas,
@@ -365,19 +387,22 @@ export function renderChart(spec: ChartSpec, ctx: RenderContext): HTMLElement {
     }
   });
 
-  getChartClass()
+  (card as any).__chartReady = getChartClass()
     .then((Chart) => {
-      if (disposed) return;
+      if (disposed) return null;
       try {
         chartInstance = new Chart(canvas, config);
         (card as any).__chartInstance = chartInstance;
         (canvas as any).__chartInstance = chartInstance;
+        return chartInstance;
       } catch (err) {
         console.warn('[IUI] Chart initialization failed:', err);
+        return null;
       }
     })
     .catch((err) => {
       console.warn('[IUI] Failed to load Chart.js:', err);
+      return null;
     });
 
   return card;

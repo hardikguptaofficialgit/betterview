@@ -1,19 +1,102 @@
 .flow-card {
   border-radius: var(--iui-radius-card, 18px);
+  overflow: hidden;
+}
+
+.flow-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  min-height: 34px;
+  padding: 2px 4px 8px;
+}
+
+.flow-control-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--iui-border);
+  border-radius: 8px;
+  color: var(--iui-muted);
+  background: var(--iui-surface);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.flow-control-btn:hover,
+.flow-control-btn:focus-visible {
+  color: var(--iui-text);
+  background: var(--iui-surface-2);
+  border-color: var(--iui-subtle);
+}
+
+.flow-control-btn:focus-visible { outline: 2px solid var(--iui-text); outline-offset: 2px; }
+
+.flow-zoom-label {
+  min-width: 42px;
+  margin-left: 3px;
+  color: var(--iui-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .flow-canvas {
   position: relative;
-  overflow: hidden;
-  padding: 8px 4px;
+  overflow: auto;
+  min-height: 320px;
+  max-height: min(68vh, 720px);
+  padding: 32px 36px 38px;
+  box-sizing: border-box;
+  border: 1px solid var(--iui-border);
+  border-radius: 14px;
+  background-color: var(--iui-surface);
+  background-image: radial-gradient(var(--iui-border) 0.7px, transparent 0.7px);
+  background-size: 20px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--iui-subtle) transparent;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  cursor: grab;
+  touch-action: pan-x pan-y;
+}
+
+.flow-canvas.is-panning {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.flow-canvas::-webkit-scrollbar {
+  height: 7px;
+}
+
+.flow-canvas::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.flow-canvas::-webkit-scrollbar-thumb {
+  background: var(--iui-subtle);
+  border: 2px solid var(--iui-bg);
+  border-radius: 999px;
 }
 
 .flow-inner {
   position: relative;
   display: inline-flex;
   flex-direction: column;
+  width: max-content;
   min-width: 100%;
   box-sizing: border-box;
+}
+
+.flow-zoom-surface {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+  width: max-content;
 }
 
 .flow-body {
@@ -24,19 +107,22 @@
 }
 
 .flow-body.flow-ungrouped-body {
-  gap: 44px;
+  gap: 92px;
 }
 
 .flow-body.flow-grouped-body {
-  gap: 40px;
+  gap: 84px;
 }
 
 .flow-rank-row {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 28px;
-  width: 100%;
+  gap: 96px;
+  width: max-content;
+  min-width: 100%;
+  padding: 8px 22px;
+  box-sizing: border-box;
 }
 
 /* Groups as subtle labeled lanes with dashed hairline border */
@@ -67,37 +153,44 @@
 .flow-group-rows {
   display: flex;
   flex-direction: column;
-  gap: 44px;
+  gap: 88px;
   width: 100%;
 }
 
 .flow-ungrouped-section {
   display: flex;
   flex-direction: column;
-  gap: 44px;
+  gap: 76px;
   width: 100%;
 }
 
-/* Node card: 12px-radius boxes, min width 140px, auto height */
+/* Node cards stay comfortably readable instead of collapsing in chat columns. */
 .flow-node {
-  min-width: 140px;
-  max-width: 240px;
+  min-width: 210px;
+  max-width: 300px;
   width: auto;
   height: auto;
   border-radius: var(--iui-radius-inner, 12px);
-  background-color: var(--iui-bg);
-  border: 1px solid var(--iui-border);
-  padding: 12px 14px;
+  background-color: var(--c-bg, var(--iui-bg));
+  border: 1px solid var(--c-line, var(--iui-border));
+  padding: 17px 19px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   box-sizing: border-box;
   flex-shrink: 0;
   user-select: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.045);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
   animation: iui-node-pop 200ms cubic-bezier(.2,.8,.2,1) both;
   animation-delay: calc(var(--node-topo-idx, 0) * 50ms);
+}
+
+.flow-node:hover {
+  border-color: var(--iui-subtle);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
 }
 
 .iui-root[data-host="gemini"] .flow-node {
@@ -142,7 +235,7 @@
   height: 20px;
   background: transparent;
   border: none;
-  color: var(--iui-text);
+  color: var(--c-ink, var(--iui-text));
 }
 
 .flow-node-text {
@@ -212,6 +305,38 @@
   pointer-events: auto;
   user-select: none;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.flow-card:fullscreen,
+.flow-card.is-fullscreen-fallback {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483000 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 24px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-sizing: border-box !important;
+  background: var(--iui-bg) !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.flow-card:fullscreen .flow-canvas,
+.flow-card.is-fullscreen-fallback .flow-canvas {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+@media (max-width: 600px) {
+  .flow-canvas { min-height: 280px; padding: 24px; }
+  .flow-rank-row { gap: 68px; }
+  .flow-node { min-width: 190px; }
 }
 
 .flow-edge-label.c-mint {

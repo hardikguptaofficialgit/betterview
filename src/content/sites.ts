@@ -302,15 +302,26 @@ export const GEMINI_SETUP_SELECTORS = {
 };
 
 export const GROK_SETUP_SELECTORS = {
-  customizeRegion: '[role="region"][aria-label="Customize"], region[aria-label="Customize"]',
-  accountMenu: 'button[aria-label^="Account menu for"]',
+  customizeRegion: '[role="region"][aria-label*="Customize" i], region[aria-label*="Customize" i], [data-testid*="customize" i]',
+  accountMenu: 'button[aria-label*="account" i], button[aria-label*="profile" i], [data-testid*="account" i] button',
   menuItem: '[role="menuitem"]',
-  customizeButton: 'button',
   dropdown: 'button[aria-label="Customize Grok\'s Response"]',
   menuitemRadio: '[role="menuitemradio"]',
   textarea: 'textarea[aria-label="Instructions"], textarea',
   saveButton: 'button',
 };
+
+function findGrokAction(pattern: RegExp): HTMLElement | null {
+  const candidates = document.querySelectorAll<HTMLElement>(
+    'button, a, [role="button"], [role="menuitem"], [role="tab"]',
+  );
+  for (const el of Array.from(candidates)) {
+    const text = [el.textContent, el.getAttribute('aria-label'), el.getAttribute('title')]
+      .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    if (pattern.test(text)) return el;
+  }
+  return null;
+}
 
 export function extractInstructionVersion(text: string): number | null {
   const matches = text.matchAll(/\[betterview(?:\s+v(\d+))?\]/gi);
@@ -335,6 +346,11 @@ export function hasOlderInstruction(text: string): boolean {
   return false;
 }
 
+function hasCurrentInstruction(text: string): boolean {
+  const version = extractInstructionVersion(text);
+  return version !== null && version >= CURRENT_INSTRUCTION_VERSION;
+}
+
 export function appendInstruction(existing: string, instruction: string): string {
   const trimmed = existing.trim();
   const existingVer = extractInstructionVersion(trimmed);
@@ -353,30 +369,51 @@ export function hasBetterViewMarker(text: string): boolean {
   return /\[betterview(?:\s+v\d+)?\]/i.test(text);
 }
 
-function findGeminiTextarea(root: ParentNode): HTMLTextAreaElement | null {
-  return (
-    root.querySelector<HTMLTextAreaElement>('edit-memory-dialog textarea') ??
-    root.querySelector<HTMLTextAreaElement>('.cdk-overlay-container edit-memory-dialog textarea') ??
-    root.querySelector<HTMLTextAreaElement>('.cdk-overlay-container textarea[aria-label]') ??
-    root.querySelector<HTMLTextAreaElement>('textarea[aria-label="Enter new memory"]') ??
-    root.querySelector<HTMLTextAreaElement>('textarea.edit-memory-input') ??
-    root.querySelector<HTMLTextAreaElement>('textarea[aria-label]')
-  );
-}
+type GeminiEditor = HTMLTextAreaElement | HTMLInputElement | HTMLElement;
 
-function findGeminiSubmitButton(root: ParentNode): HTMLButtonElement | null {
-  return (
-    root.querySelector<HTMLButtonElement>('button[data-test-id="submit-button"]') ??
-    root.querySelector<HTMLButtonElement>('edit-memory-dialog button[data-test-id="submit-button"]')
-  );
+function geminiDeepQueryAll<T extends Element>(root: ParentNode, selector: string): T[] {
+  const found = new Set<T>();
+  const visit = (scope: ParentNode) => {
+    scope.querySelectorAll<T>(selector).forEach((el) => found.add(el));
+    scope.querySelectorAll<HTMLElement>('*').forEach((el) => {
+      if (el.shadowRoot) visit(el.shadowRoot);
+    });
+  };
+  visit(root);
+  return Array.from(found);
 }
 
 function findGeminiDialog(root: ParentNode): HTMLElement | null {
-  return (
-    root.querySelector<HTMLElement>('edit-memory-dialog') ??
-    root.querySelector<HTMLElement>('.cdk-overlay-container edit-memory-dialog') ??
-    root.querySelector<HTMLElement>('mat-dialog-container')
-  );
+  return geminiDeepQueryAll<HTMLElement>(
+    root,
+    'edit-memory-dialog, [role="dialog"], mat-dialog-container, dialog',
+  ).find((el) => el.getAttribute('aria-hidden') !== 'true' && el.getAttribute('inert') === null) ?? null;
+}
+
+function findGeminiTextarea(root: ParentNode): GeminiEditor | null {
+  const dialog = findGeminiDialog(root);
+  // Never fall back to the whole page: Gemini's chat composer is also a
+  // contenteditable textbox and must not receive the Saved Info instruction.
+  if (!dialog) return null;
+  return geminiDeepQueryAll<GeminiEditor>(
+    dialog,
+    'edit-memory-dialog textarea, textarea[aria-label*="memory" i], textarea, [contenteditable="true"][role="textbox"], [contenteditable="true"], input[type="text"]',
+  ).find((el) => el.getAttribute('aria-hidden') !== 'true') ?? null;
+}
+
+function findGeminiSubmitButton(root: ParentNode): HTMLButtonElement | null {
+  const dialog = findGeminiDialog(root);
+  // Only submit from the same Saved Info dialog that contains the editor.
+  if (!dialog) return null;
+  const buttons = geminiDeepQueryAll<HTMLButtonElement>(dialog, 'button, [role="button"]');
+  for (const button of buttons) {
+    const labels = [button.textContent, button.getAttribute('aria-label'), button.getAttribute('data-test-id')]
+      .filter(Boolean).map((value) => (value ?? '').replace(/\s+/g, ' ').trim());
+    if (labels.some((label) => /^(submit|save|add|done)(?:\s+(?:memory|info|instruction|changes))?$/i.test(label) || /submit-button/i.test(label))) {
+      return button as HTMLButtonElement;
+    }
+  }
+  return null;
 }
 
 export async function fillGeminiMemoryDialog(
@@ -386,11 +423,12 @@ export async function fillGeminiMemoryDialog(
   const timeoutMs = options.waitTimeoutMs ?? 10000;
   const pollMs = options.pollIntervalMs ?? 100;
 
-  // 1. Wait (up to 10s, MutationObserver) for edit-memory-dialog textarea
-  let textarea: HTMLTextAreaElement | null = findGeminiTextarea(root);
+  // 1. Wait for the editor inside the Add dialog. Gemini has changed this
+  // dialog's custom element and accessibility markup more than once.
+  let textarea: GeminiEditor | null = findGeminiTextarea(root);
 
   if (!textarea) {
-    textarea = await new Promise<HTMLTextAreaElement | null>((resolve) => {
+    textarea = await new Promise<GeminiEditor | null>((resolve) => {
       let resolved = false;
       let observer: MutationObserver | null = null;
       let timer: number | null = null;
@@ -439,27 +477,37 @@ export async function fillGeminiMemoryDialog(
     throw new Error(msg);
   }
 
-  // 2. Focus it, set value via native setter, dispatch input, change, and keyup (Angular needs these)
+  // 2. Fill the editor through its native value setter (or contenteditable
+  // text) and dispatch the events Angular/Material listens for.
   const instruction = getCompactInstruction();
 
-  const applyNativeFill = (el: HTMLTextAreaElement, val: string) => {
+  const applyNativeFill = (el: GeminiEditor, val: string) => {
     el.focus();
-    const desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
-    if (desc?.set) {
-      desc.set.call(el, val);
+    if (el instanceof HTMLTextAreaElement) {
+      const desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+      if (desc?.set) desc.set.call(el, val);
+      else el.value = val;
+    } else if (el instanceof HTMLInputElement) {
+      const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+      if (desc?.set) desc.set.call(el, val);
+      else el.value = val;
     } else {
-      el.value = val;
+      el.textContent = val;
     }
-    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: val }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
     el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: ' ' }));
+    const actual = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
+      ? el.value
+      : (el.textContent ?? '');
+    if (actual !== val) throw new Error('Gemini editor did not accept the complete BetterView instruction');
   };
 
   applyNativeFill(textarea, instruction);
 
   // 3. Wait until button[data-test-id="submit-button"] is enabled (poll up to 5s)
   const isEnabled = (btn: HTMLButtonElement | null) =>
-    Boolean(btn && !btn.disabled && !btn.hasAttribute('disabled'));
+    Boolean(btn && !btn.disabled && !btn.hasAttribute('disabled') && btn.getAttribute('aria-disabled') !== 'true');
 
   const waitForSubmitButton = async (maxMs: number): Promise<HTMLButtonElement | null> => {
     const start = Date.now();
@@ -494,7 +542,7 @@ export async function fillGeminiMemoryDialog(
     let dialogClosed = false;
     while (Date.now() - startCloseWait < maxCloseWait) {
       const dialog = findGeminiDialog(root);
-      if (!dialog || dialog.style.display === 'none' || !(root as any).contains(dialog)) {
+      if (!dialog || !dialog.isConnected || dialog.style.display === 'none') {
         dialogClosed = true;
         break;
       }
@@ -509,114 +557,26 @@ export async function fillGeminiMemoryDialog(
   }
 }
 
-function findGeminiAddButton(): HTMLButtonElement | null {
-  const buttons = document.querySelectorAll(GEMINI_SETUP_SELECTORS.addButton);
-  for (const b of Array.from(buttons)) {
-    const label = b.querySelector('span.mdc-button__label');
-    const txt = (label?.textContent || b.textContent || '').trim().toLowerCase();
-    if (txt === 'add') {
-      return b as HTMLButtonElement;
-    }
-  }
-  return null;
-}
-
 export async function runGeminiSetup(): Promise<SetupResult> {
   try {
-    let headingOrAddFound = false;
-    const startHeading = Date.now();
-    while (Date.now() - startHeading < 10000) {
-      const headings = document.querySelectorAll('h1, h2, h3, [role="heading"]');
-      for (const h of Array.from(headings)) {
-        const text = (h.textContent || '').toLowerCase().replace(/\s+/g, ' ');
-        if (
-          text.includes('your instructions for gemini') ||
-          text.includes('saved info') ||
-          text.includes('instructions for gemini')
-        ) {
-          headingOrAddFound = true;
-          break;
-        }
-      }
-      if (headingOrAddFound || findGeminiAddButton()) {
-        headingOrAddFound = true;
-        break;
-      }
-      await new Promise((r) => setTimeout(r, 200));
-    }
-    if (!headingOrAddFound) {
-      const msg = "Couldn't find instructions section";
+    // Gemini opens its Add memory dialog automatically when Saved info is
+    // opened through the setup link. Do not inspect existing entries or click
+    // Add again: wait for that already-open form, fill it, and submit it.
+    if (window.location.hostname === 'gemini.google.com' && window.location.pathname.replace(/\/+$/, '') !== '/saved-info') {
+      const msg = 'Gemini setup must run on https://gemini.google.com/saved-info';
       console.warn('[BetterView]', msg);
-      return { status: 'failed', error: msg };
-    }
-
-    const bodyText = document.body.textContent ?? '';
-    const existingVer = extractInstructionVersion(bodyText);
-    const hasOldEntry = hasOlderInstruction(bodyText);
-
-    if (existingVer !== null && existingVer >= CURRENT_INSTRUCTION_VERSION) {
-      const res: SetupResult = { status: 'already', version: existingVer, hasOldEntry };
+      const res: SetupResult = { status: 'failed', error: msg };
       recordSetupResult('gemini', res);
       return res;
     }
 
-    const addBtn = findGeminiAddButton();
-    if (!addBtn) {
-      const msg = "Couldn't find Add button";
-      console.warn('[BetterView]', msg);
-      return { status: 'failed', error: msg };
-    }
-    addBtn.click();
+    await fillGeminiMemoryDialog(document, {
+      waitTimeoutMs: 20000,
+      pollIntervalMs: 200,
+      waitForClose: true,
+    });
 
-    try {
-      await fillGeminiMemoryDialog(document, { waitTimeoutMs: 10000, pollIntervalMs: 200, waitForClose: true });
-    } catch (fillErr: unknown) {
-      const msg = fillErr instanceof Error ? fillErr.message : String(fillErr);
-      const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
-      recordSetupResult('gemini', res);
-      return res;
-    }
-
-    // Confirm success: entry containing [BetterView v3] appears within 10s
-    let entryAppeared = false;
-    const startConfirm = Date.now();
-    while (Date.now() - startConfirm < 10000) {
-      const normalizedBody = (document.body.textContent ?? '').replace(/\s+/g, ' ');
-      if (/wasn't saved|something went wrong/i.test(normalizedBody)) {
-        const msg = 'Gemini rejected the entry';
-        console.warn('[BetterView]', msg);
-        const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
-        recordSetupResult('gemini', res);
-        return res;
-      }
-
-      if (/\[BetterView\s+v3/i.test(normalizedBody)) {
-        entryAppeared = true;
-        break;
-      }
-
-      const inputs = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
-      for (const input of Array.from(inputs)) {
-        const val = (input.value ?? '').replace(/\s+/g, ' ');
-        if (/\[BetterView\s+v3/i.test(val)) {
-          entryAppeared = true;
-          break;
-        }
-      }
-      if (entryAppeared) break;
-
-      await new Promise((r) => setTimeout(r, 200));
-    }
-
-    if (!entryAppeared) {
-      const msg = "Saved entry didn't appear";
-      console.warn('[BetterView]', msg);
-      const res: SetupResult = { status: 'failed', error: msg, hasOldEntry };
-      recordSetupResult('gemini', res);
-      return res;
-    }
-
-    const res: SetupResult = { status: 'added', version: CURRENT_INSTRUCTION_VERSION, hasOldEntry };
+    const res: SetupResult = { status: 'added', version: CURRENT_INSTRUCTION_VERSION };
     recordSetupResult('gemini', res);
     return res;
   } catch (err: unknown) {
@@ -642,46 +602,58 @@ function showGrokFallbackToast(): void {
 
 export async function runGrokSetup(): Promise<SetupResult> {
   try {
-    let customizeRegion: Element | null = null;
-    for (let i = 0; i < 30; i++) {
-      const regions = document.querySelectorAll(GROK_SETUP_SELECTORS.customizeRegion);
-      if (regions.length > 0) {
-        customizeRegion = regions[0];
-        break;
-      }
+    const findCustomizeRegion = (): Element | null => {
+      const direct = document.querySelector(GROK_SETUP_SELECTORS.customizeRegion);
+      if (direct) return direct;
       const headings = document.querySelectorAll('h1, h2, h3, [role="heading"]');
-      for (const h of Array.from(headings)) {
-        if (h.textContent?.trim() === 'Customize') {
-          customizeRegion = h.closest('[role="region"], div') || h.parentElement;
-          break;
+      for (const heading of Array.from(headings)) {
+        if (/^customize$/i.test((heading.textContent ?? '').trim())) {
+          return heading.closest('[role="region"], section, form') ?? heading.parentElement?.parentElement ?? heading.parentElement;
         }
       }
-      if (customizeRegion) break;
-      await new Promise((r) => setTimeout(r, 500));
+      return null;
+    };
+
+    let customizeRegion: Element | null = null;
+    for (let i = 0; i < 24; i++) {
+      customizeRegion = findCustomizeRegion();
+      const settingsReady = !!findGrokAction(/^settings$/i) || !!findGrokAction(/^customize(?: grok's response)?$/i)
+        || !!document.querySelector(GROK_SETUP_SELECTORS.accountMenu)
+        || !!findGrokAction(/^(open )?(account|profile|menu|navigation menu)$/i);
+      if (customizeRegion || settingsReady) break;
+      await new Promise((r) => setTimeout(r, 250));
     }
 
     if (!customizeRegion) {
-      const acctBtn = document.querySelector<HTMLButtonElement>(GROK_SETUP_SELECTORS.accountMenu);
-      if (acctBtn) {
+      let settingsItem: HTMLElement | null = findGrokAction(/^settings$/i);
+      let customizeAction: HTMLElement | null = findGrokAction(/^customize(?: grok's response)?$/i);
+      const acctBtn = document.querySelector<HTMLButtonElement>(GROK_SETUP_SELECTORS.accountMenu)
+        ?? findGrokAction(/^(open )?(account|profile|menu|navigation menu)$/i) as HTMLButtonElement | null;
+      if (!settingsItem && !customizeAction && acctBtn) {
         acctBtn.click();
-        await new Promise((r) => setTimeout(r, 500));
-        const menuItems = document.querySelectorAll(GROK_SETUP_SELECTORS.menuItem);
-        for (const item of Array.from(menuItems)) {
-          if (item.textContent?.trim() === 'Settings') {
-            (item as HTMLElement).click();
-            break;
-          }
+        const menuWaitStart = Date.now();
+        while (!settingsItem && Date.now() - menuWaitStart < 5000) {
+          settingsItem = findGrokAction(/^settings$/i);
+          if (!settingsItem) await new Promise((r) => setTimeout(r, 200));
         }
-        await new Promise((r) => setTimeout(r, 500));
-        const buttons = document.querySelectorAll(GROK_SETUP_SELECTORS.customizeButton);
-        for (const b of Array.from(buttons)) {
-          if (b.textContent?.trim() === 'Customize') {
-            (b as HTMLElement).click();
-            break;
-          }
+      }
+      if (settingsItem) settingsItem.click();
+
+      if (settingsItem || acctBtn || customizeAction) {
+        const customizeWaitStart = Date.now();
+        while (!customizeAction && Date.now() - customizeWaitStart < 7000) {
+          customizeAction = findGrokAction(/^customize(?: grok's response)?$/i);
+          if (!customizeAction) await new Promise((r) => setTimeout(r, 250));
         }
-        await new Promise((r) => setTimeout(r, 500));
-        customizeRegion = document.querySelector(GROK_SETUP_SELECTORS.customizeRegion);
+        if (customizeAction) {
+          customizeAction.click();
+        }
+
+        const startWait = Date.now();
+        while (!customizeRegion && Date.now() - startWait < 8000) {
+          await new Promise((r) => setTimeout(r, 250));
+          customizeRegion = findCustomizeRegion();
+        }
       }
     }
 
@@ -692,13 +664,14 @@ export async function runGrokSetup(): Promise<SetupResult> {
       return { status: 'failed', error: msg };
     }
 
-    const dropdown = customizeRegion.querySelector<HTMLButtonElement>(GROK_SETUP_SELECTORS.dropdown);
-    if (dropdown && !dropdown.textContent?.includes('Custom')) {
+    const dropdown = customizeRegion.querySelector<HTMLButtonElement>(GROK_SETUP_SELECTORS.dropdown)
+      ?? customizeRegion.querySelector<HTMLButtonElement>('[role="combobox"]');
+    if (dropdown && !/custom/i.test(dropdown.textContent ?? '')) {
       dropdown.click();
       await new Promise((r) => setTimeout(r, 300));
       const radios = document.querySelectorAll(GROK_SETUP_SELECTORS.menuitemRadio);
       for (const r of Array.from(radios)) {
-        if (r.textContent?.trim() === 'Custom') {
+        if (/^custom$/i.test(r.textContent?.trim() ?? '')) {
           (r as HTMLElement).click();
           break;
         }
@@ -743,7 +716,7 @@ export async function runGrokSetup(): Promise<SetupResult> {
     let saveBtn: HTMLButtonElement | null = null;
     const buttons = customizeRegion.querySelectorAll<HTMLButtonElement>(GROK_SETUP_SELECTORS.saveButton);
     for (const b of Array.from(buttons)) {
-      if (b.textContent?.trim() === 'Save') {
+      if (/^save$/i.test(b.textContent?.trim() ?? '') || /save/i.test(b.getAttribute('aria-label') ?? '')) {
         saveBtn = b;
         break;
       }
@@ -773,9 +746,16 @@ export async function runGrokSetup(): Promise<SetupResult> {
 
     let saved = false;
     const startWait = Date.now();
-    while (Date.now() - startWait < 3000) {
+    while (Date.now() - startWait < 2500) {
       await new Promise((r) => setTimeout(r, 200));
-      if (textarea.value.includes('[BetterView v3')) {
+      const pageText = (customizeRegion.textContent ?? '').replace(/\s+/g, ' ');
+      if (/couldn't save|failed to save|something went wrong/i.test(pageText)) {
+        break;
+      }
+      const liveTextarea = customizeRegion.querySelector<HTMLTextAreaElement>(GROK_SETUP_SELECTORS.textarea);
+      const currentValue = liveTextarea?.isConnected ? liveTextarea.value : '';
+      const confirmedToast = /(?:instructions|changes|settings) (?:saved|updated)|saved successfully/i.test(pageText);
+      if ((hasCurrentInstruction(currentValue) || confirmedToast) && Date.now() - startWait >= 1000) {
         saved = true;
         break;
       }

@@ -53,6 +53,7 @@ describe('Export serialization: serializeCardToSvg', () => {
 
     const svg = serializeCardToSvg(card, {
       theme: 'light',
+      host: 'gemini',
       watermark: true,
       allStyles: sampleStyles,
       title: 'System Metrics',
@@ -62,6 +63,7 @@ describe('Export serialization: serializeCardToSvg', () => {
     expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
     expect(svg).toContain('<foreignObject');
     expect(svg).toContain('</foreignObject>');
+    expect(svg).toContain('class="iui-root" data-theme="light" data-host="gemini"');
     expect(svg).toContain('System Metrics');
 
     // 2. Inlined styles present
@@ -105,6 +107,27 @@ describe('Export serialization: serializeCardToSvg', () => {
 
     expect(svg).not.toContain('BetterView AI');
     expect(svg).toContain('fill="#0A0A0A"');
+  });
+
+  it('expands the export canvas to include horizontally scrollable flow content', () => {
+    const card = document.createElement('div');
+    card.className = 'iui-card flow-card';
+    const flowCanvas = document.createElement('div');
+    flowCanvas.className = 'flow-canvas';
+    const flowInner = document.createElement('div');
+    flowInner.className = 'flow-inner';
+    flowInner.textContent = 'A wide flowchart';
+    flowCanvas.appendChild(flowInner);
+    card.appendChild(flowCanvas);
+    Object.defineProperty(flowCanvas, 'scrollWidth', { configurable: true, value: 980 });
+    Object.defineProperty(flowCanvas, 'clientWidth', { configurable: true, value: 420 });
+
+    const svg = serializeCardToSvg(card, { theme: 'light', host: 'grok' });
+
+    expect(svg).toContain('width="1028"');
+    expect(svg).toContain('data-host="grok"');
+    expect(svg).toContain('width: 980px');
+    expect(svg).toContain('overflow: visible');
   });
 });
 

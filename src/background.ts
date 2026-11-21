@@ -43,17 +43,28 @@ export function handleMessage(
 ): boolean | void {
   if (message && message.type === 'START_AUTO_SETUP') {
     const site = message.site;
+    if (site !== 'gemini' && site !== 'grok') {
+      sendResponse?.({ ok: false, error: 'Unsupported setup target' });
+      return;
+    }
     const url =
       site === 'gemini'
-        ? 'https://gemini.google.com/saved-info#betterview-setup'
-        : 'https://grok.com/?_s=personality#betterview-setup';
+        ? 'https://gemini.google.com/saved-info'
+        : 'https://grok.com/#betterview-setup';
+    const openSetupTab = () => {
+      if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+        chrome.tabs.create({ url }, (tab) => sendResponse?.({ ok: true, tabId: tab?.id }));
+      } else {
+        sendResponse?.({ ok: false, error: 'Could not open setup tab' });
+      }
+    };
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-      chrome.storage.local.set({ pendingSetup: { site, ts: Date.now() } });
+      // Do not let the new tab race the storage marker; the content script
+      // checks both this marker and the URL hash when it starts.
+      chrome.storage.local.set({ pendingSetup: { site, ts: Date.now() } }, openSetupTab);
+    } else {
+      openSetupTab();
     }
-    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
-      chrome.tabs.create({ url });
-    }
-    sendResponse?.({ ok: true });
     return true;
   }
 }

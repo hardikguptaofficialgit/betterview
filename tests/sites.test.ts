@@ -475,6 +475,62 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
 
     overlay.remove();
   });
+
+  it('never fills the page chat composer when the Saved Info dialog is absent', async () => {
+    const page = document.createElement('main');
+    page.innerHTML = '<div contenteditable="true" role="textbox" aria-label="Enter a prompt for Gemini"></div><button>Send</button>';
+    document.body.appendChild(page);
+    const composer = page.querySelector<HTMLElement>('[contenteditable="true"]')!;
+
+    await expect(fillGeminiMemoryDialog(page, { waitTimeoutMs: 100, pollIntervalMs: 20 })).rejects.toThrow(
+      "Couldn't find the text box",
+    );
+    expect(composer.textContent).toBe('');
+
+    page.remove();
+  });
+});
+
+describe('runGeminiSetup', () => {
+  it('fills and submits the form Gemini opened automatically without checking entries or clicking Add', async () => {
+    document.body.replaceChildren();
+    const dialog = document.createElement('edit-memory-dialog');
+    dialog.setAttribute('role', 'dialog');
+    dialog.innerHTML = '<textarea aria-label="Enter new memory"></textarea><button data-test-id="submit-button" disabled>Submit</button>';
+    const textarea = dialog.querySelector('textarea')!;
+    const submit = dialog.querySelector<HTMLButtonElement>('button')!;
+    textarea.addEventListener('input', () => { submit.disabled = false; });
+    submit.addEventListener('click', () => dialog.remove());
+    document.body.appendChild(dialog);
+
+    const result = await runGeminiSetup();
+
+    expect(result.status).toBe('added');
+    expect(result.version).toBe(CURRENT_INSTRUCTION_VERSION);
+    expect(textarea.value).toBe(getCompactInstruction());
+    expect(dialog.isConnected).toBe(false);
+    expect(document.querySelector('button')).toBeNull();
+  });
+
+  it('fills and submits Gemini\'s automatically opened shadow-root form', async () => {
+    document.body.replaceChildren();
+    const host = document.createElement('gemini-saved-info');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const section = document.createElement('section');
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.innerHTML = '<textarea aria-label="Memory"></textarea><button>Submit</button>';
+    const editor = dialog.querySelector('textarea')!;
+    const submit = dialog.querySelector('button')!;
+    submit.addEventListener('click', () => dialog.remove());
+    shadow.append(dialog, section);
+    document.body.appendChild(host);
+
+    const result = await runGeminiSetup();
+    expect(result.status).toBe('added');
+    expect(editor.value).toBe(getCompactInstruction());
+    expect(dialog.isConnected).toBe(false);
+  });
 });
 
 describe('Brand Icons', () => {
@@ -490,6 +546,71 @@ describe('Brand Icons', () => {
 });
 
 describe('runGrokSetup', () => {
+  it('opens Grok Settings → Customize and saves the custom instructions', async () => {
+    const profile = document.createElement('button');
+    profile.setAttribute('aria-label', 'Profile');
+    profile.addEventListener('click', () => {
+      const settings = document.createElement('button');
+      settings.textContent = 'Settings';
+      settings.addEventListener('click', () => {
+        const customize = document.createElement('button');
+        customize.textContent = 'Customize';
+        customize.addEventListener('click', () => {
+          const region = document.createElement('section');
+          region.setAttribute('role', 'region');
+          region.setAttribute('aria-label', 'Customize');
+          region.innerHTML = '<textarea aria-label="Instructions"></textarea><button>Save</button>';
+          document.body.replaceChildren(region);
+        });
+        document.body.replaceChildren(customize);
+      });
+      document.body.replaceChildren(settings);
+    });
+    document.body.appendChild(profile);
+
+    const result = await runGrokSetup();
+    expect(result.status).toBe('added');
+    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value.startsWith('[BetterView v4]')).toBe(true);
+    document.body.replaceChildren();
+  });
+
+  it('saves the current v4 instruction successfully', async () => {
+    const region = document.createElement('div');
+    region.setAttribute('role', 'region');
+    region.setAttribute('aria-label', 'Customize');
+    region.innerHTML = `
+      <button role="combobox">Custom</button>
+      <textarea aria-label="Instructions"></textarea>
+      <button>Save</button>
+    `;
+    document.body.appendChild(region);
+
+    const result = await runGrokSetup();
+    const textarea = region.querySelector('textarea')!;
+    expect(result.status).toBe('added');
+    expect(textarea.value.startsWith('[BetterView v4]')).toBe(true);
+
+    region.remove();
+  });
+
+  it('recognizes an existing current instruction without duplicating it', async () => {
+    const region = document.createElement('div');
+    region.setAttribute('role', 'region');
+    region.setAttribute('aria-label', 'Customize');
+    region.innerHTML = `
+      <button role="combobox">Custom</button>
+      <textarea aria-label="Instructions">[BetterView v4] current instruction</textarea>
+      <button>Save</button>
+    `;
+    document.body.appendChild(region);
+
+    const result = await runGrokSetup();
+    expect(result.status).toBe('already');
+    expect(region.querySelector('textarea')?.value).toBe('[BetterView v4] current instruction');
+
+    region.remove();
+  });
+
   it("returns failed when the textarea value doesn't contain the marker after save", async () => {
     const region = document.createElement('div');
     region.setAttribute('role', 'region');

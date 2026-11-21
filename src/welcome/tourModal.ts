@@ -826,6 +826,13 @@ export function showWelcomeTourModal(opts: {
             const res = await runGrokSetup();
             recordSetupResult('grok', res);
           } else {
+            if (window.location.pathname.replace(/\/+$/, '') !== '/saved-info') {
+              const ts = Date.now();
+              chrome.storage.local.set({ pendingSetup: { site: 'gemini', ts } }, () => {
+                window.location.assign('https://gemini.google.com/saved-info');
+              });
+              return;
+            }
             const res = await runGeminiSetup();
             recordSetupResult('gemini', res);
           }

@@ -32,8 +32,117 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
   const titleText = spec.title || 'Untitled';
   const canvas = h('div', {
     class: 'flow-canvas',
-    role: 'img',
+    role: 'region',
+    tabindex: '0',
     'aria-label': `Flow diagram: ${titleText}, ${nodes.length} steps`,
+  });
+
+  // A compact, always-visible canvas toolbar. Zoom is applied to the whole
+  // diagram so nodes, routes and labels stay aligned while the user explores.
+  let zoom = 1;
+  let contentWidth = 0;
+  let contentHeight = 0;
+  const controls = h('div', { class: 'flow-controls', role: 'toolbar', 'aria-label': 'Diagram controls' });
+  const zoomLabel = h('span', { class: 'flow-zoom-label', 'aria-live': 'polite' }, '100%');
+  const zoomSurface = h('div', { class: 'flow-zoom-surface' });
+  const flowInner = h('div', { class: 'flow-inner' });
+
+  function setZoom(next: number, anchorX?: number, anchorY?: number): void {
+    const previous = zoom;
+    zoom = Math.max(0.35, Math.min(2.5, next));
+    if (previous === zoom) return;
+    const x = anchorX ?? canvas.clientWidth / 2;
+    const y = anchorY ?? canvas.clientHeight / 2;
+    const logicalX = (canvas.scrollLeft + x) / previous;
+    const logicalY = (canvas.scrollTop + y) / previous;
+    flowInner.style.zoom = String(zoom);
+    const surfaceScale = Math.min(zoom, 1);
+    zoomSurface.style.width = `${contentWidth * surfaceScale}px`;
+    zoomSurface.style.height = `${contentHeight * surfaceScale}px`;
+    zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+    canvas.scrollLeft = logicalX * zoom - x;
+    canvas.scrollTop = logicalY * zoom - y;
+  }
+
+  function addControl(label: string, icon: string, action: () => void): HTMLButtonElement {
+    const button = h('button', {
+      class: 'flow-control-btn', type: 'button', 'aria-label': label, title: label,
+      onClick: (event: Event) => { event.stopPropagation(); action(); },
+    }, iconEl(icon, 15));
+    controls.appendChild(button);
+    return button;
+  }
+
+  addControl('Zoom out', 'minus', () => setZoom(zoom - 0.15));
+  addControl('Zoom in', 'plus', () => setZoom(zoom + 0.15));
+  addControl('Fit diagram', 'bounding-box', () => {
+    if (!contentWidth || !contentHeight) return;
+    const fit = Math.min((canvas.clientWidth - 32) / contentWidth, (canvas.clientHeight - 32) / contentHeight, 1);
+    setZoom(Math.max(0.35, fit));
+    canvas.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+  });
+  const fullscreenButton = addControl('Enter full screen', 'corners-out', async () => {
+    try {
+      if (card.matches(':fullscreen')) await document.exitFullscreen();
+      else if (card.requestFullscreen) await card.requestFullscreen();
+      else card.classList.toggle('is-fullscreen-fallback');
+    } catch {
+      card.classList.toggle('is-fullscreen-fallback');
+    }
+    syncFullscreen();
+  });
+  const syncFullscreen = () => {
+    const active = card.matches(':fullscreen') || card.classList.contains('is-fullscreen-fallback');
+    fullscreenButton.setAttribute('aria-label', active ? 'Exit full screen' : 'Enter full screen');
+    fullscreenButton.title = active ? 'Exit full screen' : 'Enter full screen';
+    fullscreenButton.replaceChildren(iconEl(active ? 'corners-in' : 'corners-out', 15));
+    if (active) requestAnimationFrame(() => {
+      const fit = Math.min(
+        (canvas.clientWidth - 56) / Math.max(contentWidth, 1),
+        (canvas.clientHeight - 56) / Math.max(contentHeight, 1),
+        1.5,
+      );
+      setZoom(Math.max(0.35, fit));
+      canvas.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+    });
+  };
+  document.addEventListener('fullscreenchange', syncFullscreen);
+  ctx.onCleanup(() => document.removeEventListener('fullscreenchange', syncFullscreen));
+  controls.appendChild(zoomLabel);
+
+  // Ctrl/⌘ + wheel zooms around the pointer; ordinary wheel/trackpad scrolls.
+  const onWheel = (event: WheelEvent) => {
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    setZoom(zoom * (event.deltaY < 0 ? 1.08 : 0.92), event.clientX - rect.left, event.clientY - rect.top);
+  };
+  canvas.addEventListener('wheel', onWheel, { passive: false });
+  ctx.onCleanup(() => canvas.removeEventListener('wheel', onWheel));
+
+  // Grab-and-drag panning (ignore clicks on controls and diagram nodes).
+  let drag: { x: number; y: number; left: number; top: number } | null = null;
+  const onPointerDown = (event: PointerEvent) => {
+    if (event.button !== 0 || (event.target as HTMLElement).closest('.flow-node, .flow-controls')) return;
+    drag = { x: event.clientX, y: event.clientY, left: canvas.scrollLeft, top: canvas.scrollTop };
+    canvas.classList.add('is-panning');
+    canvas.setPointerCapture?.(event.pointerId);
+  };
+  const onPointerMove = (event: PointerEvent) => {
+    if (!drag) return;
+    canvas.scrollLeft = drag.left - (event.clientX - drag.x);
+    canvas.scrollTop = drag.top - (event.clientY - drag.y);
+  };
+  const stopPan = () => { drag = null; canvas.classList.remove('is-panning'); };
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerup', stopPan);
+  canvas.addEventListener('pointercancel', stopPan);
+  ctx.onCleanup(() => {
+    canvas.removeEventListener('pointerdown', onPointerDown);
+    canvas.removeEventListener('pointermove', onPointerMove);
+    canvas.removeEventListener('pointerup', stopPan);
+    canvas.removeEventListener('pointercancel', stopPan);
   });
 
   const nodeMap = new Map<string, FlowNode>();
@@ -81,7 +190,6 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
     }
   }
 
-  const flowInner = h('div', { class: 'flow-inner' });
   const svgOverlay = svg('svg', { class: 'flow-svg-overlay' });
   const labelsLayer = h('div', { class: 'flow-labels-layer' });
 
@@ -99,7 +207,7 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
   });
   const markerPath = svg('path', {
     d: 'M 1 2 L 6 4 L 1 6 z',
-    fill: 'var(--iui-text)',
+    fill: 'var(--iui-muted)',
   });
   marker.appendChild(markerPath);
   defs.appendChild(marker);
@@ -272,7 +380,9 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
 
   flowInner.appendChild(svgOverlay);
   flowInner.appendChild(labelsLayer);
-  canvas.appendChild(flowInner);
+  zoomSurface.appendChild(flowInner);
+  canvas.appendChild(zoomSurface);
+  card.appendChild(controls);
   card.appendChild(canvas);
 
   function redraw(): void {
@@ -282,8 +392,13 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
     }
     clear(labelsLayer);
 
+    // Measure and route in the diagram's unscaled coordinate space. The zoom
+    // is restored after layout so SVG paths and labels are scaled together.
+    const appliedZoom = flowInner.style.zoom || '1';
+    flowInner.style.zoom = '1';
     const innerRect = flowInner.getBoundingClientRect();
     if (innerRect.width === 0 && innerRect.height === 0) {
+      flowInner.style.zoom = appliedZoom;
       return;
     }
 
@@ -330,17 +445,17 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
     );
     const scrollH = Math.max(flowInner.scrollHeight, flowInner.clientHeight);
 
-    // Fit to chat width: scale down to fit exactly, no arbitrary minimum
-    const canvasWidth = canvas.clientWidth;
-    if (canvasWidth > 0 && scrollW > canvasWidth) {
-      const scale = Math.min(1, canvasWidth / scrollW);
-      flowInner.style.transformOrigin = 'top left';
-      flowInner.style.transform = scale < 0.999 ? `scale(${scale})` : '';
-      canvas.style.height = scale < 0.999 ? `${Math.ceil(scrollH * scale)}px` : '';
-    } else {
-      flowInner.style.transform = '';
-      canvas.style.height = '';
-    }
+    contentWidth = scrollW;
+    contentHeight = scrollH;
+    const surfaceScale = Math.min(zoom, 1);
+    zoomSurface.style.width = `${contentWidth * surfaceScale}px`;
+    zoomSurface.style.height = `${contentHeight * surfaceScale}px`;
+
+    // Preserve readable node text on narrow chat columns. The canvas scrolls
+    // horizontally when a graph is wider than the available conversation width.
+    flowInner.style.transform = '';
+    flowInner.style.transformOrigin = '';
+    canvas.style.height = '';
 
     svgOverlay.setAttribute('width', String(scrollW));
     svgOverlay.setAttribute('height', String(scrollH));
@@ -365,12 +480,9 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
       }
     }
 
-    const prefersReduced =
-      typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    // Draw edges
+    // Draw edges and gently separate nearby edge labels. Several long/back
+    // channels can share a midpoint; stacking pills there made them unreadable.
+    const placedLabels: { x: number; y: number; width: number; height: number }[] = [];
     let currentOuterIdx = 0;
     for (let edgeIdx = 0; edgeIdx < edges.length; edgeIdx++) {
       const e = edges[edgeIdx];
@@ -408,27 +520,17 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
 
       const pathEl = svg('path', {
         d: route.pathD,
-        stroke: 'var(--iui-text)',
-        'stroke-width': '1.5',
+        stroke: 'var(--iui-muted)',
+        'stroke-width': '1.75',
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
         fill: 'none',
         'marker-end': `url(#${markerId})`,
       });
 
-      if (!prefersReduced && typeof requestAnimationFrame !== 'undefined') {
-        try {
-          const len = (pathEl as SVGGeometryElement).getTotalLength?.() || 200;
-          pathEl.style.strokeDasharray = `${len}`;
-          pathEl.style.strokeDashoffset = `${len}`;
-          const edgeDelay = 150 + edgeIdx * 100;
-          pathEl.style.transition = `stroke-dashoffset 400ms cubic-bezier(.2,.8,.2,1) ${edgeDelay}ms`;
-          requestAnimationFrame(() => {
-            pathEl.style.strokeDashoffset = '0';
-          });
-        } catch {
-          // ignore
-        }
-      }
-
+      // Edges are intentionally static. redraw() runs after layout, font and
+      // resize changes; animating newly-created SVG paths here made every
+      // observer pass look like the whole diagram was restarting.
       svgOverlay.appendChild(pathEl);
 
       // Edge label at route.labelPoint
@@ -446,21 +548,26 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
           { class: `flow-edge-label iui-chip ${chipClass}` },
           labelText
         );
-        pill.style.left = `${route.labelPoint.x}px`;
-        pill.style.top = `${route.labelPoint.y}px`;
-
-        if (!prefersReduced && typeof requestAnimationFrame !== 'undefined') {
-          pill.style.opacity = '0';
-          const labelDelay = 150 + edgeIdx * 100 + 350;
-          pill.style.transition = `opacity 240ms cubic-bezier(.2,.8,.2,1) ${labelDelay}ms`;
-          requestAnimationFrame(() => {
-            pill.style.opacity = '1';
-          });
+        const candidates = [0, 22, -22, 44, -44, 66, -66, 88, -88];
+        const measuredWidth = Math.max(44, labelText.length * 7 + 22);
+        const measuredHeight = 26;
+        let labelX = route.labelPoint.x;
+        let labelY = route.labelPoint.y;
+        for (const offset of candidates) {
+          const candidate = { x: route.labelPoint.x, y: route.labelPoint.y + offset, width: measuredWidth, height: measuredHeight };
+          const collides = placedLabels.some((other) =>
+            Math.abs(candidate.x - other.x) < (candidate.width + other.width) / 2 + 8 &&
+            Math.abs(candidate.y - other.y) < (candidate.height + other.height) / 2 + 5,
+          );
+          if (!collides) { labelX = candidate.x; labelY = candidate.y; placedLabels.push(candidate); break; }
         }
+        pill.style.left = `${labelX}px`;
+        pill.style.top = `${labelY}px`;
 
         labelsLayer.appendChild(pill);
       }
     }
+    flowInner.style.zoom = appliedZoom;
   }
 
   // Setup ResizeObserver and settles

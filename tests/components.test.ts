@@ -16,7 +16,8 @@ import {
 import { RENDERERS } from '../src/components/index';
 import { renderChart } from '../src/components/chart';
 import { renderMermaid } from '../src/components/mermaid';
-import { ChartSpec } from '../src/core/types';
+import { renderFlow } from '../src/components/flow';
+import { ChartSpec, FlowSpec } from '../src/core/types';
 
 describe('parseNumericValue', () => {
   it('parses plain numbers', () => {
@@ -107,7 +108,7 @@ describe('Chart palettes and helpers', () => {
     expect(hexToRgba('#FFFFFF', 0)).toBe('rgba(255, 255, 255, 0)');
   });
 
-  it('buildChartConfig configures bar chart with zero begin, radius 4 and no animation', () => {
+  it('buildChartConfig configures bar chart with zero begin, rounded bars and no animation', () => {
     const spec: ChartSpec = {
       type: 'chart',
       title: 'Redirects per day',
@@ -137,10 +138,11 @@ describe('Chart palettes and helpers', () => {
     expect(ds.backgroundColor).toBe(LIGHT_SOLIDS[0]);
     expect(ds.borderColor).toBe(LIGHT_INKS[0]);
     expect(ds.borderWidth).toBe(1);
-    expect(ds.borderRadius).toBe(4);
+    expect(ds.borderRadius).toBe(8);
+    expect(ds.maxBarThickness).toBe(48);
   });
 
-  it('buildChartConfig configures line chart with tension 0.3, pointRadius 3 and no area fill', () => {
+  it('buildChartConfig configures line chart with smooth curves, hover targets and no area fill', () => {
     const spec: ChartSpec = {
       type: 'chart',
       chartType: 'line',
@@ -158,10 +160,11 @@ describe('Chart palettes and helpers', () => {
     expect(config.options?.plugins?.legend?.position).toBe('bottom');
 
     const ds0 = config.data.datasets[0] as any;
-    expect(ds0.tension).toBe(0.3);
-    expect(ds0.borderWidth).toBe(2);
+    expect(ds0.tension).toBe(0.35);
+    expect(ds0.borderWidth).toBe(2.5);
     expect(ds0.fill).toBe(false);
-    expect(ds0.pointRadius).toBe(3);
+    expect(ds0.pointRadius).toBe(2.5);
+    expect(ds0.pointHoverRadius).toBe(6);
     expect(ds0.pointBackgroundColor).toBe(LIGHT_SOLIDS[0]);
     expect(ds0.pointBorderColor).toBe(LIGHT_INKS[0]);
 
@@ -374,5 +377,60 @@ describe('RENDERERS registry', () => {
       ctx,
     );
     expect(followupsEl.querySelectorAll('.iui-followup-chip')).toHaveLength(2);
+  });
+});
+
+describe('Flow diagram canvas controls', () => {
+  it('renders zoom, fit and fullscreen controls with an accessible pannable canvas', () => {
+    const cleanups: (() => void)[] = [];
+    const ctx = { theme: 'light' as const, onCleanup: (fn: () => void) => cleanups.push(fn) };
+    const spec: FlowSpec = {
+      type: 'flow',
+      title: 'OAuth flow',
+      nodes: [
+        { id: 'user', label: 'Resource owner' },
+        { id: 'client', label: 'Client application' },
+        { id: 'server', label: 'Authorization server' },
+      ],
+      edges: [
+        { from: 'user', to: 'client', label: 'Starts login' },
+        { from: 'client', to: 'server', label: 'Requests authorization' },
+      ],
+    };
+    const card = renderFlow(spec, ctx);
+    const canvas = card.querySelector<HTMLElement>('.flow-canvas')!;
+    const zoomIn = card.querySelector<HTMLButtonElement>('[aria-label="Zoom in"]')!;
+    const zoomOut = card.querySelector<HTMLButtonElement>('[aria-label="Zoom out"]')!;
+    const fullscreen = card.querySelector<HTMLButtonElement>('[aria-label="Enter full screen"]')!;
+    const fit = card.querySelector<HTMLButtonElement>('[aria-label="Fit diagram"]')!;
+
+    expect(canvas.getAttribute('role')).toBe('region');
+    expect(canvas.getAttribute('tabindex')).toBe('0');
+    expect(fit).not.toBeNull();
+    expect(fit.innerHTML).not.toBe(fullscreen.innerHTML);
+    expect(card.querySelectorAll('[aria-label="Fit diagram"]')).toHaveLength(1);
+    expect(card.querySelectorAll('[aria-label="Enter full screen"]')).toHaveLength(1);
+    expect(card.querySelectorAll('.flow-node')).toHaveLength(3);
+
+    zoomIn.click();
+    expect(card.querySelector('.flow-zoom-label')?.textContent).toBe('115%');
+    zoomOut.click();
+    expect(card.querySelector('.flow-zoom-label')?.textContent).toBe('100%');
+
+    const wheel = new Event('wheel', { bubbles: true, cancelable: true });
+    Object.defineProperties(wheel, {
+      deltaY: { value: -1 }, ctrlKey: { value: true }, metaKey: { value: false },
+      clientX: { value: 0 }, clientY: { value: 0 },
+    });
+    canvas.dispatchEvent(wheel);
+    expect(wheel.defaultPrevented).toBe(true);
+    expect(card.querySelector('.flow-zoom-label')?.textContent).toBe('108%');
+
+    // Happy DOM has no Fullscreen API, so the accessible fallback is used.
+    fullscreen.click();
+    expect(card.classList.contains('is-fullscreen-fallback')).toBe(true);
+    expect(fullscreen.getAttribute('aria-label')).toBe('Exit full screen');
+
+    cleanups.forEach((cleanup) => cleanup());
   });
 });

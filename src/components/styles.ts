@@ -12,6 +12,7 @@ import followupsCss from './styles/followups.css?inline';
 import mathCss from './styles/math.css?inline';
 import codeCss from './styles/code.css?inline';
 import genericCss from './styles/generic.css?inline';
+import chartCss from './styles/chart.css?inline';
 
 export const COMPONENT_STYLES: string[] = [
   tableCss,
@@ -28,4 +29,5 @@ export const COMPONENT_STYLES: string[] = [
   mathCss,
   codeCss,
   genericCss,
+  chartCss,
 ];

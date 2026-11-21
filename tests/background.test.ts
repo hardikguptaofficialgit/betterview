@@ -113,8 +113,9 @@ describe('Background onMessage START_AUTO_SETUP handler', () => {
     expect(pendingData).not.toBeNull();
     expect((pendingData as any)?.site).toBe('gemini');
     expect(typeof (pendingData as any)?.ts).toBe('number');
-    expect(chrome.tabs.create).toHaveBeenCalledWith({
-      url: 'https://gemini.google.com/saved-info#betterview-setup',
-    });
+    expect(chrome.tabs.create).toHaveBeenCalledWith(
+      { url: 'https://gemini.google.com/saved-info' },
+      expect.any(Function),
+    );
   });
 });

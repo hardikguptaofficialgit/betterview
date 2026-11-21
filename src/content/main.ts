@@ -12,8 +12,12 @@ async function init(): Promise<void> {
   if (!matched) return;
   const adapter: SiteAdapter = matched;
 
-  // Handle auto-setup if opened with #betterview-setup or pendingSetup storage
+  // Handle auto-setup if opened with #betterview-setup or pendingSetup storage.
+  // Keep the marker until the flow finishes: Gemini can perform a full page
+  // navigation while opening Personal Intelligence / Instructions, which
+  // destroys this content-script instance and its in-memory promise.
   let shouldRunSetup = window.location.hash.includes('betterview-setup');
+  let pendingSetupTs: number | undefined;
   if (typeof chrome !== 'undefined' && chrome.storage?.local) {
     try {
       const items = await new Promise<Record<string, unknown>>((resolve) => {
@@ -21,8 +25,11 @@ async function init(): Promise<void> {
       });
       const pending = items.pendingSetup as { site?: string; ts?: number } | undefined;
       if (pending && pending.site === adapter.id && typeof pending.ts === 'number') {
-        if (Date.now() - pending.ts < 90000) {
+        if (Date.now() - pending.ts < 5 * 60 * 1000) {
           shouldRunSetup = true;
+          pendingSetupTs = pending.ts;
+        } else {
+          chrome.storage.local.remove('pendingSetup');
         }
       }
     } catch {
@@ -31,17 +38,33 @@ async function init(): Promise<void> {
   }
 
   if (shouldRunSetup) {
-    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-      chrome.storage.local.remove('pendingSetup');
-    }
-    if (adapter.id === 'gemini') {
-      runGeminiSetup()
-        .then((res) => recordSetupResult('gemini', res))
-        .catch(() => recordSetupResult('gemini', 'failed'));
-    } else if (adapter.id === 'grok') {
-      runGrokSetup()
-        .then((res) => recordSetupResult('grok', res))
-        .catch(() => recordSetupResult('grok', 'failed'));
+    // Gemini setup is performed on Saved info itself. Redirect once, preserve
+    // the pending marker, then let the content script on that page continue.
+    if (adapter.id === 'gemini' && window.location.pathname.replace(/\/+$/, '') !== '/saved-info') {
+      if (pendingSetupTs === undefined && typeof chrome !== 'undefined' && chrome.storage?.local) {
+        pendingSetupTs = Date.now();
+        chrome.storage.local.set(
+          { pendingSetup: { site: 'gemini', ts: pendingSetupTs } },
+          () => window.location.assign('https://gemini.google.com/saved-info'),
+        );
+      } else {
+        window.location.assign('https://gemini.google.com/saved-info');
+      }
+    } else {
+      const setup = adapter.id === 'gemini' ? runGeminiSetup() : runGrokSetup();
+      setup
+        .then((res) => {
+          recordSetupResult(adapter.id, res);
+          if (typeof chrome !== 'undefined' && chrome.storage?.local && pendingSetupTs !== undefined) {
+            chrome.storage.local.get(['pendingSetup'], (items) => {
+              const pending = items.pendingSetup as { site?: string; ts?: number } | undefined;
+              if (pending?.site === adapter.id && pending.ts === pendingSetupTs) {
+                chrome.storage.local.remove('pendingSetup');
+              }
+            });
+          }
+        })
+        .catch(() => recordSetupResult(adapter.id, 'failed'));
     }
   }
 

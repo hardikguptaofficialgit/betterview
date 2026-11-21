@@ -7,99 +7,106 @@
   <link rel="stylesheet" href="/src/popup/popup.css" />
 </head>
 <body>
-  <div class="popup-container">
-    <!-- Top row -->
+  <main class="popup-container">
+    <!-- Top Header -->
     <header class="header-row">
       <div class="header-brand">
         <picture id="header-logo" class="logo-picture">
           <source id="logo-source" media="(prefers-color-scheme: dark)" srcset="/brand/mark-white.png" />
-          <img id="logo-img" src="/brand/mark-black.png" alt="BetterView AI" width="28" height="28" />
+          <img id="logo-img" src="/brand/mark-black.png" alt="BetterView AI" width="24" height="24" />
         </picture>
         <span class="brand-title">BetterView AI</span>
       </div>
-      <div id="status-line" class="status-line">
-        <span class="status-text">Open Gemini or Grok</span>
+
+      <div class="header-actions">
+        <div id="status-line" class="status-line status-badge" role="status" aria-live="polite">
+          <span class="status-text">Open Gemini or Grok</span>
+        </div>
       </div>
     </header>
 
+    <!-- Main Body -->
     <div class="popup-body">
       <!-- Section: Sites -->
-      <section class="sites-section" id="setup-card">
-        <div class="section-label">Sites</div>
-        <div class="sites-container">
+      <section class="sites-section" id="setup-card" aria-labelledby="sites-heading">
+        <div class="section-header">
+          <h2 id="sites-heading" class="section-label">Connected Platforms</h2>
+        </div>
+
+        <div class="card sites-container">
           <!-- Gemini Row -->
           <div class="site-row-wrapper" id="row-gemini">
             <div class="setup-row">
               <div class="site-row-left">
-                <div id="logo-gemini" class="site-row-logo">
+                <div id="logo-gemini" class="site-row-logo" aria-hidden="true">
                   <span class="btn-site-icon" id="icon-gemini"></span>
                 </div>
                 <div class="site-text-col">
                   <span class="site-row-name">Gemini</span>
                   <div class="site-status-row">
-                    <span class="site-status-dot dot-not-set-up"></span>
+                    <span class="site-status-dot dot-not-set-up" aria-hidden="true"></span>
                     <span id="setup-gemini-status" class="site-status-text">Not set up</span>
                   </div>
                 </div>
               </div>
               <div class="site-row-action">
                 <button id="setup-gemini-btn" class="setup-btn btn-primary" type="button" aria-label="Set up Gemini">
-                  <span class="btn-spinner hidden" id="spinner-gemini"></span>
+                  <span class="btn-spinner hidden" id="spinner-gemini" aria-hidden="true"></span>
                   <span class="btn-label" id="label-gemini">Set up</span>
-                  <span class="btn-check hidden" id="check-gemini"></span>
+                  <span class="btn-check hidden" id="check-gemini" aria-hidden="true"></span>
                 </button>
               </div>
             </div>
-            <div id="gemini-update-hint" class="gemini-update-hint hidden">Delete the old BetterView entry in Gemini Saved info</div>
+            <p id="gemini-update-hint" class="gemini-update-hint hidden">
+              Delete the old BetterView entry in Gemini Saved info
+            </p>
           </div>
 
-          <!-- Divider -->
-          <div class="site-divider" aria-hidden="true"></div>
+          <div class="site-divider" role="separator" aria-hidden="true"></div>
 
           <!-- Grok Row -->
           <div class="site-row-wrapper" id="row-grok">
             <div class="setup-row">
               <div class="site-row-left">
-                <div id="logo-grok" class="site-row-logo">
+                <div id="logo-grok" class="site-row-logo" aria-hidden="true">
                   <span class="btn-site-icon" id="icon-grok"></span>
                 </div>
                 <div class="site-text-col">
                   <span class="site-row-name">Grok</span>
                   <div class="site-status-row">
-                    <span class="site-status-dot dot-not-set-up"></span>
+                    <span class="site-status-dot dot-not-set-up" aria-hidden="true"></span>
                     <span id="setup-grok-status" class="site-status-text">Not set up</span>
                   </div>
                 </div>
               </div>
               <div class="site-row-action">
                 <button id="setup-grok-btn" class="setup-btn btn-primary" type="button" aria-label="Set up Grok">
-                  <span class="btn-spinner hidden" id="spinner-grok"></span>
+                  <span class="btn-spinner hidden" id="spinner-grok" aria-hidden="true"></span>
                   <span class="btn-label" id="label-grok">Set up</span>
-                  <span class="btn-check hidden" id="check-grok"></span>
+                  <span class="btn-check hidden" id="check-grok" aria-hidden="true"></span>
                 </button>
               </div>
             </div>
           </div>
         </div>
+
         <div id="setup-status" class="setup-status-line sr-only" aria-live="polite"></div>
       </section>
 
-      <!-- Row: Appearance -->
-      <section class="card appearance-card" id="appearance-card">
+      <!-- Section: Appearance & Preferences -->
+      <section class="card appearance-card" id="appearance-card" aria-label="Preferences">
         <div class="appearance-row">
-          <span class="card-label">Appearance</span>
-          <div class="segmented-control" id="theme-segmented" role="radiogroup" aria-label="Appearance theme" data-value="auto">
+          <span class="card-label" id="theme-label">Appearance</span>
+          <div class="segmented-control" id="theme-segmented" role="radiogroup" aria-labelledby="theme-label" data-value="auto">
             <div class="segmented-thumb" aria-hidden="true"></div>
             <button type="button" class="segmented-btn is-active" data-value="auto" role="radio" aria-checked="true">Auto</button>
             <button type="button" class="segmented-btn" data-value="light" role="radio" aria-checked="false">Light</button>
             <button type="button" class="segmented-btn" data-value="dark" role="radio" aria-checked="false">Dark</button>
           </div>
         </div>
-        <select id="theme-select" class="visually-hidden" aria-hidden="true" tabindex="-1">
-          <option value="auto">Auto</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
+
+        <div class="card-divider" role="separator" aria-hidden="true"></div>
+
         <div class="watermark-row">
           <label for="watermark-toggle" class="watermark-label">Watermark on exports</label>
           <label class="switch" for="watermark-toggle">
@@ -107,36 +114,66 @@
             <span class="switch-slider"></span>
           </label>
         </div>
+
+        <select id="theme-select" class="visually-hidden" aria-hidden="true" tabindex="-1">
+          <option value="auto">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
       </section>
 
-      <!-- Row: Try it -->
-      <section class="card try-it-row" id="try-it-card">
+      <!-- Section: Try It -->
+      <section class="card try-it-row" id="try-it-card" aria-label="Sample prompt">
         <div class="try-it-left">
-          <span class="try-it-title">Try it</span>
+          <span class="try-it-title">Try a sample prompt</span>
           <span class="try-it-hint">Flow diagram of OAuth 2.0</span>
         </div>
-        <button id="try-it-btn" class="ghost-btn try-it-btn" type="button" aria-label="Copy prompt">
+        <button id="try-it-btn" class="ghost-btn try-it-btn" type="button" aria-label="Copy sample prompt">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
           <span id="try-it-label">Copy prompt</span>
         </button>
       </section>
 
-      <!-- Row: Manual Setup -->
+      <!-- Section: Manual Setup -->
       <section class="card manual-setup-section" id="manual-setup-section">
-        <button id="manual-setup-toggle" class="manual-setup-toggle" type="button" aria-expanded="false" aria-controls="manual-setup-content">
+        <button
+          id="manual-setup-toggle"
+          class="manual-setup-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="manual-setup-content"
+        >
           <span class="manual-setup-title">Manual setup</span>
-          <span class="manual-setup-chevron" id="manual-setup-chevron"></span>
+          <span class="manual-setup-chevron" id="manual-setup-chevron" aria-hidden="true"></span>
         </button>
+
         <div id="manual-setup-content" class="manual-setup-content">
           <div class="manual-setup-inner">
             <div class="instruction-container">
               <div class="instruction-header">
+                <span class="instruction-meta">System instruction</span>
                 <button id="copy-btn" class="ghost-btn copy-btn" type="button" aria-label="Copy instruction">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
                   <span class="copy-label">Copy</span>
                 </button>
               </div>
-              <div id="system-instruction" class="instruction-preview" role="region" aria-label="System instruction preview" tabindex="0"></div>
+              <div
+                id="system-instruction"
+                class="instruction-preview"
+                role="region"
+                aria-label="System instruction preview"
+                tabindex="0"
+              ></div>
             </div>
-            <p class="manual-setup-hint">Paste into Gemini &rsaquo; Saved info, or Grok &rsaquo; Settings &rsaquo; Customize &rsaquo; Custom.</p>
+            <p class="manual-setup-hint">
+              Paste into Gemini &rsaquo; Saved info, or Grok &rsaquo; Settings &rsaquo; Customize &rsaquo; Custom.
+            </p>
           </div>
         </div>
       </section>
@@ -144,13 +181,29 @@
 
     <!-- Footer -->
     <footer class="popup-footer">
-      <div class="footer-links">
+      <nav class="footer-links" aria-label="Extension links">
         <a id="welcome-tour-link" class="footer-link" href="#" role="button">Welcome tour</a>
         <a id="whats-new-link" class="footer-link hidden" href="#" role="button">What's new</a>
+      </nav>
+      <div class="footer-actions">
+        <a
+          id="support-me-btn"
+          class="support-btn"
+          href="http://takealookatmy.cv/betterviewai"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Support Me"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+          <span>Support Me</span>
+        </a>
+        <span class="version-tag">v0.1.0</span>
       </div>
-      <span class="version-tag">v0.1.0</span>
     </footer>
-  </div>
+  </main>
+
   <script type="module" src="/src/popup/popup.ts"></script>
 </body>
 </html>

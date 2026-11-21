@@ -113,6 +113,9 @@ import treeStructureReg from '@phosphor-icons/core/assets/regular/tree-structure
 import graphReg from '@phosphor-icons/core/assets/regular/graph.svg?raw';
 import tabsReg from '@phosphor-icons/core/assets/regular/tabs.svg?raw';
 import listReg from '@phosphor-icons/core/assets/regular/list.svg?raw';
+import plusReg from '@phosphor-icons/core/assets/regular/plus.svg?raw';
+import minusReg from '@phosphor-icons/core/assets/regular/minus.svg?raw';
+import boundingBoxReg from '@phosphor-icons/core/assets/regular/bounding-box.svg?raw';
 
 export const CARD_TYPE_DUOTONE: Record<UIType, string> = {
   flow: flowDuo,
@@ -271,6 +274,10 @@ export const REGULAR_ICON_MAP: Record<string, string> = {
   'tabs': tabsReg,
   'layers': tabsReg,
   'list': listReg,
+  'plus': plusReg,
+  'minus': minusReg,
+  'bounding-box': boundingBoxReg,
+  'shrink': cornersInReg,
 };
 
 /**

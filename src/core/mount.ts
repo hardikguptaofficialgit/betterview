@@ -247,6 +247,7 @@ export function mountBlock(
                   allStyles: ALL_STYLES,
                   cardType: spec?.type,
                   title: spec?.title,
+                  host: opts.host,
                 });
               }
             },
@@ -272,6 +273,7 @@ export function mountBlock(
                   allStyles: ALL_STYLES,
                   cardType: spec?.type,
                   title: spec?.title,
+                  host: opts.host,
                 });
               }
             },
@@ -324,6 +326,7 @@ export function mountBlock(
                     allStyles: ALL_STYLES,
                     cardType: spec?.type,
                     title: spec?.title,
+                    host: opts.host,
                   });
                 }
               },
