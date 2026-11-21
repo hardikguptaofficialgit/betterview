@@ -448,4 +448,65 @@ describe('validateSpec', () => {
     const nullResult = validateSpec(null);
     expect(nullResult.ok).toBe(false);
   });
+
+  it('validates user screenshot quiz with numeric-option text answer ("4096")', () => {
+    const userQuiz = {
+      type: 'quiz',
+      title: 'URL Shortener & Distributed IDs Quiz',
+      questions: [
+        {
+          q: 'In a URL shortener, which approach is generally preferred for generating short codes at high scale?',
+          options: [
+            'Hash the long URL and take the first few characters',
+            'Base62-encode a distributed unique ID (e.g. Snowflake)',
+            'Use a single central auto-increment sequence',
+            'Generate a random UUID and truncate it',
+          ],
+          answer: 'Base62-encode a distributed unique ID (e.g. Snowflake)',
+          explain:
+            'ID + Base62 guarantees uniqueness with no collisions and produces compact, predictable codes.',
+        },
+        {
+          q: 'In classic Twitter Snowflake, how many IDs can a single worker generate per millisecond?',
+          options: ['1024', '2048', '4096', '8192'],
+          answer: '4096',
+          explain: '12 bits are allocated to the sequence number -> 2^12 = 4096 IDs per millisecond per worker.',
+        },
+        {
+          q: 'What is the main reason redirects in a URL shortener are heavily cached?',
+          options: [
+            'To reduce storage costs',
+            'Redirects are extremely read-heavy and latency-sensitive',
+            'To enforce expiration',
+            'To prevent duplicate short codes',
+          ],
+          answer: 'Redirects are extremely read-heavy and latency-sensitive',
+          explain: 'Redirect QPS is usually orders of magnitude higher than creation QPS.',
+        },
+        {
+          q: 'What is the biggest operational challenge with Snowflake-style generators?',
+          options: ['Worker ID collisions', 'Clock skew / clock moving backward', '64-bit integer size'],
+          answer: 'Clock skew / clock moving backward',
+          explain: 'Because the timestamp is part of the ID, a backward clock jump can cause duplicate or out-of-order IDs.',
+        },
+        {
+          q: 'For a 7-character Base62 short code, roughly how many unique values are possible?',
+          options: ['~1 million', '~3.5 billion', '~3.5 trillion', '~62 billion'],
+          answer: '~3.5 trillion',
+          explain: '62^7 ≈ 3.5 × 10^12 (3.5 trillion). This is more than enough for most URL shorteners for many years.',
+        },
+      ],
+    };
+
+    const res = validateSpec(userQuiz);
+    expect(res.ok).toBe(true);
+    if (res.ok && res.spec.type === 'quiz') {
+      expect(res.spec.questions).toHaveLength(5);
+      expect(res.spec.questions[0].answer).toBe(1);
+      expect(res.spec.questions[1].answer).toBe(2); // 4096 is at index 2!
+      expect(res.spec.questions[2].answer).toBe(1);
+      expect(res.spec.questions[3].answer).toBe(1);
+      expect(res.spec.questions[4].answer).toBe(2);
+    }
+  });
 });

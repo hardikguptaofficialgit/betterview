@@ -330,17 +330,55 @@ function validateQuiz(raw: Record<string, unknown>, warnings: string[]): { ok: t
     let ans: number | undefined;
 
     if (typeof rawAns === 'number' && Number.isInteger(rawAns)) {
-      ans = rawAns;
+      if (rawAns >= 0 && rawAns < options.length) {
+        ans = rawAns;
+      } else {
+        // Check if the number was meant to match the option value (e.g. 4096 in ["1024", "2048", "4096"])
+        const matchIdx = options.findIndex((opt) => opt.trim() === String(rawAns).trim());
+        ans = matchIdx >= 0 ? matchIdx : rawAns;
+      }
     } else if (typeof rawAns === 'string') {
       const trimmed = rawAns.trim();
-      if (/^[a-hA-H]$/.test(trimmed)) {
-        ans = trimmed.toUpperCase().charCodeAt(0) - 65;
-      } else if (/^\d+$/.test(trimmed)) {
-        ans = parseInt(trimmed, 10);
+      // 1. Exact match with one of the options (e.g. answer: "4096" or answer: "Base62-encode...")
+      const exactIdx = options.findIndex((opt) => opt.trim().toLowerCase() === trimmed.toLowerCase());
+      if (exactIdx >= 0) {
+        ans = exactIdx;
+      } else if (/^[a-hA-H]$/.test(trimmed)) {
+        // 2. Letter choice 'A', 'B', 'C', etc.
+        const letterIdx = trimmed.toUpperCase().charCodeAt(0) - 65;
+        if (letterIdx >= 0 && letterIdx < options.length) {
+          ans = letterIdx;
+        }
       } else {
-        const idx = options.findIndex((opt) => opt.toLowerCase() === trimmed.toLowerCase());
-        if (idx >= 0) {
-          ans = idx;
+        // 3. Option letter prefix (e.g. "B) 4096" or "Option B")
+        const letterMatch = trimmed.match(/^(?:option\s+|choice\s+)?([a-hA-H])(?:[\)\.\:\s]|$)/i);
+        if (letterMatch) {
+          const lIdx = letterMatch[1].toUpperCase().charCodeAt(0) - 65;
+          if (lIdx >= 0 && lIdx < options.length) {
+            ans = lIdx;
+          }
+        }
+
+        if (ans === undefined) {
+          // 4. Numeric index (e.g. "0", "1", "2")
+          if (/^\d+$/.test(trimmed)) {
+            const num = parseInt(trimmed, 10);
+            if (num >= 0 && num < options.length) {
+              ans = num;
+            } else {
+              ans = num;
+            }
+          } else {
+            // 5. Substring / partial text match
+            const subIdx = options.findIndex((opt) => {
+              const o = opt.trim().toLowerCase();
+              const t = trimmed.toLowerCase();
+              return (o.length > 3 && t.length > 3) && (o.includes(t) || t.includes(o));
+            });
+            if (subIdx >= 0) {
+              ans = subIdx;
+            }
+          }
         }
       }
     }

@@ -780,6 +780,16 @@ export function mountBlock(
       }
     }
 
+    if (!specToRender && parseRes.ok && typeof parseRes.value === 'object' && parseRes.value !== null && !Array.isArray(parseRes.value)) {
+      const genObj = parseRes.value as Record<string, unknown>;
+      specToRender = {
+        type: 'generic',
+        title: typeof genObj.title === 'string' ? genObj.title : undefined,
+        originalType: typeof genObj.type === 'string' ? genObj.type : undefined,
+        data: genObj,
+      };
+    }
+
     if (specToRender) {
       renderSpec(specToRender, lastRawText);
       return;
