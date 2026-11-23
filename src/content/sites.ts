@@ -20,7 +20,7 @@ export interface SiteAdapter {
 export const BETTERVIEW_TYPES = UI_TYPES.filter((type) => type !== 'generic');
 const STREAMING_TYPES_PATTERN = BETTERVIEW_TYPES.join('|');
 export const BETTERVIEW_STREAMING_TYPE_RE = new RegExp(
-  `^\\s*\\{\\s*"type"\\s*:\\s*"(${STREAMING_TYPES_PATTERN})"`,
+  `^\\s*\\{[\\s\\S]{0,300}?["“”]type["“”]\\s*:\\s*["“”](${STREAMING_TYPES_PATTERN})["“”]`,
 );
 
 /** Query through open shadow roots as well as the light DOM used by older hosts. */
@@ -114,9 +114,10 @@ export const GEMINI_ADAPTER: SiteAdapter = {
     // (1) a code child whose class matches /language-([\w-]+)/
     const codeChild = this.codeElementOf ? this.codeElementOf(block) : block.querySelector('code');
     if (codeChild && codeChild.className) {
-      const m = codeChild.className.match(/language-([\w-]+)/);
+      const m = codeChild.className.match(/language-([\w-]+)/i);
       if (m) {
-        return m[1].toLowerCase();
+        const lang = m[1].toLowerCase();
+        if (lang && lang !== 'code snippet') return lang;
       }
     }
 
@@ -124,18 +125,23 @@ export const GEMINI_ADAPTER: SiteAdapter = {
     const wrapper = this.wrapperOf(block);
     if (wrapper) {
       const decor = wrapper.querySelector('.code-block-decoration');
-      if (decor && decor.textContent) {
-        const text = decor.textContent.trim().toLowerCase();
+      if (decor) {
+        const clone = decor.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll('button, [role="button"], .buttons').forEach((el) => el.remove());
+        const text = (clone.textContent ?? '').trim().toLowerCase();
         if (text && text !== 'code snippet') return text;
+        return null;
       }
 
+      // If no .code-block-decoration exists, only accept recognized programming languages, never buttons or "code snippet"
+      const KNOWN_LANGUAGES = new Set(['ui', 'json', 'javascript', 'typescript', 'python', 'html', 'css', 'bash', 'sh', 'markdown', 'sql', 'cpp', 'c', 'java', 'go', 'rust']);
       const elements = wrapper.querySelectorAll('*');
       for (const el of Array.from(elements)) {
         if (el.tagName.toLowerCase() === 'button' || el.closest('button')) continue;
         if (el.contains(codeChild ?? block)) continue;
-        const txt = (el.textContent ?? '').trim();
-        if (txt.length >= 1 && txt.length <= 12 && el.children.length === 0 && txt.toLowerCase() !== 'code snippet') {
-          return txt.toLowerCase();
+        const txt = (el.textContent ?? '').trim().toLowerCase();
+        if (KNOWN_LANGUAGES.has(txt)) {
+          return txt;
         }
       }
     }
@@ -324,14 +330,20 @@ export function isUiBlock(adapter: SiteAdapter, block: HTMLElement): boolean {
   if (lang === 'ui') return true;
 
   const codeText = getBlockCodeText(adapter, block);
-  const trimmed = codeText.trim();
+  let text = codeText.replace(/^\uFEFF/, '').trimStart();
+  text = text.replace(/^(?:```\s*ui|ui|json)\s*(?:\r?\n|$)/i, '').trimStart();
 
-  const head = trimmed.slice(0, 120).replace(/[“”]/g, '"');
-  if (BETTERVIEW_STREAMING_TYPE_RE.test(head)) {
+  const normalized = text.replace(/[“”]/g, '"');
+  const head = normalized.slice(0, 300);
+
+  if (text.startsWith('{') && BETTERVIEW_STREAMING_TYPE_RE.test(normalized.slice(0, 350))) {
+    return true;
+  }
+  if (text.startsWith('{') && BETTERVIEW_STREAMING_TYPE_RE.test(head)) {
     return true;
   }
 
-  const parsed = tryParse(codeText);
+  const parsed = tryParse(text);
   if (parsed.ok && typeof parsed.value === 'object' && parsed.value !== null && !Array.isArray(parsed.value)) {
     const type = (parsed.value as { type?: unknown }).type;
     if (typeof type === 'string' && (BETTERVIEW_TYPES as readonly string[]).includes(type)) {

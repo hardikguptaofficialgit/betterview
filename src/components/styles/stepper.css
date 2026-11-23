@@ -5,6 +5,7 @@
 .iui-stepper-list {
   display: flex;
   flex-direction: column;
+  gap: 10px;
   padding: 4px 0;
 }
 
@@ -18,10 +19,10 @@
   flex-direction: column;
   align-items: center;
   flex-shrink: 0;
-  width: 22px;
+  width: 20px;
 }
 
-/* Small dot / step number */
+/* 20px number circle */
 .iui-stepper-circle {
   width: 20px;
   height: 20px;
@@ -38,12 +39,12 @@
   user-select: none;
 }
 
-/* Thin rail */
+/* Thin 1px rail between circles */
 .iui-stepper-line {
   width: 1px;
   background-color: color-mix(in srgb, var(--iui-text, #000) 12%, transparent);
   flex: 1;
-  min-height: 16px;
+  min-height: 10px;
   margin-top: 4px;
   margin-bottom: 4px;
 }
@@ -51,37 +52,15 @@
 .iui-stepper-content {
   flex: 1;
   min-width: 0;
-  padding-bottom: 14px;
+  padding-bottom: 0;
   padding-top: 1px;
 }
 
 .iui-stepper-content.is-last {
-  padding-bottom: 2px;
+  padding-bottom: 0;
 }
 
-.iui-stepper-btn {
-  all: unset;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  cursor: pointer;
-  box-sizing: border-box;
-  text-align: left;
-}
-
-.iui-stepper-btn:focus-visible {
-  outline: 2px solid var(--iui-accent);
-  outline-offset: 1px;
-  border-radius: 4px;
-}
-
-.iui-stepper-header-static {
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
+/* 13px semibold title */
 .iui-stepper-title {
   font-size: 13px;
   font-weight: 600;
@@ -89,30 +68,10 @@
   line-height: 1.4;
 }
 
-.iui-stepper-chevron {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--iui-muted);
-  flex-shrink: 0;
-  margin-left: 8px;
-}
-
-.iui-stepper-btn:hover .iui-stepper-chevron {
-  color: var(--iui-text);
-}
-
+/* 12.5px muted detail */
 .iui-stepper-detail {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--iui-muted);
   line-height: 1.45;
-  margin-top: 4px;
-}
-
-.iui-stepper-detail.is-collapsed {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-top: 3px;
 }

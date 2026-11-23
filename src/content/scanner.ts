@@ -44,7 +44,7 @@ export function startScanner(
   let hasTrailing = false;
   let isStopped = false;
 
-  function restoreFallbackWrapper(block: HTMLElement, item: TrackedItem): void {
+  function restoreFallbackWrapper(block: HTMLElement, item: TrackedItem, showNote = true): void {
     if (item.finalizeTimer !== undefined) {
       window.clearTimeout(item.finalizeTimer);
       item.finalizeTimer = undefined;
@@ -56,7 +56,11 @@ export function startScanner(
     item.handle.destroy();
     liveHandles.delete(item.handle);
 
-    if (!item.noteHost && item.target.parentNode) {
+    // If the JSON never parses, leave Gemini's block visible as-is (no "Couldn't render").
+    // Only show fallback note if explicitly marked as language ui or if showNote is true
+    const lang = adapter.languageOf(block);
+    const shouldShow = showNote && (lang === 'ui' || showNote);
+    if (shouldShow && !item.noteHost && item.target.parentNode) {
       const noteHost = document.createElement('div');
       noteHost.className = 'iui-host';
       noteHost.setAttribute('data-iui', '1');
@@ -120,7 +124,8 @@ export function startScanner(
           }
           item.finalizeTimer = window.setTimeout(() => {
             if (item.handle.state === 'fallback') {
-              restoreFallbackWrapper(block, item);
+              const lang = adapter.languageOf(block);
+              restoreFallbackWrapper(block, item, lang === 'ui');
             }
           }, 1600);
         }
@@ -198,7 +203,8 @@ export function startScanner(
 
       trackedItem.finalizeTimer = window.setTimeout(() => {
         if (handle.state === 'fallback') {
-          restoreFallbackWrapper(block, trackedItem);
+          const lang = adapter.languageOf(block);
+          restoreFallbackWrapper(block, trackedItem, lang === 'ui');
         }
       }, 1600);
 

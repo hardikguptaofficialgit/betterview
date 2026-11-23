@@ -38,7 +38,7 @@ export interface DagreLayoutResult {
 
 let measureCanvas: HTMLCanvasElement | null = null;
 
-export function measureTextWidth(text: string, font = '13px system-ui, sans-serif'): number {
+export function measureTextWidth(text: string, font = '12.5px system-ui, sans-serif'): number {
   if (typeof document !== 'undefined') {
     try {
       if (!measureCanvas) measureCanvas = document.createElement('canvas');
@@ -49,12 +49,12 @@ export function measureTextWidth(text: string, font = '13px system-ui, sans-seri
       }
     } catch {}
   }
-  const charWidth = font.includes('11px') ? 6.5 : 7.5;
+  const charWidth = font.includes('11px') ? 6.5 : 7.2;
   return text.length * charWidth;
 }
 
 export function measureNodeText(label: string, sub?: string, hasIcon = false): { width: number; height: number } {
-  const maxAvailableTextWidth = hasIcon ? 138 : 158;
+  const maxAvailableTextWidth = hasIcon ? 140 : 160;
   const words = (label || '').split(/\s+/);
   let lineCount = 1;
   let currentLine = '';
@@ -62,23 +62,27 @@ export function measureNodeText(label: string, sub?: string, hasIcon = false): {
 
   for (const word of words) {
     const testLine = currentLine ? currentLine + ' ' + word : word;
-    const testWidth = measureTextWidth(testLine, '13px system-ui, sans-serif');
+    const testWidth = measureTextWidth(testLine, '12.5px system-ui, sans-serif');
     if (testWidth > maxAvailableTextWidth && currentLine) {
       lineCount++;
       currentLine = word;
-      maxLineWidth = Math.max(maxLineWidth, measureTextWidth(word, '13px system-ui, sans-serif'));
+      maxLineWidth = Math.max(maxLineWidth, measureTextWidth(word, '12.5px system-ui, sans-serif'));
     } else {
       currentLine = testLine;
       maxLineWidth = Math.max(maxLineWidth, testWidth);
     }
   }
 
-  const textWidth = Math.min(maxAvailableTextWidth, Math.max(maxLineWidth, 32));
-  const nodeWidth = Math.min(180, Math.max(72, Math.ceil(textWidth + 20 + (hasIcon ? 20 : 0))));
+  // Node labels never wrap onto more than 2 lines
+  lineCount = Math.min(2, lineCount);
 
-  let textHeight = lineCount * 18;
+  const textWidth = Math.min(maxAvailableTextWidth, Math.max(maxLineWidth, 32));
+  // Node width is measured text width + 20px (min 96, max 180)
+  const nodeWidth = Math.min(180, Math.max(96, Math.ceil(textWidth + 20 + (hasIcon ? 20 : 0))));
+
+  let textHeight = lineCount * 17;
   if (sub) {
-    textHeight += 16;
+    textHeight += 15;
   }
   const nodeHeight = Math.max(34, textHeight + 12);
   return { width: nodeWidth, height: nodeHeight };
@@ -91,6 +95,56 @@ export function measureEdgeLabel(label?: string): { width: number; height: numbe
     width: Math.max(24, Math.ceil(textWidth + 14)),
     height: 18,
   };
+}
+
+export function isPureLinearChain(
+  nodes: { id: string; label?: string }[],
+  edges: { from: string; to: string }[],
+): boolean {
+  if (!nodes || nodes.length === 0) return false;
+  // No labels longer than 24 chars
+  for (const n of nodes) {
+    if ((n.label || '').length > 24) return false;
+  }
+  if (nodes.length === 1) return true;
+  if (edges.length !== nodes.length - 1) return false;
+
+  const inDegree: Record<string, number> = {};
+  const outDegree: Record<string, number> = {};
+  for (const n of nodes) {
+    inDegree[n.id] = 0;
+    outDegree[n.id] = 0;
+  }
+  for (const e of edges) {
+    if (inDegree[e.to] === undefined || outDegree[e.from] === undefined) return false;
+    inDegree[e.to]++;
+    outDegree[e.from]++;
+  }
+
+  let startNodes = 0;
+  let endNodes = 0;
+  for (const n of nodes) {
+    const inD = inDegree[n.id];
+    const outD = outDegree[n.id];
+    if (inD === 0 && outD === 1) startNodes++;
+    else if (inD === 1 && outD === 0) endNodes++;
+    else if (inD === 1 && outD === 1) {}
+    else return false;
+  }
+
+  if (startNodes !== 1 || endNodes !== 1) return false;
+
+  const nextMap = new Map<string, string>();
+  for (const e of edges) {
+    nextMap.set(e.from, e.to);
+  }
+  let curr = nodes.find((n) => inDegree[n.id] === 0)?.id;
+  let count = 0;
+  while (curr) {
+    count++;
+    curr = nextMap.get(curr);
+  }
+  return count === nodes.length;
 }
 
 export function isSimpleChain(nodes: { id: string }[], edges: { from: string; to: string }[]): boolean {
@@ -123,16 +177,168 @@ export function isSimpleChain(nodes: { id: string }[], edges: { from: string; to
   return startNodes === 1 && endNodes === 1;
 }
 
-export function dagreLayoutFlow(
+function layoutLinearChain(
   nodes: FlowNode[],
   edges: FlowEdge[],
   groups?: FlowGroup[],
+  cardWidth?: number,
 ): DagreLayoutResult {
-  if (!nodes || nodes.length === 0) {
-    return { width: 0, height: 0, rankdir: 'TB', nodes: [], edges: [] };
+  const inDegree: Record<string, number> = {};
+  for (const n of nodes) inDegree[n.id] = 0;
+  for (const e of edges) if (inDegree[e.to] !== undefined) inDegree[e.to]++;
+
+  const nextMap = new Map<string, string>();
+  const edgeMap = new Map<string, FlowEdge>();
+  for (const e of edges) {
+    nextMap.set(e.from, e.to);
+    edgeMap.set(`${e.from}->${e.to}`, e);
   }
 
-  const rankdir = isSimpleChain(nodes, edges) ? 'LR' : 'TB';
+  const orderedNodes: FlowNode[] = [];
+  let curr = nodes.find((n) => inDegree[n.id] === 0)?.id;
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  while (curr) {
+    const n = nodeById.get(curr);
+    if (n) orderedNodes.push(n);
+    curr = nextMap.get(curr);
+  }
+  if (orderedNodes.length < nodes.length) {
+    for (const n of nodes) {
+      if (!orderedNodes.includes(n)) orderedNodes.push(n);
+    }
+  }
+
+  const groupMap = new Map((groups || []).map((grp) => [grp.id, grp]));
+  const nodeWidth = 150;
+  const gapX = 36;
+  const rowGap = 42;
+  const padding = 24;
+
+  let numCols: number;
+  if (orderedNodes.length <= 4) {
+    numCols = orderedNodes.length;
+  } else {
+    const targetWidth = cardWidth && cardWidth > 0 ? cardWidth : 640;
+    const availableWidth = Math.max(336, targetWidth - padding * 2);
+    numCols = Math.max(2, Math.min(orderedNodes.length, Math.floor((availableWidth + gapX) / (nodeWidth + gapX))));
+  }
+
+  const nodeHeight = 40;
+  const layoutNodes: DagreNode[] = [];
+
+  for (let i = 0; i < orderedNodes.length; i++) {
+    const node = orderedNodes[i];
+    const col = i % numCols;
+    const row = Math.floor(i / numCols);
+
+    const x = padding + col * (nodeWidth + gapX) + nodeWidth / 2;
+    const y = padding + row * (nodeHeight + rowGap) + nodeHeight / 2;
+
+    const group = node.group ? groupMap.get(node.group) : undefined;
+    const color = node.color || group?.color;
+
+    layoutNodes.push({
+      id: node.id,
+      label: node.label,
+      sub: node.sub,
+      icon: node.icon,
+      decision: !!node.decision,
+      isStart: i === 0,
+      isEnd: i === orderedNodes.length - 1,
+      color,
+      x,
+      y,
+      width: nodeWidth,
+      height: nodeHeight,
+    });
+  }
+
+  const layoutEdges: DagreEdge[] = [];
+  let maxX = 0;
+  let maxY = 0;
+  for (const n of layoutNodes) {
+    maxX = Math.max(maxX, n.x + n.width / 2);
+    maxY = Math.max(maxY, n.y + n.height / 2);
+  }
+
+  for (let i = 0; i < orderedNodes.length - 1; i++) {
+    const fromNode = layoutNodes[i];
+    const toNode = layoutNodes[i + 1];
+    const e = edgeMap.get(`${fromNode.id}->${toNode.id}`);
+    const labelText = e?.label?.trim() || '';
+    const labelDim = labelText ? measureEdgeLabel(labelText) : { width: 0, height: 0 };
+    const tone = e?.tone || 'neutral';
+
+    const colFrom = i % numCols;
+    const rowFrom = Math.floor(i / numCols);
+    const colTo = (i + 1) % numCols;
+    const rowTo = Math.floor((i + 1) / numCols);
+
+    let points: { x: number; y: number }[] = [];
+    let labelX = 0;
+    let labelY = 0;
+
+    if (rowFrom === rowTo) {
+      const startX = fromNode.x + nodeWidth / 2;
+      const startY = fromNode.y;
+      const endX = toNode.x - nodeWidth / 2;
+      const endY = toNode.y;
+      points = [
+        { x: startX, y: startY },
+        { x: endX, y: endY },
+      ];
+      labelX = (startX + endX) / 2;
+      labelY = startY;
+    } else {
+      const midY = fromNode.y + nodeHeight / 2 + rowGap / 2;
+      const p0 = { x: fromNode.x + nodeWidth / 2, y: fromNode.y };
+      const p1 = { x: fromNode.x + nodeWidth / 2 + 16, y: fromNode.y };
+      const p2 = { x: fromNode.x + nodeWidth / 2 + 16, y: midY };
+      const p3 = { x: toNode.x - nodeWidth / 2 - 16, y: midY };
+      const p4 = { x: toNode.x - nodeWidth / 2 - 16, y: toNode.y };
+      const p5 = { x: toNode.x - nodeWidth / 2, y: toNode.y };
+      points = [p0, p1, p2, p3, p4, p5];
+      labelX = (p2.x + p3.x) / 2;
+      labelY = midY;
+      maxX = Math.max(maxX, p1.x);
+    }
+
+    for (const p of points) {
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+
+    layoutEdges.push({
+      from: fromNode.id,
+      to: toNode.id,
+      label: labelText || undefined,
+      tone,
+      points,
+      labelX: labelText ? labelX : undefined,
+      labelY: labelText ? labelY : undefined,
+      labelWidth: labelDim.width,
+      labelHeight: labelDim.height,
+    });
+  }
+
+  const totalWidth = Math.ceil(maxX + padding);
+  const totalHeight = Math.ceil(maxY + padding);
+
+  return {
+    width: totalWidth,
+    height: totalHeight,
+    rankdir: orderedNodes.length <= 4 ? 'LR' : 'TB',
+    nodes: layoutNodes,
+    edges: layoutEdges,
+  };
+}
+
+function runDagreWithRankdir(
+  nodes: FlowNode[],
+  edges: FlowEdge[],
+  groups: FlowGroup[] | undefined,
+  rankdir: 'TB' | 'LR',
+): DagreLayoutResult {
   const g = new dagre.graphlib.Graph();
   g.setGraph({
     rankdir,
@@ -295,6 +501,32 @@ export function dagreLayoutFlow(
     nodes: layoutNodes,
     edges: layoutEdges,
   };
+}
+
+export function dagreLayoutFlow(
+  nodes: FlowNode[],
+  edges: FlowEdge[],
+  groups?: FlowGroup[],
+  cardWidth?: number,
+): DagreLayoutResult {
+  if (!nodes || nodes.length === 0) {
+    return { width: 0, height: 0, rankdir: 'TB', nodes: [], edges: [] };
+  }
+
+  if (isPureLinearChain(nodes, edges)) {
+    return layoutLinearChain(nodes, edges, groups, cardWidth);
+  }
+
+  const tbResult = runDagreWithRankdir(nodes, edges, groups, 'TB');
+  if (tbResult.width > 0 && tbResult.height / tbResult.width > 1.6) {
+    const lrResult = runDagreWithRankdir(nodes, edges, groups, 'LR');
+    const targetWidth = cardWidth && cardWidth > 0 ? cardWidth : 640;
+    if (lrResult.width <= targetWidth || lrResult.height < tbResult.height) {
+      return lrResult;
+    }
+  }
+
+  return tbResult;
 }
 
 export function renderSmoothDagrePath(points: { x: number; y: number }[]): string {

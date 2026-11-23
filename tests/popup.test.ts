@@ -394,7 +394,7 @@ describe('BetterView Popup', () => {
       await Promise.resolve();
 
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-        expect.stringContaining('Teach me how a web browser loads a webpage'),
+        expect.stringContaining('Explain how a web browser loads a website after I type a URL'),
       );
       expect(tryItLabel.textContent).toBe('Copied');
       expect(tryItBtn.classList.contains('is-copied')).toBe(true);

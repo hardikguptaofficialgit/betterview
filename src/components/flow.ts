@@ -72,6 +72,8 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
   flowInner.style.width = `${layout.width}px`;
   flowInner.style.height = `${layout.height}px`;
   flowInner.style.position = 'relative';
+  flowInner.style.margin = '0 auto';
+  flowInner.style.transformOrigin = 'top center';
 
   const uid = Math.random().toString(36).slice(2, 8);
   const arrowMarkerId = `flow-arrow-${uid}`;
@@ -187,19 +189,45 @@ export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
 
   function updateLayout(): void {
     const containerWidth = viewport.clientWidth || card.clientWidth || layout.width;
+    let widthScale = 1;
     if (containerWidth > 0 && layout.width > 0) {
-      baseScale = Math.min(1, containerWidth / layout.width);
-    } else {
-      baseScale = 1;
+      widthScale = Math.min(1, containerWidth / layout.width);
     }
 
-    const effectiveScale = baseScale * userZoom;
+    const maxAllowedCardHeight = 440;
+    const paddingHeight = 24;
+    const maxContentHeight = maxAllowedCardHeight - paddingHeight;
+
+    let heightScale = 1;
+    if (layout.height > maxContentHeight) {
+      heightScale = maxContentHeight / layout.height;
+    }
+
+    const fitScale = Math.min(widthScale, heightScale);
+    const effectiveBaseScale = Math.max(0.7, Math.min(1, fitScale));
+    const effectiveScale = effectiveBaseScale * userZoom;
+
     flowInner.style.transform = `scale(${effectiveScale})`;
-    flowInner.style.transformOrigin = 'top left';
+    flowInner.style.transformOrigin = 'top center';
+    flowInner.style.margin = '0 auto';
+
+    // Left offset when scaled with transform-origin: top center
+    const leftOffset = (containerWidth - layout.width) / 2;
+    flowInner.style.left = `${leftOffset}px`;
 
     const scaledHeight = Math.ceil(layout.height * effectiveScale);
-    viewport.style.height = `${scaledHeight}px`;
-    viewport.style.overflow = userZoom > 1 ? 'auto' : 'hidden';
+    if (scaledHeight + paddingHeight > maxAllowedCardHeight && userZoom <= 1) {
+      viewport.style.height = `${maxContentHeight}px`;
+      viewport.style.overflowY = 'auto';
+      viewport.style.overflowX = 'hidden';
+    } else if (userZoom > 1) {
+      viewport.style.height = `${Math.min(maxContentHeight, scaledHeight)}px`;
+      viewport.style.overflow = 'auto';
+    } else {
+      viewport.style.height = `${scaledHeight}px`;
+      viewport.style.overflowY = 'hidden';
+      viewport.style.overflowX = 'hidden';
+    }
 
     zoomValue.textContent = `${Math.round(userZoom * 100)}%`;
   }

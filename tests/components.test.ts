@@ -17,6 +17,7 @@ import { RENDERERS } from '../src/components/index';
 import { renderChart } from '../src/components/chart';
 import { renderMermaid } from '../src/components/mermaid';
 import { renderFlow } from '../src/components/flow';
+import { renderStepper, stripStepTitleNumber } from '../src/components/stepper';
 import { ChartSpec, FlowSpec } from '../src/core/types';
 
 describe('parseNumericValue', () => {
@@ -609,5 +610,41 @@ describe('Flow diagrams', () => {
     expect(card.querySelectorAll('.flow-control-btn')).toHaveLength(3);
 
     cleanups.forEach((cleanup) => cleanup());
+  });
+
+  it('strips leading number patterns from step titles', () => {
+    expect(stripStepTitleNumber('1. Browser Cache')).toBe('Browser Cache');
+    expect(stripStepTitleNumber('Step 2: DNS Lookup')).toBe('DNS Lookup');
+    expect(stripStepTitleNumber('3) TCP Handshake')).toBe('TCP Handshake');
+    expect(stripStepTitleNumber('4 - TLS Negotiation')).toBe('TLS Negotiation');
+    expect(stripStepTitleNumber('step  5.  HTTP Request')).toBe('HTTP Request');
+    expect(stripStepTitleNumber('No Number Title')).toBe('No Number Title');
+  });
+
+  it('renders stepper without double numbering and without collapse chevrons', () => {
+    const cleanups: (() => void)[] = [];
+    const ctx = { theme: 'light' as const, onCleanup: (fn: () => void) => cleanups.push(fn) };
+    const spec = {
+      type: 'stepper' as const,
+      title: 'Loading Steps',
+      steps: [
+        { title: '1. Browser Cache', detail: 'Check cache' },
+        { title: 'Step 2: DNS Lookup', detail: 'Resolve IP' },
+        { title: '3) TCP Handshake', detail: 'Connect socket' },
+        { title: 'Plain Step', detail: 'Render page' },
+      ],
+    };
+    const card = renderStepper(spec, ctx);
+    const titles = Array.from(card.querySelectorAll('.iui-stepper-title')).map((el) => el.textContent?.trim());
+    expect(titles).toEqual([
+      'Browser Cache',
+      'DNS Lookup',
+      'TCP Handshake',
+      'Plain Step',
+    ]);
+    expect(card.querySelectorAll('.iui-stepper-chevron')).toHaveLength(0);
+    expect(card.querySelectorAll('.iui-stepper-btn')).toHaveLength(0);
+    expect(card.querySelectorAll('.iui-stepper-detail')).toHaveLength(4);
+    cleanups.forEach((c) => c());
   });
 });

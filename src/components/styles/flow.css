@@ -90,7 +90,8 @@
 
 .flow-inner {
   position: relative;
-  transform-origin: top left;
+  transform-origin: top center;
+  margin: 0 auto;
 }
 
 .flow-svg-overlay {
@@ -140,7 +141,7 @@
   color: #ef4444;
 }
 
-/* Nodes: compact rounded rects with 8px radius, padding 6px by 10px, 13px text, max width 180px */
+/* Nodes: compact rounded rects with 8px radius, padding 6px by 10px, 12.5px text, max width 180px */
 .flow-node {
   position: absolute;
   box-sizing: border-box;
@@ -149,7 +150,7 @@
   justify-content: center;
   gap: 6px;
   padding: 6px 10px;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.4;
   border-radius: 8px;
   background-color: var(--iui-surface, #fafafa);
@@ -184,10 +185,14 @@
 }
 
 .flow-node-label {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--iui-text);
   overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .flow-node-sub {

@@ -584,7 +584,7 @@ export function initWelcomePage(): () => void {
 
   // STEP 2 CARD: "Try it"
   const samplePromptText =
-    'Design a URL shortener like bit.ly. Show the architecture, the request flow, the steps to build it, SQL vs NoSQL for it, a capacity table, and a 3-question quiz.';
+    'Explain how a web browser loads a website after I type a URL, for a beginner. Keep the explanation short, add one simple flow diagram of the steps, and end with a 3-question quiz.';
 
   const step2Card = h(
     'div',

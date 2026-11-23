@@ -301,7 +301,7 @@ export function initPopup(): () => void {
     tryItBtn.addEventListener('click', async () => {
       try {
         const samplePrompt =
-          'Teach me how a web browser loads a webpage, starting from entering a URL to displaying the finished page. Break down every step in a beginner-friendly way, explain the underlying concepts, and use a clear flow diagram with practical examples to help me understand how everything works.';
+          'Explain how a web browser loads a website after I type a URL, for a beginner. Keep the explanation short, add one simple flow diagram of the steps, and end with a 3-question quiz.';
         if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(samplePrompt);
         }

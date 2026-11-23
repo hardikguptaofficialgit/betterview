@@ -1,8 +1,11 @@
 import { StepperSpec } from '../core/types';
 import { RenderContext } from './index';
-import { clear, h } from '../core/dom';
-import { iconEl } from '../core/icons';
+import { h } from '../core/dom';
 import { renderMathText } from '../core/mathParser';
+
+export function stripStepTitleNumber(title: string): string {
+  return (title || '').replace(/^\s*(step\s*)?\d+\s*[.):-]\s*/i, '').trim();
+}
 
 export function renderStepper(spec: StepperSpec, _ctx: RenderContext): HTMLElement {
   const card = h('div', { class: 'iui-card iui-stepper-card' });
@@ -12,7 +15,6 @@ export function renderStepper(spec: StepperSpec, _ctx: RenderContext): HTMLEleme
 
   const steps = spec.steps || [];
   const list = h('div', { class: 'iui-stepper-list' });
-  const startsExpanded = steps.length <= 4;
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
@@ -21,7 +23,7 @@ export function renderStepper(spec: StepperSpec, _ctx: RenderContext): HTMLEleme
     const stepEl = h('div', { class: 'iui-stepper-step' });
     stepEl.style.setProperty('--step-idx', String(i));
 
-    // Left track: circle in sky pastel + connecting line
+    // Left track: 20px circle in sky pastel + 1px rail
     const track = h('div', { class: 'iui-stepper-track' });
     const circle = h('div', { class: 'iui-stepper-circle c-sky' }, String(i + 1));
     track.appendChild(circle);
@@ -32,51 +34,18 @@ export function renderStepper(spec: StepperSpec, _ctx: RenderContext): HTMLEleme
     }
     stepEl.appendChild(track);
 
-    // Right content
+    // Right content: clean title + always visible detail
     const content = h('div', { class: `iui-stepper-content${isLast ? ' is-last' : ''}` });
 
+    const cleanTitle = stripStepTitleNumber(step.title);
+    const titleEl = h('div', { class: 'iui-stepper-title' });
+    renderMathText(titleEl, cleanTitle);
+    content.appendChild(titleEl);
+
     if (step.detail !== undefined && step.detail !== '') {
-      let isExpanded = startsExpanded;
-      const chevronSpan = h(
-        'span',
-        { class: 'iui-stepper-chevron' },
-        iconEl(isExpanded ? 'caret-up' : 'caret-down', 16),
-      );
-      const titleSpan = h('span', { class: 'iui-stepper-title' });
-      renderMathText(titleSpan, step.title);
-
-      const detailEl = h('div', { class: `iui-stepper-detail${isExpanded ? '' : ' is-collapsed'}` });
+      const detailEl = h('div', { class: 'iui-stepper-detail' });
       renderMathText(detailEl, step.detail);
-
-      const btn = h(
-        'button',
-        {
-          type: 'button',
-          class: 'iui-stepper-btn',
-          'aria-expanded': String(isExpanded),
-          onClick: () => {
-            isExpanded = !isExpanded;
-            btn.setAttribute('aria-expanded', String(isExpanded));
-            clear(chevronSpan);
-            chevronSpan.appendChild(iconEl(isExpanded ? 'caret-up' : 'caret-down', 16));
-            if (isExpanded) {
-              detailEl.classList.remove('is-collapsed');
-            } else {
-              detailEl.classList.add('is-collapsed');
-            }
-          },
-        },
-        titleSpan,
-        chevronSpan,
-      );
-
-      content.appendChild(btn);
       content.appendChild(detailEl);
-    } else {
-      const titleSpan = h('span', { class: 'iui-stepper-title' });
-      renderMathText(titleSpan, step.title);
-      const headerStatic = h('div', { class: 'iui-stepper-header-static' }, titleSpan);
-      content.appendChild(headerStatic);
     }
 
     stepEl.appendChild(content);

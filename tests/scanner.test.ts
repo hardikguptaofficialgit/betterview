@@ -122,6 +122,60 @@ describe('Gemini live DOM code block detection (Bug #2)', () => {
     container.remove();
   });
 
+  it('detects and renders Gemini-like DOM with "Code snippet" decoration and pretty-printed flow JSON', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <code-block>
+        <div class="code-block-decoration">Code snippet</div>
+        <pre><code>{\n  "type": "flow",\n  "nodes": [\n    {"id": "a", "label": "Start"}\n  ]\n}</code></pre>
+      </code-block>
+    `;
+    document.body.appendChild(container);
+    const codeBlock = container.querySelector('code-block') as HTMLElement;
+    const scanner = startScanner(GEMINI_ADAPTER, () => 'light', container);
+
+    expect(codeBlock.style.display).toBe('none');
+    expect(codeBlock.getAttribute('data-iui-hidden')).toBe('1');
+    const host = container.querySelector('.iui-host') as HTMLElement;
+    expect(host).not.toBeNull();
+    expect(host.shadowRoot?.querySelector('.flow-card')).not.toBeNull();
+
+    scanner.stop();
+    container.remove();
+  });
+
+  it('triggers render when streaming text updates into complete flow JSON on Gemini-like DOM', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <code-block>
+        <div class="code-block-decoration">Code snippet</div>
+        <pre><code data-test-id="code-content">{\n</code></pre>
+      </code-block>
+    `;
+    document.body.appendChild(container);
+    const codeBlock = container.querySelector('code-block') as HTMLElement;
+    const codeEl = container.querySelector('code') as HTMLElement;
+    const scanner = startScanner(GEMINI_ADAPTER, () => 'light', container);
+
+    // During streaming incomplete JSON: code-block remains visible, no host mounted
+    expect(codeBlock.style.display).toBe('');
+    expect(container.querySelector('.iui-host')).toBeNull();
+
+    // Now Gemini streams the rest of the flow JSON
+    codeEl.textContent = '{\n  "type": "flow",\n  "nodes": [\n    {"id": "a", "label": "Start"}\n  ]\n}';
+    scanner.rescan();
+
+    // Now that JSON parses fully, it renders and hides the code-block
+    expect(codeBlock.style.display).toBe('none');
+    expect(codeBlock.getAttribute('data-iui-hidden')).toBe('1');
+    const host = container.querySelector('.iui-host') as HTMLElement;
+    expect(host).not.toBeNull();
+    expect(host.shadowRoot?.querySelector('.flow-card')).not.toBeNull();
+
+    scanner.stop();
+    container.remove();
+  });
+
   it('detects positive blocks for various types and mounts before code-block in response-element', () => {
     const testCases = [
       {

@@ -446,4 +446,34 @@ describe('layoutFlow', () => {
       }
     }
   });
+
+  it('pure linear chain of 8 nodes uses snake grid layout with rows going left to right', () => {
+    const nodes = [
+      { id: '1', label: 'Step 1' },
+      { id: '2', label: 'Step 2' },
+      { id: '3', label: 'Step 3' },
+      { id: '4', label: 'Step 4' },
+      { id: '5', label: 'Step 5' },
+      { id: '6', label: 'Step 6' },
+      { id: '7', label: 'Step 7' },
+      { id: '8', label: 'Step 8' },
+    ];
+    const edges = [
+      { from: '1', to: '2' },
+      { from: '2', to: '3' },
+      { from: '3', to: '4' },
+      { from: '4', to: '5' },
+      { from: '5', to: '6' },
+      { from: '6', to: '7' },
+      { from: '7', to: '8' },
+    ];
+    const result = dagreLayoutFlow(nodes, edges);
+    expect(result.nodes).toHaveLength(8);
+    // Height should be compact (under 300px), not 700px!
+    expect(result.height).toBeLessThan(400);
+    // Multiple rows
+    const yCoords = Array.from(new Set(result.nodes.map((n) => n.y)));
+    expect(yCoords.length).toBeGreaterThan(1);
+    expect(result.edges).toHaveLength(7);
+  });
 });
