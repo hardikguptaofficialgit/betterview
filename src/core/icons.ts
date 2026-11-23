@@ -268,6 +268,8 @@ const CARD_TYPE_ICONS: Record<UIType, string> = {
   code: codeIcon,
   checklist: listChecksIcon,
   form: listIcon,
+  image: imageIcon,
+  dashboard: panelsTopLeftIcon,
   generic: listIcon,
 };
 

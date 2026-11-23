@@ -323,24 +323,19 @@ export function initPopup(): () => void {
   let activeTabSite: 'gemini' | 'grok' | null = null;
   let activeTabId: number | undefined;
 
-  function renderTabStatus(site: 'gemini' | 'grok' | null): void {
+  function renderTabStatus(site: 'gemini' | 'grok' | 'chatgpt' | 'claude' | null): void {
     if (!statusLine) return;
     clear(statusLine);
-    if (site === 'gemini') {
+    if (site) {
       statusLine.className = 'status-line status-active';
       const dot = h('span', { class: 'status-dot' });
       statusLine.appendChild(dot);
-      statusLine.appendChild(document.createTextNode('Active on Gemini'));
-      enableTourLink(true);
-    } else if (site === 'grok') {
-      statusLine.className = 'status-line status-active';
-      const dot = h('span', { class: 'status-dot' });
-      statusLine.appendChild(dot);
-      statusLine.appendChild(document.createTextNode('Active on Grok'));
-      enableTourLink(true);
+      const labels = { gemini: 'Gemini', grok: 'Grok', chatgpt: 'ChatGPT', claude: 'Claude' };
+      statusLine.appendChild(document.createTextNode(`Active on ${labels[site]}`));
+      enableTourLink(site === 'gemini' || site === 'grok');
     } else {
       statusLine.className = 'status-line status-muted';
-      statusLine.appendChild(document.createTextNode('Open Gemini or Grok'));
+      statusLine.appendChild(document.createTextNode('Open Gemini, Grok, ChatGPT or Claude'));
       enableTourLink(false);
     }
   }
@@ -370,6 +365,12 @@ export function initPopup(): () => void {
         } else if (url.includes('grok.com')) {
           activeTabSite = 'grok';
           renderTabStatus('grok');
+        } else if (url.includes('chatgpt.com')) {
+          activeTabSite = null;
+          renderTabStatus('chatgpt');
+        } else if (url.includes('claude.ai')) {
+          activeTabSite = null;
+          renderTabStatus('claude');
         } else {
           activeTabSite = null;
           renderTabStatus(null);

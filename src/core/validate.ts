@@ -12,6 +12,7 @@ import {
   TableSpec,
   CompareSpec,
   QuizSpec,
+  ChartPoint,
   ChartSpec,
   MermaidSpec,
   CalloutSpec,
@@ -29,6 +30,9 @@ import {
   ChecklistItem,
   FormSpec,
   FormFieldSpec,
+  ImageSpec,
+  DashboardSpec,
+  DashboardPanel,
   GenericSpec,
 } from './types';
 
@@ -399,67 +403,92 @@ function validateQuiz(raw: Record<string, unknown>, warnings: string[]): { ok: t
 
 function validateChart(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: ChartSpec } | { ok: false; error: string } {
   let chartType = cleanString(raw.chartType).toLowerCase();
-  const validChartTypes = ['bar', 'line', 'pie', 'doughnut', 'radar'];
+  const validChartTypes = ['bar', 'line', 'area', 'pie', 'doughnut', 'radar', 'scatter', 'bubble', 'heatmap', 'geo'];
   if (!validChartTypes.includes(chartType)) {
     warnings.push(`Invalid chartType "${raw.chartType}", defaulting to bar`);
     chartType = 'bar';
   }
 
+  const isPointChart = chartType === 'scatter' || chartType === 'bubble' || chartType === 'geo';
   const rawLabels = Array.isArray(raw.labels) ? raw.labels : [];
-  const labels = rawLabels.map((l) => cleanString(l));
-  if (labels.length === 0) {
-    return { ok: false, error: 'chart must have at least 1 label' };
-  }
+  const labelLimit = chartType === 'heatmap' ? 18 : 12;
+  const labels = rawLabels.slice(0, labelLimit).map((label, index) => cleanString(label) || `Item ${index + 1}`);
+  if (rawLabels.length > labelLimit) warnings.push(`Chart labels capped at ${labelLimit}`);
+  if (!isPointChart && labels.length === 0) return { ok: false, error: 'chart must have at least 1 label' };
 
   let rawDatasets = Array.isArray(raw.datasets) ? raw.datasets : [];
-  if (rawDatasets.length === 0) {
-    return { ok: false, error: 'chart must have at least 1 dataset' };
-  }
-  if (rawDatasets.length > 12) {
-    warnings.push('Datasets capped at 12');
-    rawDatasets = rawDatasets.slice(0, 12);
+  if (rawDatasets.length === 0) return { ok: false, error: 'chart must have at least 1 dataset' };
+  const datasetLimit = chartType === 'heatmap' ? 20 : 12;
+  if (rawDatasets.length > datasetLimit) {
+    warnings.push(`Datasets capped at ${datasetLimit}`);
+    rawDatasets = rawDatasets.slice(0, datasetLimit);
   }
 
-  const datasets: { label: string; data: number[] }[] = [];
+  const datasets: { label: string; data: (number | ChartPoint)[] }[] = [];
+  let totalPoints = 0;
+  const numberValue = (value: unknown): number | null => {
+    if (typeof value !== 'number' && typeof value !== 'string') return null;
+    if (typeof value === 'string' && !value.trim()) return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
+
   for (const ds of rawDatasets) {
-    if (!ds || typeof ds !== 'object') {
-      return { ok: false, error: 'Chart dataset must be an object' };
-    }
+    if (!ds || typeof ds !== 'object' || Array.isArray(ds)) return { ok: false, error: 'Chart dataset must be an object' };
     const rec = ds as Record<string, unknown>;
     const label = cleanString(rec.label) || 'Dataset';
-    if (!Array.isArray(rec.data)) {
-      return { ok: false, error: 'Chart dataset must have a data array' };
-    }
-    const data: number[] = [];
-    for (const item of rec.data) {
-      if (typeof item === 'string' && item.trim() === '') {
-        return { ok: false, error: 'Invalid chart data: NaN encountered' };
+    if (!Array.isArray(rec.data)) return { ok: false, error: 'Chart dataset must have a data array' };
+    const data: (number | ChartPoint)[] = [];
+
+    if (chartType === 'scatter' || chartType === 'bubble') {
+      for (const item of rec.data.slice(0, 100)) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return { ok: false, error: 'Scatter and bubble data must use {x,y} points' };
+        const point = item as Record<string, unknown>;
+        const x = numberValue(point.x);
+        const y = numberValue(point.y);
+        const radius = point.r === undefined ? null : numberValue(point.r);
+        if (x === null || y === null || (point.r !== undefined && (radius === null || radius <= 0))) {
+          return { ok: false, error: 'Scatter and bubble points require finite x and y values (and a positive r when supplied)' };
+        }
+        if (chartType === 'bubble' && radius === null) return { ok: false, error: 'Bubble points require a positive r value' };
+        data.push({ x, y, ...(radius !== null ? { r: radius } : {}), ...(cleanString(point.label) ? { label: cleanString(point.label) } : {}) });
       }
-      const num = Number(item);
-      if (Number.isNaN(num)) {
-        return { ok: false, error: 'Invalid chart data: NaN encountered' };
+    } else if (chartType === 'geo') {
+      for (const item of rec.data.slice(0, 60)) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return { ok: false, error: 'Geographic chart points must be objects with latitude and longitude' };
+        const point = item as Record<string, unknown>;
+        const lon = numberValue(point.lon ?? point.longitude ?? point.x);
+        const lat = numberValue(point.lat ?? point.latitude ?? point.y);
+        const value = point.value === undefined ? null : numberValue(point.value);
+        if (lon === null || lat === null || lon < -180 || lon > 180 || lat < -90 || lat > 90 || (point.value !== undefined && value === null)) {
+          return { ok: false, error: 'Geographic points need longitude in [-180,180], latitude in [-90,90], and a finite optional value' };
+        }
+        data.push({ x: lon, y: lat, ...(value !== null ? { value } : {}), ...(cleanString(point.label ?? point.name ?? point.location) ? { label: cleanString(point.label ?? point.name ?? point.location) } : {}) });
       }
-      data.push(num);
-    }
-    if (data.length > labels.length) {
-      data.splice(labels.length);
     } else {
-      while (data.length < labels.length) {
-        data.push(0);
+      for (const item of rec.data) {
+        const number = numberValue(item);
+        if (number === null) return { ok: false, error: 'Invalid chart data: NaN encountered' };
+        data.push(number);
       }
+      if (data.length > labels.length) data.splice(labels.length);
+      else while (data.length < labels.length) data.push(0);
     }
+
+    if (data.length === 0) return { ok: false, error: 'Chart dataset must contain at least one data point' };
+    totalPoints += data.length;
+    if (chartType === 'geo' && totalPoints > 120) return { ok: false, error: 'Geographic charts are capped at 120 locations' };
     datasets.push({ label, data });
   }
 
   const unit = cleanString(raw.unit);
+  const xLabel = cleanString(raw.xLabel);
+  const yLabel = cleanString(raw.yLabel);
   return {
     ok: true,
     spec: {
-      type: 'chart',
-      chartType: chartType as ChartSpec['chartType'],
-      labels,
-      datasets,
-      ...(unit ? { unit } : {}),
+      type: 'chart', chartType: chartType as ChartSpec['chartType'], labels, datasets,
+      ...(unit ? { unit } : {}), ...(xLabel ? { xLabel } : {}), ...(yLabel ? { yLabel } : {}),
     },
   };
 }
@@ -770,6 +799,60 @@ function validateForm(raw: Record<string, unknown>, warnings: string[]): { ok: t
   } };
 }
 
+function validateImage(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: ImageSpec } | { ok: false; error: string } {
+  const src = cleanString(raw.src, 2048);
+  const alt = cleanString(raw.alt, 500);
+  if (!src) return { ok: false, error: 'image must have a source URL' };
+  if (!alt) return { ok: false, error: 'image must have descriptive alt text' };
+  try {
+    const url = new URL(src);
+    if (url.protocol !== 'https:' || url.username || url.password) return { ok: false, error: 'image source must be a credential-free HTTPS URL' };
+  } catch {
+    return { ok: false, error: 'image source must be a valid HTTPS URL' };
+  }
+  let aspect = cleanString(raw.aspect).toLowerCase();
+  if (!['auto', 'wide', 'square', 'portrait'].includes(aspect)) {
+    if (raw.aspect !== undefined) warnings.push('Invalid image aspect, defaulting to auto');
+    aspect = 'auto';
+  }
+  let fit = cleanString(raw.fit).toLowerCase();
+  if (!['contain', 'cover'].includes(fit)) {
+    if (raw.fit !== undefined) warnings.push('Invalid image fit, defaulting to contain');
+    fit = 'contain';
+  }
+  const caption = cleanString(raw.caption, 500);
+  return { ok: true, spec: {
+    type: 'image', src, alt, aspect: aspect as ImageSpec['aspect'], fit: fit as ImageSpec['fit'],
+    ...(caption ? { caption } : {}),
+  } };
+}
+
+function validateDashboard(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: DashboardSpec } | { ok: false; error: string } {
+  let rawItems = Array.isArray(raw.items) ? raw.items : [];
+  if (rawItems.length < 2) return { ok: false, error: 'dashboard must have at least 2 visual items' };
+  if (rawItems.length > 8) {
+    warnings.push('Dashboard items capped at 8');
+    rawItems = rawItems.slice(0, 8);
+  }
+  const items: DashboardPanel[] = [];
+  for (let index = 0; index < rawItems.length; index++) {
+    const item = rawItems[index];
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return { ok: false, error: `Dashboard item ${index + 1} must be an object` };
+    const rec = item as Record<string, unknown>;
+    const visualRaw = rec.visual ?? rec.spec;
+    if (!visualRaw || typeof visualRaw !== 'object' || Array.isArray(visualRaw)) return { ok: false, error: `Dashboard item ${index + 1} must contain a visual object` };
+    const visualType = (visualRaw as Record<string, unknown>).type;
+    if (visualType === 'dashboard' || visualType === 'generic') return { ok: false, error: 'Dashboard panels cannot contain another dashboard or generic fallback' };
+    const validated = validateSpec(visualRaw);
+    if (!validated.ok) return { ok: false, error: `Dashboard item ${index + 1}: ${validated.error}` };
+    if (validated.spec.type === 'dashboard' || validated.spec.type === 'generic') return { ok: false, error: 'Dashboard panels must use supported visual types' };
+    warnings.push(...validated.warnings);
+    const title = cleanString(rec.title, 120);
+    items.push({ visual: validated.spec as DashboardPanel['visual'], ...(title ? { title } : {}) });
+  }
+  return { ok: true, spec: { type: 'dashboard', items } };
+}
+
 function validateGeneric(raw: Record<string, unknown>, _warnings: string[]): { ok: true; spec: GenericSpec } | { ok: false; error: string } {
   const title = cleanString(raw.title);
   const originalType = cleanString(raw.originalType);
@@ -858,6 +941,12 @@ export function validateSpec(input: unknown): ValidateResult {
       break;
     case 'form':
       result = validateForm(raw, warnings);
+      break;
+    case 'image':
+      result = validateImage(raw, warnings);
+      break;
+    case 'dashboard':
+      result = validateDashboard(raw, warnings);
       break;
     case 'generic':
       result = validateGeneric(raw, warnings);

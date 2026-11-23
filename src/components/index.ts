@@ -1,5 +1,5 @@
 import { ThemeMode } from '../core/theme';
-import { UISpec, UIType } from '../core/types';
+import { DashboardVisualSpec, UISpec, UIType, UIHost } from '../core/types';
 import { renderTable } from './table';
 import { renderCompare } from './compare';
 import { renderStepper } from './stepper';
@@ -17,10 +17,12 @@ import { renderCode } from './code';
 import { renderGeneric } from './generic';
 import { renderChecklist } from './checklist';
 import { renderForm } from './form';
+import { renderImage } from './image';
+import { renderDashboard } from './dashboard';
 
 export interface RenderContext {
   theme: ThemeMode;
-  host?: 'gemini' | 'grok';
+  host?: UIHost;
   onCleanup(fn: () => void): void;
 }
 
@@ -43,5 +45,10 @@ export const RENDERERS: { [K in UIType]: RenderFn<Extract<UISpec, { type: K }>> 
   code: renderCode,
   checklist: renderChecklist,
   form: renderForm,
+  image: renderImage,
+  dashboard: (spec, ctx) => renderDashboard(spec, ctx, (visual: DashboardVisualSpec, innerCtx) => {
+    const renderer = RENDERERS[visual.type] as RenderFn<UISpec>;
+    return renderer(visual, innerCtx);
+  }),
   generic: renderGeneric,
 };

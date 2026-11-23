@@ -353,8 +353,71 @@ export function findLongestSegmentMidpoint(points: Point[]): Point {
   };
 }
 
+function orthogonalIntersections(a: Point, b: Point, c: Point, d: Point): Point[] {
+  const aHorizontal = Math.abs(a.y - b.y) < 1e-6;
+  const bHorizontal = Math.abs(c.y - d.y) < 1e-6;
+
+  if (aHorizontal && bHorizontal) {
+    if (Math.abs(a.y - c.y) >= 1e-6) return [];
+    const left = Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x));
+    const right = Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x));
+    return left <= right + 1e-6 ? [{ x: (left + right) / 2, y: a.y }] : [];
+  }
+
+  if (!aHorizontal && !bHorizontal) {
+    if (Math.abs(a.x - c.x) >= 1e-6) return [];
+    const top = Math.max(Math.min(a.y, b.y), Math.min(c.y, d.y));
+    const bottom = Math.min(Math.max(a.y, b.y), Math.max(c.y, d.y));
+    return top <= bottom + 1e-6 ? [{ x: a.x, y: (top + bottom) / 2 }] : [];
+  }
+
+  const horizontalStart = aHorizontal ? a : c;
+  const horizontalEnd = aHorizontal ? b : d;
+  const verticalStart = aHorizontal ? c : a;
+  const verticalEnd = aHorizontal ? d : b;
+  const x = verticalStart.x;
+  const y = horizontalStart.y;
+  const onHorizontal = x >= Math.min(horizontalStart.x, horizontalEnd.x) - 1e-6 &&
+    x <= Math.max(horizontalStart.x, horizontalEnd.x) + 1e-6;
+  const onVertical = y >= Math.min(verticalStart.y, verticalEnd.y) - 1e-6 &&
+    y <= Math.max(verticalStart.y, verticalEnd.y) + 1e-6;
+  return onHorizontal && onVertical ? [{ x, y }] : [];
+}
+
+function segmentCrossingPenalty(
+  a: Point,
+  b: Point,
+  routedEdges: Point[][],
+  start: Point,
+  goal: Point,
+): number {
+  let penalty = 0;
+  for (const route of routedEdges) {
+    for (let i = 0; i < route.length - 1; i++) {
+      for (const point of orthogonalIntersections(a, b, route[i], route[i + 1])) {
+        const near = (p1: Point, p2: Point) => Math.hypot(p1.x - p2.x, p1.y - p2.y) < 20;
+        if (
+          near(point, start) || near(point, goal) ||
+          near(point, route[0]) || near(point, route[route.length - 1])
+        ) continue;
+        penalty += 700;
+      }
+    }
+  }
+  return penalty;
+}
+
+function pathHasInteriorConflict(points: Point[], routedEdges: Point[][]): boolean {
+  for (let i = 0; i < points.length - 1; i++) {
+    if (segmentCrossingPenalty(points[i], points[i + 1], routedEdges, points[0], points[points.length - 1]) > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
- * A* Orthogonal grid router with obstacle avoidance and bend penalty.
+ * A* Orthogonal grid router with obstacle avoidance, bend penalty and edge separation.
  */
 function routeAStar(
   start: Point,
@@ -363,6 +426,7 @@ function routeAStar(
   allBoxes: BoxRect[],
   gutterX: number,
   padding = 16,
+  routedEdges: Point[][] = [],
 ): Point[] {
   // Build coarse grid coordinates
   const xSet = new Set<number>([start.x, goal.x, gutterX]);
@@ -376,6 +440,24 @@ function routeAStar(
     ySet.add(b.y - padding);
     ySet.add(b.y + b.height + padding);
     ySet.add(b.y + b.height / 2);
+  }
+
+  for (const route of routedEdges) {
+    for (const point of route) {
+      xSet.add(point.x);
+      ySet.add(point.y);
+    }
+    for (let i = 0; i < route.length - 1; i++) {
+      const a = route[i];
+      const b = route[i + 1];
+      if (Math.abs(a.y - b.y) < 1e-6) {
+        ySet.add(a.y - 12);
+        ySet.add(a.y + 12);
+      } else {
+        xSet.add(a.x - 12);
+        xSet.add(a.x + 12);
+      }
+    }
   }
 
   // Add intermediate channels between sorted boxes
@@ -496,7 +578,8 @@ function routeAStar(
 
       const stepLen = Math.abs(nPt.x - curPt.x) + Math.abs(nPt.y - curPt.y);
       const bendCost = current.dir !== 0 && current.dir !== n.nDir ? BEND_PENALTY : 0;
-      const tentG = current.g + stepLen + bendCost;
+      const crossingCost = segmentCrossingPenalty(curPt, nPt, routedEdges, start, goal);
+      const tentG = current.g + stepLen + bendCost + crossingCost;
 
       const nKey = `${n.nXi},${n.nYi},${n.nDir}`;
       const prevG = dist.get(nKey) ?? Infinity;
@@ -522,12 +605,10 @@ function routeAStar(
     // the obstacle bounds. Never fall back to a direct line through a node.
     const minY = Math.min(...allBoxes.map((box) => box.y), start.y, goal.y) - padding - 24;
     const maxY = Math.max(...allBoxes.map((box) => box.y + box.height), start.y, goal.y) + padding + 24;
-    const minX = Math.min(...allBoxes.map((box) => box.x), start.x, goal.x) - padding - 24;
     const maxX = Math.max(...allBoxes.map((box) => box.x + box.width), start.x, goal.x) + padding + 24;
     const candidates: Point[][] = [
       [start, { x: start.x, y: minY }, { x: goal.x, y: minY }, goal],
       [start, { x: start.x, y: maxY }, { x: goal.x, y: maxY }, goal],
-      [start, { x: minX, y: start.y }, { x: minX, y: goal.y }, goal],
       [start, { x: maxX, y: start.y }, { x: maxX, y: goal.y }, goal],
     ];
     const clearRoutes = candidates.filter((points) => points.slice(1).every((point, index) =>
@@ -535,9 +616,10 @@ function routeAStar(
     ));
     if (clearRoutes.length > 0) {
       return simplifyCollinear(clearRoutes.sort((a, b) => {
-        const length = (route: Point[]) => route.slice(1).reduce((sum, point, index) =>
-          sum + Math.abs(point.x - route[index].x) + Math.abs(point.y - route[index].y), 0);
-        return length(a) - length(b);
+        const cost = (route: Point[]) => route.slice(1).reduce((sum, point, index) =>
+          sum + Math.abs(point.x - route[index].x) + Math.abs(point.y - route[index].y) +
+            segmentCrossingPenalty(route[index], point, routedEdges, start, goal), 0);
+        return cost(a) - cost(b);
       })[0]);
     }
 
@@ -567,6 +649,8 @@ export function computeEdgeRoute(
   outerIndex = 0,
   fanOffset = 0,
   allBoxes: BoxRect[] = [],
+  targetFanOffset = 0,
+  routedEdges: Point[][] = [],
 ): EdgeRoute {
   // Ensure obstacle set does not include source or target node
   const obstacleBoxes = allBoxes.filter(
@@ -601,8 +685,11 @@ export function computeEdgeRoute(
     let points: Point[];
     if (!p0p1Blocked && !p2p3Blocked) {
       points = simplifyCollinear([p0, p1, p2, p3]);
+      if (pathHasInteriorConflict(points, routedEdges)) {
+        points = routeAStar(p0, p3, obstacleBoxes, [sourceBox, targetBox, ...obstacleBoxes], gutterX, 16, routedEdges);
+      }
     } else {
-      points = routeAStar(p0, p3, obstacleBoxes, [sourceBox, targetBox, ...obstacleBoxes], gutterX, 16);
+      points = routeAStar(p0, p3, obstacleBoxes, [sourceBox, targetBox, ...obstacleBoxes], gutterX, 16, routedEdges);
     }
 
     const pathD = renderRoundedPath(points, 8);
@@ -618,7 +705,7 @@ export function computeEdgeRoute(
   // 2. Same-lane adjacent edges stay straight
   const sx = sourceBox.x + sourceBox.width / 2 + fanOffset;
   const sy = sourceBox.y + sourceBox.height;
-  const tx = targetBox.x + targetBox.width / 2;
+  const tx = targetBox.x + targetBox.width / 2 + targetFanOffset;
   const ty = targetBox.y;
 
   const isSameLane = Math.abs(sx - tx) < 5 && ty >= sy;
@@ -629,9 +716,11 @@ export function computeEdgeRoute(
 
     if (!straightBlocked) {
       const points = [{ x: sx, y: sy }, { x: tx, y: ty }];
-      const pathD = `M ${sx} ${sy} L ${tx} ${ty}`;
-      const labelPoint = { x: sx, y: (sy + ty) / 2 };
-      return { isOuter: false, pathD, labelPoint, points };
+      if (!pathHasInteriorConflict(points, routedEdges)) {
+        const pathD = `M ${sx} ${sy} L ${tx} ${ty}`;
+        const labelPoint = { x: sx, y: (sy + ty) / 2 };
+        return { isOuter: false, pathD, labelPoint, points };
+      }
     }
   }
 
@@ -641,7 +730,7 @@ export function computeEdgeRoute(
   const goalPt: Point = { x: tx, y: ty };
 
   const allBoxesList = [sourceBox, targetBox, ...obstacleBoxes];
-  const routedPoints = routeAStar(startPt, goalPt, obstacleBoxes, allBoxesList, gutterX, 16);
+  const routedPoints = routeAStar(startPt, goalPt, obstacleBoxes, allBoxesList, gutterX, 16, routedEdges);
   const pathD = renderRoundedPath(routedPoints, 8);
   const labelPoint = findLongestSegmentMidpoint(routedPoints);
 

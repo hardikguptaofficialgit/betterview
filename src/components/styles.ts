@@ -5,6 +5,7 @@ import quizCss from './styles/quiz.css?inline';
 import flowCss from './styles/flow.css?inline';
 import mermaidCss from './styles/mermaid.css?inline';
 import calloutCss from './styles/callout.css?inline';
+import maxGraphCss from '@maxgraph/core/css/common.css?inline';
 import statsCss from './styles/stats.css?inline';
 import tabsCss from './styles/tabs.css?inline';
 import timelineCss from './styles/timeline.css?inline';
@@ -15,6 +16,7 @@ import genericCss from './styles/generic.css?inline';
 import chartCss from './styles/chart.css?inline';
 import checklistCss from './styles/checklist.css?inline';
 import formCss from './styles/form.css?inline';
+import visualExtrasCss from './styles/visualExtras.css?inline';
 
 export const COMPONENT_STYLES: string[] = [
   tableCss,
@@ -22,6 +24,7 @@ export const COMPONENT_STYLES: string[] = [
   stepperCss,
   quizCss,
   flowCss,
+  maxGraphCss,
   mermaidCss,
   calloutCss,
   statsCss,
@@ -34,4 +37,5 @@ export const COMPONENT_STYLES: string[] = [
   chartCss,
   checklistCss,
   formCss,
+  visualExtrasCss,
 ];

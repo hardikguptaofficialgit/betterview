@@ -64,10 +64,11 @@
 }
 
 .iui-tabs-panel {
-  background-color: var(--iui-bg);
-  border: 1px solid var(--iui-border);
-  border-radius: var(--iui-radius-inner, 12px);
-  padding: 14px 16px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--iui-border);
+  border-radius: 0;
+  padding: 14px 0 0;
   min-height: 48px;
   line-height: 1.5;
 }

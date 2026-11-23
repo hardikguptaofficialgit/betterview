@@ -125,7 +125,7 @@ export function renderQuiz(spec: QuizSpec, _ctx: RenderContext): HTMLElement {
               if (qObj.explain) {
                 const explainBox = h(
                   'div',
-                  { class: 'iui-card tinted c-stone iui-quiz-explain' },
+                  { class: 'iui-quiz-explain' },
                   h('span', { class: 'iui-quiz-explain-icon' }, iconEl('info', 16)),
                   h('div', { class: 'iui-quiz-explain-text' }, qObj.explain),
                 );
@@ -144,7 +144,7 @@ export function renderQuiz(spec: QuizSpec, _ctx: RenderContext): HTMLElement {
 
                 const banner = h(
                   'div',
-                  { class: `iui-card tinted ${toneClass} iui-quiz-result-banner` },
+                  { class: `iui-quiz-result-banner ${toneClass}` },
                   h(
                     'span',
                     { class: 'iui-quiz-result-text' },

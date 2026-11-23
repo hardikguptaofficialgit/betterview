@@ -26,8 +26,7 @@ export function renderCompare(spec: CompareSpec, _ctx: RenderContext): HTMLEleme
       headerIconName = 'x-circle';
     }
 
-    const sideClass = idx % 2 === 0 ? 'is-col-left' : 'is-col-right';
-    const panel = h('div', { class: `iui-card tinted iui-compare-panel ${colorClass} ${sideClass}` });
+    const panel = h('div', { class: `iui-compare-panel ${colorClass}` });
 
     const header = h('div', { class: 'iui-compare-header' });
     const iconBox = h('div', { class: 'iui-compare-iconbox' }, iconEl(headerIconName, 16));

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { parseNumericValue } from '../src/components/table';
 import {
   LIGHT_SOLIDS,
@@ -241,6 +241,30 @@ describe('Chart palettes and helpers', () => {
     expect(labelResult).toContain('req/s');
     expect(labelResult).toContain('Count:');
   });
+
+  it('configures area, scatter, and bubble charts with their expected data shapes', () => {
+    const area = buildChartConfig({
+      type: 'chart', chartType: 'area', labels: ['Mon', 'Tue'],
+      datasets: [{ label: 'Traffic', data: [10, 20] }],
+    }, 'light');
+    expect(area.type).toBe('line');
+    expect((area.data.datasets[0] as any).fill).toBe('origin');
+
+    const scatter = buildChartConfig({
+      type: 'chart', chartType: 'scatter', labels: [], xLabel: 'Requests', yLabel: 'Latency',
+      datasets: [{ label: 'Samples', data: [{ x: 4, y: 18 }] }],
+    }, 'light');
+    expect(scatter.type).toBe('scatter');
+    expect((scatter.options?.scales as any).x.type).toBe('linear');
+    expect((scatter.data.datasets[0] as any).data).toEqual([{ x: 4, y: 18 }]);
+
+    const bubble = buildChartConfig({
+      type: 'chart', chartType: 'bubble', labels: [],
+      datasets: [{ label: 'Accounts', data: [{ x: 4, y: 18, r: 7 }] }],
+    }, 'light');
+    expect(bubble.type).toBe('bubble');
+    expect((bubble.data.datasets[0] as any).data[0].r).toBe(7);
+  });
 });
 
 describe('Mermaid theme variables', () => {
@@ -291,6 +315,8 @@ describe('RENDERERS registry', () => {
     expect(typeof RENDERERS.code).toBe('function');
     expect(typeof RENDERERS.checklist).toBe('function');
     expect(typeof RENDERERS.form).toBe('function');
+    expect(typeof RENDERERS.image).toBe('function');
+    expect(typeof RENDERERS.dashboard).toBe('function');
     expect(typeof RENDERERS.generic).toBe('function');
   });
 
@@ -382,6 +408,43 @@ describe('RENDERERS registry', () => {
     expect(result.hidden).toBe(true);
   });
 
+  it('renders image, heatmap, geographic points, and a compact dashboard', () => {
+    const ctx = { theme: 'light' as const, onCleanup: () => {} };
+    const image = RENDERERS.image({
+      type: 'image', title: 'Architecture', src: 'https://example.com/architecture.png',
+      alt: 'Services connected by arrows', caption: 'Request path', aspect: 'wide',
+    }, ctx);
+    expect(image.querySelector('img')?.getAttribute('alt')).toBe('Services connected by arrows');
+    expect(image.querySelector('img')?.getAttribute('referrerpolicy')).toBe('no-referrer');
+    expect(image.textContent).toContain('Request path');
+
+    const heatmap = renderChart({
+      type: 'chart', chartType: 'heatmap', title: 'Latency by day', labels: ['Mon', 'Tue'],
+      datasets: [{ label: 'API', data: [18, 34] }, { label: 'Cache', data: [3, 7] }],
+    }, ctx);
+    expect(heatmap.querySelectorAll('.iui-heatmap-cell')).toHaveLength(4);
+    expect(heatmap.textContent).toContain('Latency by day');
+
+    const geo = renderChart({
+      type: 'chart', chartType: 'geo', title: 'Events by region', labels: [],
+      datasets: [{ label: 'Cities', data: [{ x: -73.9, y: 40.7, label: 'New York' }, { x: 139.7, y: 35.7, label: 'Tokyo' }] }],
+    }, ctx);
+    expect(geo.querySelectorAll('.iui-geo-point')).toHaveLength(2);
+    expect(geo.textContent).toContain('New York');
+
+    const dashboard = RENDERERS.dashboard({
+      type: 'dashboard', title: 'Service snapshot',
+      items: [
+        { title: 'Availability', visual: { type: 'stats', items: [{ label: 'Uptime', value: '99.9%' }, { label: 'Errors', value: '0.1%' }] } },
+        { title: 'Traffic', visual: { type: 'callout', tone: 'info', text: 'Traffic is within the normal range.' } },
+      ],
+    }, ctx);
+    expect(dashboard.querySelectorAll('.iui-dashboard-panel')).toHaveLength(2);
+    expect(dashboard.querySelectorAll('.iui-dashboard-visual')).toHaveLength(2);
+    expect(dashboard.querySelectorAll('.iui-dashboard-panel-title')).toHaveLength(2);
+    expect(dashboard.textContent).toContain('Service snapshot');
+  });
+
   it('renders generic fallback card into DOM with readable key-value and list layout', () => {
     const ctx = { theme: 'light' as const, onCleanup: () => {} };
     const genericEl = RENDERERS.generic(
@@ -420,6 +483,7 @@ describe('RENDERERS registry', () => {
       ctx,
     );
     expect(statsEl.querySelectorAll('.iui-stat-item')).toHaveLength(2);
+    expect(statsEl.querySelector('.iui-stat-delta')?.classList.contains('iui-chip')).toBe(false);
 
     const tabsEl = RENDERERS.tabs(
       { type: 'tabs', tabs: [{ label: 'T1', content: 'C1' }, { label: 'T2', content: ['A', 'B'] }] },
@@ -441,8 +505,8 @@ describe('RENDERERS registry', () => {
   });
 });
 
-describe('Flow diagram canvas controls', () => {
-  it('renders zoom, fit and fullscreen controls with an accessible pannable canvas', () => {
+describe('Flow diagrams', () => {
+  it('renders a small flow as an accessible movable graph with zoom controls', () => {
     const cleanups: (() => void)[] = [];
     const ctx = { theme: 'light' as const, onCleanup: (fn: () => void) => cleanups.push(fn) };
     const spec: FlowSpec = {
@@ -459,39 +523,78 @@ describe('Flow diagram canvas controls', () => {
       ],
     };
     const card = renderFlow(spec, ctx);
-    const canvas = card.querySelector<HTMLElement>('.flow-canvas')!;
-    const zoomIn = card.querySelector<HTMLButtonElement>('[aria-label="Zoom in"]')!;
-    const zoomOut = card.querySelector<HTMLButtonElement>('[aria-label="Zoom out"]')!;
-    const fullscreen = card.querySelector<HTMLButtonElement>('[aria-label="Enter full screen"]')!;
-    const fit = card.querySelector<HTMLButtonElement>('[aria-label="Fit diagram"]')!;
+    const diagram = card.querySelector<HTMLElement>('.flow-diagram')!;
+    const viewport = card.querySelector<HTMLElement>('.flow-viewport')!;
+    const canvas = card.querySelector<HTMLElement>('.flow-graph-canvas')!;
 
-    expect(canvas.getAttribute('role')).toBe('region');
+    expect(diagram.getAttribute('role')).toBe('region');
+    expect(viewport.getAttribute('role')).toBe('region');
+    expect(viewport.getAttribute('aria-label')).toBe('Interactive flow canvas: OAuth flow, 3 nodes');
+    expect(canvas.getAttribute('role')).toBe('application');
     expect(canvas.getAttribute('tabindex')).toBe('0');
-    expect(fit).not.toBeNull();
-    expect(fit.innerHTML).not.toBe(fullscreen.innerHTML);
-    expect(card.querySelectorAll('[aria-label="Fit diagram"]')).toHaveLength(1);
-    expect(card.querySelectorAll('[aria-label="Enter full screen"]')).toHaveLength(1);
-    expect(card.querySelectorAll('.flow-node')).toHaveLength(3);
-    expect(card.querySelectorAll('.flow-node-iconbox')).toHaveLength(0);
+    expect(canvas.dataset.flowNodeCount).toBe('3');
+    expect(canvas.dataset.flowEdgeCount).toBe('2');
+    expect(card.querySelectorAll('.flow-control-btn')).toHaveLength(4);
+    expect(card.querySelector('[aria-label="Fit flow in canvas"]')).not.toBeNull();
+    expect(card.querySelector('.flow-svg-overlay')).toBeNull();
+    expect(card.querySelector('.flow-node')).toBeNull();
+    expect(diagram.querySelector('.iui-sr-only')?.textContent).toContain('Resource owner → Client application (Starts login)');
+    expect(diagram.querySelector('.iui-sr-only')?.textContent).toContain('Client application → Authorization server (Requests authorization)');
 
-    zoomIn.click();
-    expect(card.querySelector('.flow-zoom-label')?.textContent).toBe('115%');
-    zoomOut.click();
-    expect(card.querySelector('.flow-zoom-label')?.textContent).toBe('100%');
+    card.querySelector<HTMLButtonElement>('[aria-label="Zoom in"]')!.click();
+    expect(card.querySelector('.flow-zoom-value')?.textContent).toBe('110%');
+    cleanups.forEach((cleanup) => cleanup());
+  });
 
-    const wheel = new Event('wheel', { bubbles: true, cancelable: true });
-    Object.defineProperties(wheel, {
-      deltaY: { value: -1 }, ctrlKey: { value: true }, metaKey: { value: false },
-      clientX: { value: 0 }, clientY: { value: 0 },
-    });
-    canvas.dispatchEvent(wheel);
-    expect(wheel.defaultPrevented).toBe(true);
-    expect(card.querySelector('.flow-zoom-label')?.textContent).toBe('108%');
+  it('keeps a crowded URL-shortener graph pannable and exposes every connection', () => {
+    const cleanups: (() => void)[] = [];
+    const ctx = { theme: 'light' as const, onCleanup: (fn: () => void) => cleanups.push(fn) };
+    const spec: FlowSpec = {
+      type: 'flow',
+      title: 'URL shortener architecture',
+      nodes: [
+        { id: 'client', label: 'Client app' },
+        { id: 'api', label: 'Shorten API' },
+        { id: 'validate', label: 'Validate URL' },
+        { id: 'encode', label: 'Generate Base62 code' },
+        { id: 'mapping', label: 'URL mapping store' },
+        { id: 'redirect', label: 'Redirect service' },
+        { id: 'cache', label: 'Redirect cache' },
+        { id: 'target', label: 'Destination URL' },
+        { id: 'missing', label: 'Expired or missing code' },
+        { id: 'events', label: 'Click events' },
+        { id: 'queue', label: 'Event queue' },
+        { id: 'analytics', label: 'Analytics store' },
+      ],
+      edges: [
+        { from: 'client', to: 'api', label: 'POST /shorten' },
+        { from: 'api', to: 'validate', label: 'Check request' },
+        { from: 'validate', to: 'encode', label: 'Valid URL' },
+        { from: 'encode', to: 'mapping', label: 'Write mapping' },
+        { from: 'mapping', to: 'cache', label: 'Warm cache' },
+        { from: 'client', to: 'redirect', label: 'GET /:code' },
+        { from: 'redirect', to: 'cache', label: 'Lookup' },
+        { from: 'cache', to: 'mapping', label: 'Cache miss' },
+        { from: 'redirect', to: 'target', label: '302 redirect' },
+        { from: 'redirect', to: 'missing', label: 'Expired / unknown' },
+        { from: 'target', to: 'events', label: 'Record click' },
+        { from: 'events', to: 'queue', label: 'Publish event' },
+        { from: 'queue', to: 'analytics', label: 'Batch write' },
+      ],
+    };
+    const card = renderFlow(spec, ctx);
+    const diagram = card.querySelector<HTMLElement>('.flow-diagram')!;
+    const viewport = card.querySelector<HTMLElement>('.flow-viewport')!;
+    const canvas = card.querySelector<HTMLElement>('.flow-graph-canvas')!;
 
-    // Happy DOM has no Fullscreen API, so the accessible fallback is used.
-    fullscreen.click();
-    expect(card.classList.contains('is-fullscreen-fallback')).toBe(true);
-    expect(fullscreen.getAttribute('aria-label')).toBe('Exit full screen');
+    expect(viewport.getAttribute('role')).toBe('region');
+    expect(viewport.hasAttribute('tabindex')).toBe(false);
+    expect(canvas.getAttribute('tabindex')).toBe('0');
+    expect(canvas.dataset.flowNodeCount).toBe('12');
+    expect(canvas.dataset.flowEdgeCount).toBe('13');
+    expect(diagram.querySelectorAll('.iui-sr-only li')).toHaveLength(13);
+    expect(diagram.querySelector('.iui-sr-only')?.textContent).toContain('Client app → Shorten API (POST /shorten)');
+    expect(card.querySelectorAll('.flow-control-btn')).toHaveLength(4);
 
     cleanups.forEach((cleanup) => cleanup());
   });

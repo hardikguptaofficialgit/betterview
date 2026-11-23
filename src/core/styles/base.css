@@ -537,13 +537,13 @@
 
 /* Card: base */
 .iui-card {
-  background-color: var(--iui-bg);
-  border: 1px solid var(--iui-border);
-  border-radius: var(--iui-radius-card, 12px);
-  padding: 14px 16px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   box-sizing: border-box;
   box-shadow: none;
   animation: iui-card-rise 240ms cubic-bezier(.2,.8,.2,1) forwards;
@@ -551,20 +551,20 @@
 
 /* Gemini Cards: consistent 12px radius, hairline border */
 .iui-root[data-host="gemini"] .iui-card {
-  background-color: var(--iui-surface);
-  border: 1px solid var(--iui-border);
-  border-radius: var(--iui-radius-card, 12px);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   box-shadow: none;
-  padding: 14px 16px;
+  padding: 0;
 }
 
 /* Grok Cards: hairline borders, flat surfaces, tight density */
 .iui-root[data-host="grok"] .iui-card {
-  background-color: var(--iui-bg);
-  border: 1px solid var(--iui-border);
-  border-radius: var(--iui-radius-card, 12px);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   box-shadow: none;
-  padding: 14px;
+  padding: 0;
 }
 
 .iui-card.tinted {
@@ -1375,7 +1375,7 @@
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  margin: 12px 0;
+  margin: 4px 0;
   box-sizing: border-box;
 }
 
@@ -1405,38 +1405,38 @@
 
 .iui-root[data-host="gemini"] .iui-card,
 .iui-root[data-host="grok"] .iui-card {
-  padding: 16px;
+  padding: 0;
 }
 
 .iui-root .iui-card-header {
-  gap: 12px;
-  min-height: 34px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--iui-border);
+  gap: 8px;
+  min-height: 24px;
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 
 .iui-root .iui-type-iconbox {
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
-  border: 1px solid var(--c-line, var(--iui-border));
-  border-radius: 10px;
-  background: var(--c-bg, var(--iui-accent-bg));
-  color: var(--c-ink, var(--iui-accent));
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--iui-muted);
 }
 
 .iui-root[data-host="gemini"] .iui-type-iconbox,
 .iui-root[data-host="grok"] .iui-type-iconbox {
-  width: 30px;
-  height: 30px;
-  flex-basis: 30px;
-  border: 1px solid var(--c-line, var(--iui-border));
-  background: var(--c-bg, var(--iui-accent-bg));
-  color: var(--c-ink, var(--iui-accent));
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+  border: 0;
+  background: transparent;
+  color: var(--iui-muted);
 }
 
 .iui-root[data-host="gemini"] .iui-type-iconbox {
-  border-radius: 10px;
+  border-radius: 0;
 }
 
 .iui-root[data-host="grok"] .iui-type-iconbox {
@@ -1456,7 +1456,7 @@
 @container iui (max-width: 520px) {
   .iui-root[data-host="gemini"] .iui-card,
   .iui-root[data-host="grok"] .iui-card {
-    padding: 12px;
+    padding: 0;
   }
 
   .iui-root .iui-card-header {

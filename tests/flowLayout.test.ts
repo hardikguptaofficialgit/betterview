@@ -35,6 +35,34 @@ function assertNoIntersectionWithNonEndpoints(
   }
 }
 
+function routesIntersect(pointsA: { x: number; y: number }[], pointsB: { x: number; y: number }[]): boolean {
+  for (let i = 0; i < pointsA.length - 1; i++) {
+    const a = pointsA[i];
+    const b = pointsA[i + 1];
+    for (let j = 0; j < pointsB.length - 1; j++) {
+      const c = pointsB[j];
+      const d = pointsB[j + 1];
+      const aHorizontal = Math.abs(a.y - b.y) < 1e-6;
+      const bHorizontal = Math.abs(c.y - d.y) < 1e-6;
+      if (aHorizontal && bHorizontal) {
+        if (Math.abs(a.y - c.y) < 1e-6 && Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x)) <= Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x))) return true;
+      } else if (!aHorizontal && !bHorizontal) {
+        if (Math.abs(a.x - c.x) < 1e-6 && Math.max(Math.min(a.y, b.y), Math.min(c.y, d.y)) <= Math.min(Math.max(a.y, b.y), Math.max(c.y, d.y))) return true;
+      } else {
+        const h1 = aHorizontal ? a : c;
+        const h2 = aHorizontal ? b : d;
+        const v1 = aHorizontal ? c : a;
+        const v2 = aHorizontal ? d : b;
+        if (
+          v1.x >= Math.min(h1.x, h2.x) && v1.x <= Math.max(h1.x, h2.x) &&
+          h1.y >= Math.min(v1.y, v2.y) && h1.y <= Math.max(v1.y, v2.y)
+        ) return true;
+      }
+    }
+  }
+  return false;
+}
+
 describe('computeEdgeRoute', () => {
   it('routes back-edge orthogonally through right side gutter around nodes', () => {
     const sourceBox = { x: 50, y: 200, width: 120, height: 40 };
@@ -99,6 +127,38 @@ describe('computeEdgeRoute', () => {
 
     assertNoIntersectionWithNonEndpoints(routeAB, nodeA, nodeB, allBoxes);
     assertNoIntersectionWithNonEndpoints(routeAC, nodeA, nodeC, allBoxes);
+    expect(routeAB.points!.every((point) => point.x >= 0)).toBe(true);
+    expect(routeAC.points!.every((point) => point.x >= 0)).toBe(true);
+  });
+
+  it('fans incoming edges into distinct points on the target node', () => {
+    const sourceLeft: BoxRect = { x: 20, y: 40, width: 80, height: 40 };
+    const sourceRight: BoxRect = { x: 220, y: 40, width: 80, height: 40 };
+    const target: BoxRect = { x: 120, y: 190, width: 80, height: 40 };
+    const allBoxes = [sourceLeft, sourceRight, target];
+
+    const routeLeft = computeEdgeRoute(sourceLeft, target, false, false, 300, 0, 0, allBoxes, -12);
+    const routeRight = computeEdgeRoute(sourceRight, target, false, false, 300, 0, 0, allBoxes, 12, [routeLeft.points!]);
+
+    const leftEndpoint = routeLeft.points![routeLeft.points!.length - 1];
+    const rightEndpoint = routeRight.points![routeRight.points!.length - 1];
+    expect(leftEndpoint.x).toBe(148);
+    expect(rightEndpoint.x).toBe(172);
+    expect(leftEndpoint.y).toBe(target.y);
+    expect(rightEndpoint.y).toBe(target.y);
+  });
+
+  it('routes a crossing connector onto a separate channel instead of reusing the first edge', () => {
+    const sourceLeft: BoxRect = { x: 20, y: 20, width: 80, height: 40 };
+    const sourceRight: BoxRect = { x: 220, y: 20, width: 80, height: 40 };
+    const targetLeft: BoxRect = { x: 20, y: 180, width: 80, height: 40 };
+    const targetRight: BoxRect = { x: 220, y: 180, width: 80, height: 40 };
+    const allBoxes = [sourceLeft, sourceRight, targetLeft, targetRight];
+
+    const firstRoute = computeEdgeRoute(sourceLeft, targetRight, false, false, 300, 0, 0, allBoxes);
+    const secondRoute = computeEdgeRoute(sourceRight, targetLeft, false, false, 300, 0, 0, allBoxes, 0, [firstRoute.points!]);
+
+    expect(routesIntersect(firstRoute.points!, secondRoute.points!)).toBe(false);
   });
 
   it('back-edge fixture: assert no routed segment intersects any non-endpoint node rect', () => {

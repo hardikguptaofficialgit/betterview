@@ -110,18 +110,18 @@ describe('Export serialization: serializeCardToSvg', () => {
     expect(svg).toContain('fill="#0A0A0A"');
   });
 
-  it('expands the export canvas to include horizontally scrollable flow content', () => {
+  it('includes wider static flow content in card exports', () => {
     const card = document.createElement('div');
     card.className = 'iui-card flow-card';
-    const flowCanvas = document.createElement('div');
-    flowCanvas.className = 'flow-canvas';
+    const flowDiagram = document.createElement('div');
+    flowDiagram.className = 'flow-diagram';
     const flowInner = document.createElement('div');
     flowInner.className = 'flow-inner';
     flowInner.textContent = 'A wide flowchart';
-    flowCanvas.appendChild(flowInner);
-    card.appendChild(flowCanvas);
-    Object.defineProperty(flowCanvas, 'scrollWidth', { configurable: true, value: 980 });
-    Object.defineProperty(flowCanvas, 'clientWidth', { configurable: true, value: 420 });
+    flowDiagram.appendChild(flowInner);
+    card.appendChild(flowDiagram);
+    Object.defineProperty(flowDiagram, 'scrollWidth', { configurable: true, value: 980 });
+    Object.defineProperty(flowDiagram, 'clientWidth', { configurable: true, value: 420 });
 
     const svg = serializeCardToSvg(card, { theme: 'light', host: 'grok' });
 
@@ -138,7 +138,7 @@ describe('Export serialization: serializeFlowToSvg', () => {
     card.className = 'iui-card flow-card';
     card.innerHTML = `
       <div class="iui-title flow-title">Approval Flow</div>
-      <div class="flow-canvas"><div class="flow-inner">
+      <div class="flow-diagram"><div class="flow-inner">
         <svg class="flow-svg-overlay"><path d="M 10 20 L 10 80" /></svg>
         <div class="flow-node"><span class="flow-node-label">Start &amp; review</span><span class="flow-node-sub">Check request</span></div>
         <span class="flow-edge-label">Yes</span>

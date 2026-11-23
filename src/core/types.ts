@@ -15,6 +15,8 @@ export type UIType =
   | 'code'
   | 'checklist'
   | 'form'
+  | 'image'
+  | 'dashboard'
   | 'generic';
 
 export const UI_TYPES: readonly UIType[] = [
@@ -34,8 +36,12 @@ export const UI_TYPES: readonly UIType[] = [
   'code',
   'checklist',
   'form',
+  'image',
+  'dashboard',
   'generic',
 ] as const;
+
+export type UIHost = 'gemini' | 'grok' | 'chatgpt' | 'claude';
 
 export type Color =
   | 'blue'
@@ -129,13 +135,25 @@ export interface QuizSpec {
   questions: { q: string; options: string[]; answer: number; explain?: string }[];
 }
 
+export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'doughnut' | 'radar' | 'scatter' | 'bubble' | 'heatmap' | 'geo';
+
+export interface ChartPoint {
+  x: number;
+  y: number;
+  r?: number;
+  label?: string;
+  value?: number;
+}
+
 export interface ChartSpec {
   type: 'chart';
   title?: string;
-  chartType: 'bar' | 'line' | 'pie' | 'doughnut' | 'radar';
+  chartType: ChartType;
   labels: string[];
-  datasets: { label: string; data: number[] }[];
+  datasets: { label: string; data: (number | ChartPoint)[] }[];
   unit?: string;
+  xLabel?: string;
+  yLabel?: string;
 }
 
 export interface MermaidSpec {
@@ -252,6 +270,32 @@ export interface FormSpec {
   fields: FormFieldSpec[];
 }
 
+export interface ImageSpec {
+  type: 'image';
+  title?: string;
+  src: string;
+  alt: string;
+  caption?: string;
+  aspect?: 'auto' | 'wide' | 'square' | 'portrait';
+  fit?: 'contain' | 'cover';
+}
+
+export type DashboardVisualSpec =
+  | FlowSpec | StepperSpec | TableSpec | CompareSpec | QuizSpec | ChartSpec
+  | MermaidSpec | CalloutSpec | StatsSpec | TabsSpec | TimelineSpec
+  | FollowupsSpec | MathSpec | CodeSpec | ChecklistSpec | FormSpec | ImageSpec;
+
+export interface DashboardPanel {
+  title?: string;
+  visual: DashboardVisualSpec;
+}
+
+export interface DashboardSpec {
+  type: 'dashboard';
+  title?: string;
+  items: DashboardPanel[];
+}
+
 export interface GenericSpec {
   type: 'generic';
   title?: string;
@@ -276,4 +320,6 @@ export type UISpec =
   | CodeSpec
   | ChecklistSpec
   | FormSpec
+  | ImageSpec
+  | DashboardSpec
   | GenericSpec;

@@ -3,6 +3,8 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   GEMINI_ADAPTER,
   GROK_ADAPTER,
+  CHATGPT_ADAPTER,
+  CLAUDE_ADAPTER,
   pickAdapter,
   isUiBlock,
   isCodeOnlyWrapper,
@@ -28,23 +30,33 @@ import { grokIconSvg } from '../src/core/brandIcons';
 describe('System Instruction', () => {
   it('SETUP_INSTRUCTION conforms to constraints', () => {
     expect(SETUP_INSTRUCTION.length).toBeLessThanOrEqual(1400);
-    expect(SETUP_INSTRUCTION.startsWith('[BetterView v7]')).toBe(true);
+    expect(SETUP_INSTRUCTION.startsWith('[BetterView v11]')).toBe(true);
     expect(SETUP_INSTRUCTION).toContain('ui');
-    expect(SETUP_INSTRUCTION).toContain('3');
+    expect(SETUP_INSTRUCTION).toContain('no outer container');
+    expect(SETUP_INSTRUCTION).toContain('background panel');
     expect(getCompactInstruction()).toBe(SETUP_INSTRUCTION);
   });
 
-  it('Instruction tests: version is 7, marker present, contains "Never more than 3", length not greater than before', () => {
-    expect(CURRENT_INSTRUCTION_VERSION).toBe(7);
+  it('Instruction tests: version is 11, marker present, and visual guidance stays concise', () => {
+    expect(CURRENT_INSTRUCTION_VERSION).toBe(11);
     const compact = getCompactInstruction();
-    expect(compact).toContain('[BetterView v7]');
-    expect(compact).toContain('Never more than 3');
-    expect(compact).toContain('NEVER generate or create images');
+    expect(compact).toContain('[BetterView v11]');
+    expect(compact).toContain('Never invent image URLs');
+    expect(compact).toContain('Never nest cards');
+    expect(compact).toContain('no outer container');
+    expect(compact).toContain('large/branching flows may use pan/zoom');
+    expect(compact).toContain('dashboard{items:');
+    expect(compact).toContain('image{src,alt');
     expect(compact.length).toBeLessThanOrEqual(1400);
-    expect(SYSTEM_INSTRUCTION).toContain('Never more than 3');
-    expect(SYSTEM_INSTRUCTION).toContain('NEVER generate or create images');
-    expect(SYSTEM_INSTRUCTION_SHORT).toContain('Never more than 3');
-    expect(SYSTEM_INSTRUCTION_SHORT).toContain('NEVER generate or create images');
+    expect(SYSTEM_INSTRUCTION).toContain('Never invent image URLs');
+    expect(SYSTEM_INSTRUCTION).toContain('Never nest cards');
+    expect(SYSTEM_INSTRUCTION).toContain('no outer container');
+    expect(SYSTEM_INSTRUCTION).toContain('large or branching graphs use the readable pan/zoom canvas');
+    expect(SYSTEM_INSTRUCTION).toContain('Geo datasets');
+    expect(SYSTEM_INSTRUCTION).toContain('do not nest dashboards');
+    expect(SYSTEM_INSTRUCTION_SHORT).toContain('max 2 blocks');
+    expect(SYSTEM_INSTRUCTION_SHORT).toContain('No nested cards');
+    expect(SYSTEM_INSTRUCTION_SHORT).toContain('no outer container');
     expect(SYSTEM_INSTRUCTION.length).toBeLessThanOrEqual(3100);
     expect(SYSTEM_INSTRUCTION_SHORT.length).toBeLessThanOrEqual(2100);
   });
@@ -225,7 +237,18 @@ describe('pickAdapter', () => {
   it('picks adapter based on hostname', () => {
     expect(pickAdapter({ hostname: 'gemini.google.com' } as Location)).toBe(GEMINI_ADAPTER);
     expect(pickAdapter({ hostname: 'grok.com' } as Location)).toBe(GROK_ADAPTER);
+    expect(pickAdapter({ hostname: 'chatgpt.com' } as Location)).toBe(CHATGPT_ADAPTER);
+    expect(pickAdapter({ hostname: 'claude.ai' } as Location)).toBe(CLAUDE_ADAPTER);
     expect(pickAdapter({ hostname: 'unknown.site' } as Location)).toBeNull();
+  });
+
+  it('matches ChatGPT and Claude hosts without matching unrelated domains', () => {
+    expect(CHATGPT_ADAPTER.matches({ hostname: 'chatgpt.com' } as Location)).toBe(true);
+    expect(CHATGPT_ADAPTER.matches({ hostname: 'sub.chatgpt.com' } as Location)).toBe(true);
+    expect(CHATGPT_ADAPTER.matches({ hostname: 'notchatgpt.com' } as Location)).toBe(false);
+    expect(CLAUDE_ADAPTER.matches({ hostname: 'claude.ai' } as Location)).toBe(true);
+    expect(CLAUDE_ADAPTER.matches({ hostname: 'www.claude.ai' } as Location)).toBe(true);
+    expect(CLAUDE_ADAPTER.matches({ hostname: 'fakeclaude.ai' } as Location)).toBe(false);
   });
 });
 
@@ -237,7 +260,7 @@ describe('isUiBlock detection without language label', () => {
   });
 
   it('recognizes Gemini code-block with "Code snippet" decoration by JSON type', () => {
-    const types = ['flow', 'stepper', 'table', 'compare', 'quiz', 'chart', 'mermaid'];
+    const types = ['flow', 'stepper', 'table', 'compare', 'quiz', 'chart', 'mermaid', 'checklist', 'form', 'image', 'dashboard'];
     for (const t of types) {
       const el = document.createElement('code-block');
       el.innerHTML = `
@@ -289,6 +312,16 @@ describe('isUiBlock detection without language label', () => {
     const normal = document.createElement('pre');
     normal.innerHTML = '<code>{"type":"settings","dark":true}</code>';
     expect(isUiBlock(GROK_ADAPTER, normal)).toBe(false);
+  });
+
+  it('recognizes incomplete checklist and form JSON on ChatGPT and Claude', () => {
+    for (const adapter of [CHATGPT_ADAPTER, CLAUDE_ADAPTER]) {
+      for (const type of ['checklist', 'form']) {
+        const pre = document.createElement('pre');
+        pre.innerHTML = `<code>{"type":"${type}","items":[`;
+        expect(isUiBlock(adapter, pre)).toBe(true);
+      }
+    }
   });
 });
 
@@ -406,7 +439,7 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
 
     await fillGeminiMemoryDialog(overlay, { waitTimeoutMs: 2000, pollIntervalMs: 50 });
 
-    expect(textarea.value.startsWith('[BetterView v7] ')).toBe(true);
+    expect(textarea.value.startsWith('[BetterView v11] ')).toBe(true);
     expect(textarea.value).toBe(getCompactInstruction());
     expect(submitClicked).toBe(true);
 
@@ -1053,11 +1086,11 @@ describe('runGrokSetup', () => {
 
     const result = await runGrokSetup();
     expect(result.status).toBe('added');
-    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value.startsWith('[BetterView v7]')).toBe(true);
+    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value.startsWith('[BetterView v11]')).toBe(true);
     document.body.replaceChildren();
   });
 
-  it('saves the current v7 instruction successfully', async () => {
+  it('saves the latest instruction successfully', async () => {
     const region = document.createElement('div');
     region.setAttribute('role', 'region');
     region.setAttribute('aria-label', 'Customize');
@@ -1071,7 +1104,7 @@ describe('runGrokSetup', () => {
     const result = await runGrokSetup();
     const textarea = region.querySelector('textarea')!;
     expect(result.status).toBe('added');
-    expect(textarea.value.startsWith('[BetterView v7]')).toBe(true);
+    expect(textarea.value.startsWith('[BetterView v11]')).toBe(true);
 
     region.remove();
   });
@@ -1082,14 +1115,14 @@ describe('runGrokSetup', () => {
     region.setAttribute('aria-label', 'Customize');
     region.innerHTML = `
       <button role="combobox">Custom</button>
-      <textarea aria-label="Instructions">[BetterView v7] current instruction</textarea>
+      <textarea aria-label="Instructions">[BetterView v11] current instruction</textarea>
       <button>Save</button>
     `;
     document.body.appendChild(region);
 
     const result = await runGrokSetup();
     expect(result.status).toBe('already');
-    expect(region.querySelector('textarea')?.value).toBe('[BetterView v7] current instruction');
+    expect(region.querySelector('textarea')?.value).toBe('[BetterView v11] current instruction');
 
     region.remove();
   });

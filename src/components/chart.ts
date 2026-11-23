@@ -3,6 +3,8 @@ import { ChartSpec } from '../core/types';
 import { ThemeMode } from '../core/theme';
 import { RenderContext } from './index';
 import { h } from '../core/dom';
+import { renderGeoChart, renderHeatmap } from './chartExtras';
+import { UIHost } from '../core/types';
 
 let chartClassPromise: Promise<any> | null = null;
 
@@ -15,6 +17,8 @@ export async function getChartClass(): Promise<any> {
         m.PieController,
         m.DoughnutController,
         m.RadarController,
+        m.ScatterController,
+        m.BubbleController,
         m.CategoryScale,
         m.LinearScale,
         m.RadialLinearScale,
@@ -81,7 +85,7 @@ export function buildChartConfig(
   spec: ChartSpec,
   theme: ThemeMode,
   animated = false,
-  host?: 'gemini' | 'grok',
+  host?: UIHost,
 ): ChartConfiguration {
   const isDark = theme === 'dark';
   let solids = isDark ? DARK_SOLIDS : LIGHT_SOLIDS;
@@ -136,7 +140,7 @@ export function buildChartConfig(
       borderSkipped: false,
       maxBarThickness: 48,
     }));
-  } else if (spec.chartType === 'line') {
+  } else if (spec.chartType === 'line' || spec.chartType === 'area') {
     chartDatasets = spec.datasets.map((ds, idx) => ({
       label: ds.label,
       data: ds.data,
@@ -149,7 +153,17 @@ export function buildChartConfig(
       pointBorderColor: inks[idx % inks.length],
       pointBorderWidth: 1,
       pointHoverBorderWidth: 2,
-      fill: false,
+      fill: spec.chartType === 'area' ? 'origin' : false,
+    }));
+  } else if (spec.chartType === 'scatter' || spec.chartType === 'bubble') {
+    chartDatasets = spec.datasets.map((ds, idx) => ({
+      label: ds.label,
+      data: ds.data,
+      backgroundColor: hexToRgba(solids[idx % solids.length], 0.72),
+      borderColor: inks[idx % inks.length],
+      borderWidth: 1.5,
+      pointRadius: spec.chartType === 'scatter' ? 4 : undefined,
+      pointHoverRadius: 7,
     }));
   } else if (isPieOrDoughnut) {
     const sliceSolids = spec.labels.map((_, idx) => solids[idx % solids.length]);
@@ -178,7 +192,7 @@ export function buildChartConfig(
   }
 
   let scales: any = undefined;
-  if (spec.chartType === 'bar' || spec.chartType === 'line') {
+  if (spec.chartType === 'bar' || spec.chartType === 'line' || spec.chartType === 'area') {
     scales = {
       x: {
         grid: {
@@ -217,6 +231,23 @@ export function buildChartConfig(
             size: 12,
           },
         },
+      },
+    };
+  } else if (spec.chartType === 'scatter' || spec.chartType === 'bubble') {
+    scales = {
+      x: {
+        type: 'linear',
+        title: { display: !!spec.xLabel, text: spec.xLabel || '', color: mutedColor },
+        grid: { color: borderColor, drawTicks: false },
+        border: { display: false },
+        ticks: { color: mutedColor, maxTicksLimit: 8, font: { family: fontStack, size: 11 } },
+      },
+      y: {
+        type: 'linear',
+        title: { display: !!spec.yLabel, text: spec.yLabel || '', color: mutedColor },
+        grid: { color: borderColor, drawTicks: false },
+        border: { display: false },
+        ticks: { color: mutedColor, maxTicksLimit: 8, font: { family: fontStack, size: 11 } },
       },
     };
   } else if (spec.chartType === 'radar') {
@@ -262,7 +293,7 @@ export function buildChartConfig(
     : false;
 
   return {
-    type: spec.chartType as any,
+    type: (spec.chartType === 'area' ? 'line' : spec.chartType) as any,
     data: {
       labels: spec.labels,
       datasets: chartDatasets,
@@ -312,6 +343,12 @@ export function buildChartConfig(
           callbacks: {
             label: (context: any) => {
               const rawVal = context.raw;
+              if (rawVal && typeof rawVal === 'object' && 'x' in rawVal && 'y' in rawVal) {
+                const point = rawVal as { x: number; y: number };
+                const dsLabel = context.dataset?.label || '';
+                const coordinates = `(${point.x}, ${point.y})`;
+                return `${dsLabel ? `${dsLabel}: ` : ''}${coordinates}`;
+              }
               const num = typeof rawVal === 'number' ? rawVal : Number(rawVal);
               const formatted = !Number.isNaN(num) ? num.toLocaleString() : String(rawVal ?? '');
               const unitSuffix = spec.unit ? ` ${spec.unit}` : '';
@@ -327,7 +364,7 @@ export function buildChartConfig(
       },
       ...(scales ? { scales } : {}),
       interaction: {
-        mode: 'index',
+        mode: spec.chartType === 'scatter' || spec.chartType === 'bubble' ? 'nearest' : 'index',
         intersect: false,
       },
       layout: {
@@ -338,6 +375,9 @@ export function buildChartConfig(
 }
 
 export function renderChart(spec: ChartSpec, ctx: RenderContext): HTMLElement {
+  if (spec.chartType === 'heatmap') return renderHeatmap(spec, ctx);
+  if (spec.chartType === 'geo') return renderGeoChart(spec);
+
   const card = h('div', { class: 'iui-card iui-chart-card' });
   if (spec.title) {
     card.appendChild(h('div', { class: 'iui-title' }, spec.title));

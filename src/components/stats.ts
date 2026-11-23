@@ -61,7 +61,7 @@ export function renderStats(spec: StatsSpec, ctx: RenderContext): HTMLElement {
 
       const deltaChip = h(
         'span',
-        { class: `iui-chip iui-stat-delta ${toneClass}` },
+        { class: `iui-stat-delta ${toneClass}` },
         deltaClean,
       );
       valRow.appendChild(deltaChip);

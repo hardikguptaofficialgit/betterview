@@ -1,10 +1,11 @@
 // Selectors are best guesses; if rendering doesn't trigger on a site, inspect a code block there and update only this file.
 
 import { tryParse } from '../core/parse';
+import { UI_TYPES, UIHost } from '../core/types';
 import { getCompactInstruction, CURRENT_INSTRUCTION_VERSION } from '../shared/systemInstruction';
 
 export interface SiteAdapter {
-  id: 'gemini' | 'grok';
+  id: UIHost;
   matches(loc: Location): boolean;
   chatRoot(): Element | null;
   findCodeBlocks(root: ParentNode): HTMLElement[]; // candidate code blocks
@@ -16,25 +17,11 @@ export interface SiteAdapter {
   isNewChat(loc: Location): boolean;
 }
 
-export const BETTERVIEW_STREAMING_TYPE_RE =
-  /^\s*\{\s*"type"\s*:\s*"(flow|stepper|table|compare|quiz|chart|mermaid|callout|stats|tabs|timeline|followups|math|code)"/;
-
-export const BETTERVIEW_TYPES = [
-  'flow',
-  'stepper',
-  'table',
-  'compare',
-  'quiz',
-  'chart',
-  'mermaid',
-  'callout',
-  'stats',
-  'tabs',
-  'timeline',
-  'followups',
-  'math',
-  'code',
-] as const;
+export const BETTERVIEW_TYPES = UI_TYPES.filter((type) => type !== 'generic');
+const STREAMING_TYPES_PATTERN = BETTERVIEW_TYPES.join('|');
+export const BETTERVIEW_STREAMING_TYPE_RE = new RegExp(
+  `^\\s*\\{\\s*"type"\\s*:\\s*"(${STREAMING_TYPES_PATTERN})"`,
+);
 
 /** Query through open shadow roots as well as the light DOM used by older hosts. */
 function querySelectorAllDeep<T extends Element>(root: ParentNode, selector: string): T[] {
@@ -243,7 +230,66 @@ export const GROK_ADAPTER: SiteAdapter = {
   },
 };
 
-export const ADAPTERS: SiteAdapter[] = [GEMINI_ADAPTER, GROK_ADAPTER];
+function makeChatAdapter(id: 'chatgpt' | 'claude', hostname: string): SiteAdapter {
+  return {
+    id,
+    matches(loc: Location): boolean {
+      return loc.hostname === hostname || loc.hostname.endsWith(`.${hostname}`);
+    },
+    chatRoot(): Element | null {
+      return document.querySelector('main') ?? document.body;
+    },
+    findCodeBlocks(root: ParentNode): HTMLElement[] {
+      return querySelectorAllDeep<HTMLElement>(root, 'pre');
+    },
+    codeElementOf(block: HTMLElement): HTMLElement | null {
+      return block.querySelector<HTMLElement>('code') ?? (block.tagName.toLowerCase() === 'code' ? block : null);
+    },
+    languageOf(block: HTMLElement): string | null {
+      const code = this.codeElementOf?.(block) ?? block;
+      const className = typeof code.className === 'string' ? code.className : '';
+      const match = className.match(/language-([\w-]+)/i);
+      if (match) return match[1].toLowerCase();
+      const wrapper = this.wrapperOf(block);
+      for (const candidate of Array.from(wrapper.querySelectorAll('*'))) {
+        if (candidate === block || candidate.contains(block) || block.contains(candidate)) continue;
+        if (candidate.tagName.toLowerCase() === 'button' || candidate.closest('button') || candidate.children.length) continue;
+        const text = (candidate.textContent ?? '').trim();
+        if (text.length > 0 && text.length <= 12) return text.toLowerCase();
+      }
+      return null;
+    },
+    wrapperOf(block: HTMLElement): HTMLElement {
+      let current = block.parentElement;
+      let lastAccepted = block;
+      for (let depth = 0; current && depth < 4; depth++, current = current.parentElement) {
+        const preBlocks = current.querySelectorAll('pre');
+        if (preBlocks.length !== 1 || (preBlocks[0] !== block && !preBlocks[0].contains(block))) break;
+        if (!isCodeOnlyWrapper(current, block)) break;
+        lastAccepted = current;
+      }
+      return lastAccepted;
+    },
+    composer(): HTMLElement | null {
+      if (id === 'chatgpt') {
+        return document.querySelector<HTMLElement>('#prompt-textarea, [contenteditable="true"][role="textbox"], textarea');
+      }
+      return document.querySelector<HTMLElement>('fieldset [contenteditable="true"], textarea, [contenteditable="true"]');
+    },
+    sendButton(): HTMLElement | null {
+      if (id === 'chatgpt') return document.querySelector<HTMLElement>('button[data-testid="send-button"], button[aria-label*="Send" i]');
+      return document.querySelector<HTMLElement>('button[aria-label*="Send" i], button[type="submit"]');
+    },
+    isNewChat(loc: Location): boolean {
+      return loc.pathname === '/' || !/\/(c|chat)\//.test(loc.pathname);
+    },
+  };
+}
+
+export const CHATGPT_ADAPTER = makeChatAdapter('chatgpt', 'chatgpt.com');
+export const CLAUDE_ADAPTER = makeChatAdapter('claude', 'claude.ai');
+
+export const ADAPTERS: SiteAdapter[] = [GEMINI_ADAPTER, GROK_ADAPTER, CHATGPT_ADAPTER, CLAUDE_ADAPTER];
 
 export function pickAdapter(loc: Location): SiteAdapter | null {
   for (const adapter of ADAPTERS) {

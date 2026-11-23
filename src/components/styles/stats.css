@@ -5,33 +5,26 @@
 .iui-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
-  gap: 12px;
+  gap: 0;
 }
 
 .iui-stat-item {
-  background-color: var(--iui-surface);
-  border: 1px solid var(--iui-border);
-  border-radius: var(--iui-radius-inner, 12px);
-  padding: 14px 16px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   box-sizing: border-box;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.iui-root[data-host="gemini"] .iui-stat-item {
-  border-radius: 12px;
-  background-color: var(--iui-surface-2);
-  border: none;
   box-shadow: none;
 }
 
-.iui-root[data-host="grok"] .iui-stat-item {
-  border-radius: 8px;
-  background-color: var(--iui-surface);
-  border: 1px solid var(--iui-border);
-  box-shadow: none;
+.iui-stat-item + .iui-stat-item { border-left: 1px solid var(--iui-border); }
+
+@container iui (max-width: 520px) {
+  .iui-stat-item { padding-inline: 0; }
+  .iui-stat-item + .iui-stat-item { border-left: 0; border-top: 1px solid var(--iui-border); }
 }
 
 .iui-stat-label-row {
@@ -72,7 +65,7 @@
 }
 
 .iui-stat-value {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 650;
   color: var(--iui-text);
   line-height: 1.2;
@@ -82,8 +75,10 @@
 .iui-stat-delta {
   font-size: 12px;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 9999px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .iui-stat-hint {

@@ -1,4 +1,5 @@
 import { ThemeMode } from './theme';
+import type { UIHost } from './types';
 
 export interface ExportOptions {
   watermark?: boolean;
@@ -6,7 +7,7 @@ export interface ExportOptions {
   allStyles?: string[];
   cardType?: string;
   title?: string;
-  host?: 'gemini' | 'grok';
+  host?: UIHost;
 }
 
 /**
@@ -80,8 +81,8 @@ export function serializeCardToSvg(card: HTMLElement, opts: ExportOptions = {}):
   clone.style.width = `${exportWidth}px`;
   clone.style.maxWidth = 'none';
   clone.style.overflow = 'visible';
-  const sourceScrollAreas = card.querySelectorAll<HTMLElement>('.flow-canvas, .iui-table-wrap');
-  const cloneScrollAreas = clone.querySelectorAll<HTMLElement>('.flow-canvas, .iui-table-wrap');
+  const sourceScrollAreas = card.querySelectorAll<HTMLElement>('.flow-diagram, .iui-table-wrap');
+  const cloneScrollAreas = clone.querySelectorAll<HTMLElement>('.flow-diagram, .iui-table-wrap');
   sourceScrollAreas.forEach((source, index) => {
     const el = cloneScrollAreas[index];
     if (!el) return;
@@ -135,12 +136,11 @@ export function serializeFlowToSvg(card: HTMLElement, opts: ExportOptions = {}):
   const border = isDark ? '#454545' : '#D8DDE5';
   const padding = 28;
   const inner = card.querySelector<HTMLElement>('.flow-inner');
-  const canvas = card.querySelector<HTMLElement>('.flow-canvas');
-  if (!inner || !canvas) throw new Error('The flowchart is still being laid out');
+  const diagram = card.querySelector<HTMLElement>('.flow-diagram');
+  if (!inner || !diagram) throw new Error('The flowchart is still being laid out');
 
-  const zoom = Math.max(0.01, Number.parseFloat(inner.style.zoom || '1') || 1);
-  const width = Math.max(320, Math.ceil(Math.max(inner.scrollWidth, inner.clientWidth) / zoom));
-  const height = Math.max(180, Math.ceil(Math.max(inner.scrollHeight, inner.clientHeight) / zoom));
+  const width = Math.max(320, Math.ceil(Math.max(inner.scrollWidth, inner.clientWidth, diagram.scrollWidth, diagram.clientWidth)));
+  const height = Math.max(180, Math.ceil(Math.max(inner.scrollHeight, inner.clientHeight, diagram.scrollHeight, diagram.clientHeight)));
   const title = card.querySelector('.flow-title')?.textContent?.trim() || opts.title || '';
   const titleHeight = title ? 34 : 0;
   const totalWidth = width + padding * 2;
@@ -156,10 +156,10 @@ export function serializeFlowToSvg(card: HTMLElement, opts: ExportOptions = {}):
 
   const nodes = Array.from(inner.querySelectorAll<HTMLElement>('.flow-node')).map((node) => {
     const rect = node.getBoundingClientRect();
-    const x = (rect.left - innerRect.left) / zoom + padding;
-    const y = (rect.top - innerRect.top) / zoom + padding + titleHeight;
-    const w = rect.width / zoom;
-    const h = rect.height / zoom;
+    const x = rect.left - innerRect.left + padding;
+    const y = rect.top - innerRect.top + padding + titleHeight;
+    const w = rect.width;
+    const h = rect.height;
     const style = getComputedStyle(node);
     const fill = style.backgroundColor && style.backgroundColor !== 'rgba(0, 0, 0, 0)' ? style.backgroundColor : (isDark ? '#202124' : '#FFFFFF');
     const stroke = style.borderColor || border;
@@ -185,8 +185,8 @@ export function serializeFlowToSvg(card: HTMLElement, opts: ExportOptions = {}):
 
   const labels = Array.from(inner.querySelectorAll<HTMLElement>('.flow-edge-label')).map((label) => {
     const rect = label.getBoundingClientRect();
-    const x = (rect.left + rect.width / 2 - innerRect.left) / zoom + padding;
-    const y = (rect.top + rect.height / 2 - innerRect.top) / zoom + padding + titleHeight;
+    const x = rect.left + rect.width / 2 - innerRect.left + padding;
+    const y = rect.top + rect.height / 2 - innerRect.top + padding + titleHeight;
     const text = label.textContent?.trim() || '';
     const w = Math.max(44, text.length * 7 + 20);
     return `<g><rect x="${x - w / 2}" y="${y - 12}" width="${w}" height="24" rx="12" fill="${background}" stroke="${border}"/><text x="${x}" y="${y + 4}" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" fill="${foreground}">${esc(text)}</text></g>`;

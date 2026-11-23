@@ -3,7 +3,7 @@
   "name": "BetterView AI",
   "short_name": "BetterView",
   "version": "0.1.0",
-  "description": "Render beautiful interactive diagrams, tables, charts, and steps natively inside Gemini and Grok chat.",
+  "description": "Render compact interactive visuals natively inside Gemini, Grok, ChatGPT, and Claude chats.",
   "homepage_url": "https://github.com/hardikguptaofficialgit/betterview",
   "minimum_chrome_version": "116",
   "icons": {
@@ -20,7 +20,9 @@
   },
   "host_permissions": [
     "https://gemini.google.com/*",
-    "https://grok.com/*"
+    "https://grok.com/*",
+    "https://chatgpt.com/*",
+    "https://claude.ai/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -35,7 +37,9 @@
     {
       "matches": [
         "https://gemini.google.com/*",
-        "https://grok.com/*"
+        "https://grok.com/*",
+        "https://chatgpt.com/*",
+        "https://claude.ai/*"
       ],
       "js": [
         "content.js"
@@ -52,7 +56,9 @@
       ],
       "matches": [
         "https://gemini.google.com/*",
-        "https://grok.com/*"
+        "https://grok.com/*",
+        "https://chatgpt.com/*",
+        "https://claude.ai/*"
       ]
     }
   ]

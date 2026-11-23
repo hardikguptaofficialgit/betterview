@@ -28,10 +28,11 @@
 }
 
 .iui-quiz-q-card {
-  border: 1px solid var(--iui-border);
-  border-radius: var(--iui-radius-inner, 12px);
-  padding: 16px;
-  background-color: var(--iui-surface);
+  border: 0;
+  border-bottom: 1px solid var(--iui-border);
+  border-radius: 0;
+  padding: 10px 0 14px;
+  background: transparent;
 }
 
 .iui-quiz-q-caption {

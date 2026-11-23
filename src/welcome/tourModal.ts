@@ -686,7 +686,7 @@ export function showWelcomeTourModal(opts: {
     h(
       'p',
       { class: 'slide-sub' },
-      'Intelligent interactive visual components rendered directly inside Gemini and Grok chat.',
+      'Compact interactive visuals rendered directly inside Gemini, Grok, ChatGPT, and Claude.',
     ),
     h(
       'div',

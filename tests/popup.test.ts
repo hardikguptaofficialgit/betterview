@@ -95,14 +95,14 @@ describe('BetterView Popup', () => {
           <div class="header-brand">
             <picture id="header-logo" class="logo-picture">
               <source id="logo-source" media="(prefers-color-scheme: dark)" srcset="/brand/mark-white.png" />
-              <img id="logo-img" src="/brand/mark-black.png" alt="BetterView" width="20" height="20" />
-            </picture>
-            <span class="brand-title">BetterView AI</span>
-          </div>
-          <div id="status-line" class="status-pill status-muted">Open Gemini or Grok</div>
-        </header>
+            <img id="logo-img" src="/brand/mark-black.png" alt="BetterView" width="20" height="20" />
+          </picture>
+          <span class="brand-title">BetterView AI</span>
+        </div>
+        <div id="status-line" class="status-pill status-muted">Open Gemini, Grok, ChatGPT or Claude</div>
+      </header>
 
-        <section class="card setup-card" id="setup-card">
+      <section class="card setup-card" id="setup-card">
           <div class="card-title">Setup</div>
           <div class="setup-rows">
             <div class="setup-row" id="row-gemini">
@@ -464,13 +464,13 @@ describe('BetterView Popup', () => {
       expect(statusLine.querySelector('.status-dot')).not.toBeNull();
     });
 
-    it('shows Open Gemini or Grok when current tab is other site', () => {
+    it('shows supported chat sites when current tab is another site', () => {
       activeTabUrl = 'https://example.com';
       cleanupPopup = initPopup();
 
       const statusLine = document.getElementById('status-line')!;
       expect(statusLine.className).toContain('status-muted');
-      expect(statusLine.textContent).toBe('Open Gemini or Grok');
+      expect(statusLine.textContent).toBe('Open Gemini, Grok, ChatGPT or Claude');
       expect(statusLine.querySelector('.status-dot')).toBeNull();
     });
   });

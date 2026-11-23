@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { startScanner } from '../src/content/scanner';
 import { GEMINI_ADAPTER, GROK_ADAPTER } from '../src/content/sites';
+import { RENDERERS } from '../src/components';
 
 describe('startScanner', () => {
   it('scans root, hides original wrapper and mounts host', () => {
@@ -184,6 +185,74 @@ describe('Gemini live DOM code block detection (Bug #2)', () => {
       expect(renderedWrap).not.toBeNull();
 
       scanner.stop();
+      container.remove();
+    }
+  });
+
+  it('renders checklist, RSVP form, and dashboard JSON from ordinary code snippets', () => {
+    const specs = [
+      {
+        type: 'checklist', title: 'Pre-Flight Checklist',
+        items: ['Check in online', 'Confirm passport', 'Pack charger'].map((text) => ({ text })),
+      },
+      {
+        type: 'form', title: 'Event RSVP', submitLabel: 'Submit RSVP',
+        fields: [
+          { id: 'name', label: 'Name', type: 'text', required: true },
+          { id: 'email', label: 'Email', type: 'email', required: true },
+          { id: 'attendance', label: 'Attendance', type: 'radio', options: ['Yes', 'No'] },
+          { id: 'dietary', label: 'Dietary notes', type: 'textarea' },
+        ],
+      },
+      {
+        type: 'dashboard', title: 'Q1 Sales Overview',
+        items: [
+          { title: 'Key Metrics', visual: { type: 'stats', items: [{ label: 'Total sales', value: '$40k' }, { label: 'Total orders', value: 263 }] } },
+          { title: 'Monthly sales', visual: { type: 'chart', chartType: 'bar', labels: ['Jan', 'Feb', 'Mar'], datasets: [{ label: 'Sales', data: [12, 15, 13] }] } },
+        ],
+      },
+    ];
+
+    for (const spec of specs) {
+      const container = document.createElement('div');
+      const response = createGeminiBlock(JSON.stringify(spec));
+      container.appendChild(response);
+      document.body.appendChild(container);
+      const scanner = startScanner(GEMINI_ADAPTER, () => 'dark', container);
+      const host = response.querySelector('.iui-host') as HTMLElement;
+
+      expect(host).not.toBeNull();
+      expect(host.shadowRoot?.querySelector(`.iui-${spec.type}-card`)).not.toBeNull();
+      expect(host.shadowRoot?.querySelector('.iui-partial-error-note')).toBeNull();
+      expect(response.querySelector('code-block')?.getAttribute('data-iui-hidden')).toBe('1');
+
+      scanner.stop();
+      container.remove();
+    }
+  });
+
+  it('keeps source visible and adds a fallback note if a renderer throws synchronously', () => {
+    const originalRenderer = RENDERERS.checklist;
+    RENDERERS.checklist = (() => { throw new Error('simulated renderer failure'); }) as typeof RENDERERS.checklist;
+    const container = document.createElement('div');
+    const response = createGeminiBlock(JSON.stringify({
+      type: 'checklist', title: 'Fallback check', items: [{ text: 'Keep this source visible' }],
+    }));
+    container.appendChild(response);
+    document.body.appendChild(container);
+    const codeBlock = response.querySelector('code-block') as HTMLElement;
+    let scanner: ReturnType<typeof startScanner> | undefined;
+
+    try {
+      expect(() => { scanner = startScanner(GEMINI_ADAPTER, () => 'dark', container); }).not.toThrow();
+      expect(codeBlock.style.display).toBe('');
+      expect(codeBlock.hasAttribute('data-betterview-handled')).toBe(false);
+      const noteHost = container.querySelector('.iui-host') as HTMLElement;
+      expect(noteHost.shadowRoot?.querySelector('.iui-fallback-note')?.textContent)
+        .toBe("Couldn't render this UI block");
+    } finally {
+      scanner?.stop();
+      RENDERERS.checklist = originalRenderer;
       container.remove();
     }
   });

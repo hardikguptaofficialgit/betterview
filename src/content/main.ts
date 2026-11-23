@@ -51,8 +51,9 @@ async function init(): Promise<void> {
     }
   }
 
-  if (shouldRunSetup && !setupStarted) {
+  if (shouldRunSetup && !setupStarted && (adapter.id === 'gemini' || adapter.id === 'grok')) {
     setupStarted = true;
+    const setupSite = adapter.id === 'gemini' ? 'gemini' : 'grok';
 
     const clearPendingSetup = () => {
       if (typeof chrome !== 'undefined' && chrome.storage?.local) {
@@ -79,14 +80,14 @@ async function init(): Promise<void> {
       // If redirects >= 1 and we are still not on saved-info path, runGeminiSetup on current page anyway
     }
 
-    const setup = adapter.id === 'gemini' ? runGeminiSetup() : runGrokSetup();
+    const setup = setupSite === 'gemini' ? runGeminiSetup() : runGrokSetup();
     setup
       .then((res) => {
-        recordSetupResult(adapter.id, res);
+        recordSetupResult(setupSite, res);
       })
       .catch((err) => {
         const msg = err instanceof Error ? err.message : String(err);
-        recordSetupResult(adapter.id, { status: 'failed', error: msg });
+        recordSetupResult(setupSite, { status: 'failed', error: msg });
       })
       .finally(() => {
         clearPendingSetup();
@@ -140,7 +141,7 @@ async function init(): Promise<void> {
     chrome.storage.local.get(
       ['pendingTour', 'tourSeen', 'pendingUpdateModal', 'updateModalSeen'],
       (items) => {
-        if (shouldShowTour(items)) {
+        if (shouldShowTour(items) && (adapter.id === 'gemini' || adapter.id === 'grok')) {
           showWelcomeTourModal({ site: adapter.id, theme: currentTheme });
         } else if (shouldShowUpdateModal(items)) {
           showWhatsNewModal({ theme: currentTheme });
@@ -153,8 +154,12 @@ async function init(): Promise<void> {
   if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg?.type === 'OPEN_TOUR') {
-        showWelcomeTourModal({ site: adapter.id, theme: currentTheme });
-        sendResponse?.({ ok: true });
+        if (adapter.id === 'gemini' || adapter.id === 'grok') {
+          showWelcomeTourModal({ site: adapter.id, theme: currentTheme });
+          sendResponse?.({ ok: true });
+        } else {
+          sendResponse?.({ ok: false });
+        }
         return true;
       }
       if (msg?.type === 'OPEN_WHATS_NEW') {

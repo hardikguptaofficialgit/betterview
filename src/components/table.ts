@@ -3,6 +3,7 @@ import { RenderContext } from './index';
 import { clear, h } from '../core/dom';
 import { iconEl } from '../core/icons';
 import { renderMathText } from '../core/mathParser';
+import { showCardToast } from '../core/export';
 
 export function parseNumericValue(raw: string): number | null {
   if (typeof raw !== 'string') return null;
@@ -39,6 +40,13 @@ export function parseDateValue(raw: string): number | null {
 }
 
 export type ColumnType = 'numeric' | 'date' | 'string';
+
+/** Serialize table content as plain tab-separated text for spreadsheets. */
+export function serializeTableValues(columns: string[], rows: string[][]): string {
+  const cleanCell = (value: unknown): string =>
+    String(value ?? '').replace(/[\t\r\n]+/g, ' ').trim();
+  return [columns, ...rows].map((row) => row.map(cleanCell).join('\t')).join('\n');
+}
 
 export function detectColumnType(rows: string[][], colIdx: number): ColumnType {
   let hasValid = false;
@@ -103,6 +111,33 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
   let sortDir: SortDir = 'none';
   let filterQuery = '';
 
+  const actionsBar = h('div', { class: 'iui-table-actions' });
+  const copyButton = h('button', {
+    class: 'iui-table-copy-btn',
+    type: 'button',
+    'aria-label': 'Copy table data as plain text',
+    onClick: async () => {
+      const text = serializeTableValues(columns, rows);
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = h('textarea', { class: 'iui-table-copy-fallback', readonly: true }) as HTMLTextAreaElement;
+          textarea.value = text;
+          card.appendChild(textarea);
+          textarea.select();
+          const copied = document.execCommand('copy');
+          textarea.remove();
+          if (!copied) throw new Error('Clipboard access is unavailable');
+        }
+        showCardToast(card, 'Table data copied · Paste into Sheets or Excel');
+      } catch {
+        showCardToast(card, 'Could not copy table data. Check clipboard permissions.');
+      }
+    },
+  }, iconEl('copy', 14), 'Copy data');
+  actionsBar.appendChild(copyButton);
+
   // Filter input bar for tables with > 6 rows
   let filterCountEl: HTMLElement | null = null;
   if (rows.length > 6) {
@@ -127,8 +162,9 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
     filterWrap.appendChild(filterInput);
     filterBar.appendChild(filterWrap);
     filterBar.appendChild(filterCountEl);
-    card.appendChild(filterBar);
+    actionsBar.prepend(filterBar);
   }
+  card.appendChild(actionsBar);
 
   const scrollWrap = h('div', { class: 'iui-table-wrap' });
   const innerScroll = h('div', { class: 'iui-table-scroll' });

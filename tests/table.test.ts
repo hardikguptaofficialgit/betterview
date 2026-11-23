@@ -1,15 +1,28 @@
 // @vitest-environment happy-dom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   parseNumericValue,
   parseDateValue,
   detectColumnType,
   compareCellValues,
   renderTable,
+  serializeTableValues,
 } from '../src/components/table';
 import { TableSpec } from '../src/core/types';
 
 describe('Table: detectColumnType and value parsing', () => {
+  it('serializes source values as plain tab-separated rows with headers', () => {
+    expect(serializeTableValues(
+      ['Service', 'Revenue', 'Growth'],
+      [['A', '$500k', '99.9%'], ['B', '100', '']],
+    )).toBe('Service\tRevenue\tGrowth\nA\t$500k\t99.9%\nB\t100\t');
+  });
+
+  it('keeps embedded whitespace from breaking spreadsheet columns and rows', () => {
+    expect(serializeTableValues(['Name', 'Notes'], [[' A\tB ', 'line one\nline two']]))
+      .toBe('Name\tNotes\nA B\tline one line two');
+  });
+
   it('parses numeric, currency, and percentage values', () => {
     expect(parseNumericValue('42')).toBe(42);
     expect(parseNumericValue('$100')).toBe(100);
@@ -46,6 +59,29 @@ describe('Table: detectColumnType and value parsing', () => {
     expect(detectColumnType(rows, 1)).toBe('numeric');
     expect(detectColumnType(rows, 2)).toBe('date');
     expect(detectColumnType(rows, 3)).toBe('numeric');
+  });
+});
+
+describe('Table: spreadsheet data copying', () => {
+  it('copies every original cell as tab-separated plain text, including headers', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    const card = renderTable({
+      type: 'table',
+      columns: ['Product', 'Price'],
+      rows: [['Alpha', '$12'], ['Beta', '$18']],
+    }, { theme: 'light', onCleanup: () => {} });
+
+    const copyButton = card.querySelector<HTMLButtonElement>('.iui-table-copy-btn');
+    expect(copyButton?.textContent).toContain('Copy data');
+    copyButton?.click();
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith('Product\tPrice\nAlpha\t$12\nBeta\t$18');
+    expect(card.querySelector('[role="status"]')?.textContent).toContain('Paste into Sheets or Excel');
   });
 });
 

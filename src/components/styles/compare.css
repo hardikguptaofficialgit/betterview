@@ -5,77 +5,26 @@
 .iui-compare-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 12px;
+  gap: 0;
 }
 
 .iui-compare-panel {
-  border-radius: var(--iui-radius-inner, 12px);
-  padding: 16px;
-  background-color: var(--iui-surface);
-  border: 1px solid var(--iui-border);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border-radius: 0;
+  padding: 8px 18px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
 }
 
-.iui-root[data-host="gemini"] .iui-compare-panel {
-  border-radius: 12px;
-  background-color: var(--iui-surface-2);
-  border: none;
-  box-shadow: none;
-}
-
-.iui-root[data-host="grok"] .iui-compare-panel {
-  border-radius: 8px;
-  background-color: var(--iui-surface);
-  border: 1px solid var(--iui-border);
-  box-shadow: none;
-}
-
-.iui-compare-panel.is-col-left {
-  animation: iui-compare-col-left 240ms cubic-bezier(.2,.8,.2,1) both;
-}
-
-.iui-compare-panel.is-col-right {
-  animation: iui-compare-col-right 240ms cubic-bezier(.2,.8,.2,1) both;
-}
-
-@keyframes iui-compare-col-left {
-  from {
-    opacity: 0;
-    transform: translateX(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes iui-compare-col-right {
-  from {
-    opacity: 0;
-    transform: translateX(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .iui-compare-panel.is-col-left,
-  .iui-compare-panel.is-col-right {
-    animation: none !important;
-    transform: none !important;
-    opacity: 1 !important;
-  }
-}
+.iui-compare-panel + .iui-compare-panel { border-left: 1px solid var(--iui-border); }
 
 .iui-compare-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .iui-compare-iconbox {
@@ -99,7 +48,15 @@
 .iui-compare-points {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+}
+
+@container iui (max-width: 560px) {
+  .iui-compare-panel { padding: 12px 0; }
+  .iui-compare-panel + .iui-compare-panel {
+    border-left: 0;
+    border-top: 1px solid var(--iui-border);
+  }
 }
 
 .iui-compare-point {

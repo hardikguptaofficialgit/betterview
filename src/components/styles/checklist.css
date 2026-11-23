@@ -54,10 +54,11 @@
   display: flex;
   align-items: flex-start;
   gap: 11px;
-  padding: 12px;
-  border: 1px solid var(--iui-border);
-  border-radius: var(--iui-radius-inner, 12px);
-  background: var(--iui-surface);
+  padding: 10px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--iui-border);
+  border-radius: 0;
+  background: transparent;
   cursor: pointer;
   transition: border-color 140ms ease, background-color 140ms ease;
   animation: iui-checklist-enter 180ms ease both;
@@ -69,7 +70,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.iui-checklist-row:hover { border-color: var(--iui-muted); }
+.iui-checklist-row:hover { background: var(--iui-surface); }
 .iui-checklist-row:focus-within { outline: 2px solid var(--iui-text); outline-offset: 2px; }
 
 .iui-checklist-input {

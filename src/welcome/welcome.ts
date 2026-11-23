@@ -162,7 +162,7 @@ export function initWelcomePage(): () => void {
       h('h1', { class: 'hero-title' }, 'BetterView'),
       h('span', { class: 'version-pill', 'aria-label': `Version ${manifestVersion}` }, `v${manifestVersion}`),
     ),
-    h('p', { class: 'hero-tagline' }, 'Intelligent UI for Gemini and Grok'),
+    h('p', { class: 'hero-tagline' }, 'Rich visuals for Gemini, Grok, ChatGPT & Claude'),
     h(
       'p',
       { class: 'hero-desc' },
@@ -461,7 +461,7 @@ export function initWelcomePage(): () => void {
     h(
       'p',
       { class: 'step-desc' },
-      'Add our system instruction to Gemini or Grok so the AI outputs structured JSON components.',
+      'One-click setup is available for Gemini and Grok. For ChatGPT or Claude, use “Do it manually” and add the instruction to custom or project instructions.',
     ),
     h(
       'div',
@@ -598,7 +598,7 @@ export function initWelcomePage(): () => void {
     h(
       'p',
       { class: 'step-desc' },
-      'Copy this sample prompt and paste it into Gemini or Grok to see visual components generated live.',
+      'Copy this sample prompt and paste it into Gemini, Grok, ChatGPT, or Claude to see visual components generated live.',
     ),
     h('div', { class: 'inner-box prompt-preview-box', tabindex: 0, 'aria-label': 'Sample test prompt' }, samplePromptText),
     h(
@@ -690,7 +690,7 @@ export function initWelcomePage(): () => void {
       h(
         'div',
         { class: 'all-set-desc' },
-        'BetterView is fully configured. Open Gemini or Grok and ask your question to see rich diagrams, tables, and steps render in real time.',
+        'BetterView is ready. Open Gemini, Grok, ChatGPT, or Claude and ask a question to see rich visuals render in the chat.',
       ),
     ),
   );

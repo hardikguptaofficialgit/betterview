@@ -45,6 +45,10 @@ export function startScanner(
   let isStopped = false;
 
   function restoreFallbackWrapper(block: HTMLElement, item: TrackedItem): void {
+    if (item.finalizeTimer !== undefined) {
+      window.clearTimeout(item.finalizeTimer);
+      item.finalizeTimer = undefined;
+    }
     item.target.style.display = '';
     item.target.removeAttribute('data-iui-hidden');
     item.target.removeAttribute('data-betterview-handled');
@@ -150,7 +154,8 @@ export function startScanner(
         }
       }
 
-      let item: TrackedItem;
+      let item: TrackedItem | null = null;
+      let pendingFallback = false;
 
       const handle = mountBlock(target, {
         theme: getTheme(),
@@ -159,11 +164,15 @@ export function startScanner(
         initialText,
         onStateChange: (state) => {
           if (state === 'fallback' && !isStopped) {
-            restoreFallbackWrapper(block, item);
+            if (item) {
+              restoreFallbackWrapper(block, item);
+            } else {
+              pendingFallback = true;
+            }
           } else if (state === 'rendered') {
-            markRenderedText(item.lastText);
+            if (item) markRenderedText(item.lastText);
             // Remove any leftover fallback note when successfully rendered
-            if (item.noteHost) {
+            if (item?.noteHost) {
               item.noteHost.remove();
               item.noteHost = undefined;
             }
@@ -180,21 +189,26 @@ export function startScanner(
       target.setAttribute('data-betterview-handled', '1');
       block.setAttribute('data-betterview-handled', '1');
 
-      item = {
+      const trackedItem: TrackedItem = {
         handle,
         target,
         lastText: text,
       };
+      item = trackedItem;
 
-      item.finalizeTimer = window.setTimeout(() => {
+      trackedItem.finalizeTimer = window.setTimeout(() => {
         if (handle.state === 'fallback') {
-          restoreFallbackWrapper(block, item);
+          restoreFallbackWrapper(block, trackedItem);
         }
       }, 1600);
 
-      tracked.set(block, item);
+      tracked.set(block, trackedItem);
       liveHandles.add(handle);
       trackedBlocks.add(block);
+
+      if (pendingFallback) {
+        restoreFallbackWrapper(block, trackedItem);
+      }
 
       if (!initialText) {
         handle.update(text);

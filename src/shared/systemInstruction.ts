@@ -104,36 +104,53 @@ export const COMPONENT_CATALOG: ComponentCatalogEntry[] = [
     whenToUse: 'Interactive input forms, preferences and structured responses',
     schemaSnippet: '{"type":"form","title":"Project preferences","fields":[{"id":"name","label":"Name","type":"text","required":true},{"id":"plan","label":"Plan","type":"radio","options":["Starter","Pro"]},{"id":"updates","label":"Email updates","type":"checkbox"}]}',
   },
+  {
+    type: 'image',
+    required: ['type', 'src', 'alt'],
+    whenToUse: 'A requested illustration or infographic with a real HTTPS image URL',
+    schemaSnippet: '{"type":"image","title":"...","src":"https://...","alt":"Describe the image","caption":"...","aspect":"wide"}',
+  },
+  {
+    type: 'dashboard',
+    required: ['type', 'items'],
+    whenToUse: 'A compact dashboard with 2-8 different visual panels',
+    schemaSnippet: '{"type":"dashboard","title":"...","items":[{"title":"Traffic","visual":{"type":"chart","chartType":"line","labels":["Mon","Tue"],"datasets":[{"label":"Visits","data":[12,18]}]}},{"title":"Status","visual":{"type":"stats","items":[{"label":"Uptime","value":"99.9%"},{"label":"Errors","value":"0.1%"}]}}]}',
+  },
 ];
 
 function generateCatalogSection(): string {
   return COMPONENT_CATALOG.map(
-    (c) => `${c.type}: ${c.schemaSnippet}`
-  ).join('\n\n');
+    (c) => `${c.type}: ${c.schemaSnippet.replace(/^\{"type":"[^"]+",?/, '{').replace(/,"title":"\.\.\."/g, '')}`
+  ).join(' · ');
 }
 
 function generateCompactCatalog(): string {
   return COMPONENT_CATALOG.map(
-    (c) => `${c.type}: ${c.schemaSnippet.replace(/^\{"type":"[^"]+",?/, '{')}`
+    (c) => c.type === 'dashboard'
+      ? `${c.type}{items:2-8 panels}`
+      : `${c.type}{${c.required.filter((field) => field !== 'type').join(',')}}`
   ).join(' · ');
 }
 
-export const CURRENT_INSTRUCTION_VERSION = 7;
+export const CURRENT_INSTRUCTION_VERSION = 11;
 
-export const SETUP_INSTRUCTION = `[BetterView v7] Answer normally in text and markdown; the text answer is the main answer and must stand on its own. When the user asks for something visual, a diagram or a chart, answer in text with \`\`\`ui blocks and NEVER generate or create images unless the user explicitly says "image" or "picture". Only where a visual genuinely helps, add a \`\`\`ui block with ONE valid JSON object at the relevant spot (Never more than 3 per answer, none for short or casual answers, never the whole answer in ui, never invent numbers). Each block is {"type":"<one of the types>","title":"...", ...fields}; use double quotes, no comments, no trailing commas.
+export const SETUP_INSTRUCTION = `[BetterView v11] Answer normally in text and markdown; text is the main answer. Add a fenced ui block with one valid JSON object only when useful (max 2); no visuals for short/casual replies, and never invent facts. Use double-quoted JSON.
 
-STYLE: Use restrained editorial layouts, existing muted colors, clear spacing and readable labels. Prefer dividers over nested cards; use Lucide icons sparingly and avoid decorative repetition.
-Types: flow{nodes[id,label,icon?],edges[from,to,label?]} stepper{steps[title,detail]} table{columns,rows} compare{items[label,tone,points]} chart{chartType,labels,datasets[label,data]} stats{items[label,value,delta?]} timeline{events[title,time,text]} callout{tone,text} tabs{tabs[label,content]} quiz{questions[q,options,answer,explain]} checklist{items[text,detail?,checked?]} form{fields[id,label,type,options?,required?]} mermaid{code} math{latex,steps?} code{language,code} followups{suggestions}`;
+STYLE: Minimal, compact, document-like; no outer container/background panel; Never nest cards or box items. Keep labels readable. Small flows stay top-down; large/branching flows may use pan/zoom or split into titled diagrams. Never invent image URLs. Use image only when requested and with a real HTTPS src plus descriptive alt text.
+Types: flow{nodes[id,label],edges[from,to,label?]} stepper{steps[title,detail?]} table{columns,rows} compare{items[label,tone,points]} quiz{questions[q,options,answer]} chart{chartType:bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo,labels,datasets} scatter/bubble data[{x,y,r?}]; geo data[{lon,lat,label?}]; heatmap numeric rows. mermaid{code} callout{tone,text} stats{items[label,value]} tabs{tabs[label,content]} timeline{events[title,text]} followups{suggestions} math{latex} code{language,code} checklist{items[text,checked?]} form{fields[id,label,type]} image{src,alt,caption?} dashboard{items:[{title?,visual:{...}}]} (2-8 non-dashboard visuals).`;
 
-export const SYSTEM_INSTRUCTION = `[BetterView v7] Answer normally in plain text and markdown. The text answer is the main answer and must stand on its own. When asked for something visual, a diagram or a chart, answer in text with \`\`\`ui blocks; NEVER generate or create images unless the user explicitly says "image" or "picture". Only where a visual genuinely adds clarity (process, steps, trade-offs, table, metrics, timeline, formula), ALSO add a fenced code block with language ui containing ONE valid JSON object (double quotes, no comments, no trailing commas, "type" first, then "title"). Place it at the relevant spot inside your normal answer; keep text around it. Short answers and casual chat get no ui. Never more than 3 ui blocks per answer. Never put the whole answer inside ui blocks. Never invent numbers. Followups optional at the end of long answers.
+export const SYSTEM_INSTRUCTION = `[BetterView v11] Answer in plain text/Markdown; text stands alone. Add one fenced ui block with one valid JSON object only when helpful (max 2); short/casual replies get none. Never invent facts. Images only when requested, with a real HTTPS src and descriptive alt. Never invent image URLs.
 
-STYLE: Use restrained editorial layouts, existing muted colors, clear spacing and readable labels. Prefer dividers over nested cards; use Lucide icons sparingly and avoid decorative repetition.
+VISUAL STYLE: Minimal, compact, document-like. Use no outer container. Never nest cards; favor concise labels, whitespace, and restrained colors. Small flows stay top-down; for large or branching graphs use the readable pan/zoom canvas or titled sections.
 
 Type catalog:
-${generateCatalogSection()}`;
+${generateCatalogSection()}
 
-export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v7] In markdown. For visuals/diagrams, answer in text with \`\`\`ui; NEVER generate or create images unless asked for "image" or "picture". Add ui block when helpful. Casual chat gets no ui. Never more than 3 ui blocks per answer. Never invent numbers. Use restrained layouts, existing colors and sparse Lucide icons.
-Types: ${generateCompactCatalog()}`;
+Chart modes: bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo. Scatter/bubble points use {"x":number,"y":number,"r"?:number} (bubble needs r); heatmap rows are numeric. Geo datasets use {"lon":number,"lat":number,"label"?:string}. Dashboards contain 2-8 panels; do not nest dashboards. Images need a real HTTPS src and descriptive alt.`;
+
+export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v11] Markdown; ui only when helpful; casual/short: no ui; max 2 blocks; never invent facts or image URLs. Images only when requested, with real HTTPS src and descriptive alt. STYLE: compact; no outer container. No nested cards; host colors, concise readable labels. Small flows top-down; large flows pan/zoom or use titled sections.
+Types: ${generateCompactCatalog()}
+Charts: bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo; scatter/bubble points {x,y,r?}, geo points {lon,lat,label?}, heatmap rows numeric. Dashboards: 2-8 panels; no nesting.`;
 
 export function getCompactInstruction(): string {
   return SETUP_INSTRUCTION;

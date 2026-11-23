@@ -1,6 +1,6 @@
 import { ThemeMode } from './theme';
 import { readHostTypography, applyHostTheme } from './hostTheme';
-import { UISpec, UIType, UI_TYPES } from './types';
+import { UISpec, UIType, UI_TYPES, UIHost } from './types';
 import { tryParse, sniffType } from './parse';
 import { parsePartialJson } from './partialJson';
 import { validateSpec } from './validate';
@@ -12,6 +12,7 @@ import baseCss from './styles/base.css?inline';
 import { COMPONENT_STYLES } from '../components/styles';
 import { exportCard, showCardToast } from './export';
 import { loadSettings, onSettingsChange } from '../shared/settings';
+import { serializeTableValues } from '../components/table';
 
 export interface BlockHandle {
   update(text: string): void;
@@ -52,7 +53,7 @@ export function mountBlock(
   anchor: HTMLElement,
   opts: {
     theme: ThemeMode;
-    host?: 'gemini' | 'grok';
+    host?: UIHost;
     insert?: 'after' | 'inside' | 'before';
     onStateChange?: (state: 'skeleton' | 'rendered' | 'fallback') => void;
     initialText?: string;
@@ -129,6 +130,29 @@ export function mountBlock(
     cleanups = [];
   }
 
+  async function writeClipboardText(value: string): Promise<void> {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return;
+      }
+    } catch {
+      // Try the document selection fallback below (useful in restricted host pages).
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    textarea.style.pointerEvents = 'none';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = typeof document.execCommand === 'function' && document.execCommand('copy');
+    textarea.remove();
+    if (!copied) throw new Error('Clipboard access is unavailable');
+  }
+
 
 
   function createHeaderToolbar(
@@ -198,7 +222,7 @@ export function mountBlock(
         onClick: async (e: Event) => {
           e.stopPropagation();
           try {
-            await navigator.clipboard.writeText(lastRawText);
+            await writeClipboardText(lastRawText);
             clear(copyBtn);
             copyBtn.appendChild(iconEl('check', 16));
             copyTooltip.textContent = 'Copied';
@@ -235,6 +259,31 @@ export function mountBlock(
         clear(exportMenu);
         const spec = getSpec();
         const canSvg = spec ? ['flow', 'mermaid', 'chart'].includes(spec.type) : false;
+
+        if (spec?.type === 'table') {
+          const valuesItem = h(
+            'button',
+            {
+              class: 'iui-export-item',
+              type: 'button',
+              role: 'menuitem',
+              onClick: async (e: Event) => {
+                e.stopPropagation();
+                closeExportMenu();
+                const cardEl = getCardEl();
+                try {
+                  await writeClipboardText(serializeTableValues(spec.columns || [], spec.rows || []));
+                  if (cardEl) showCardToast(cardEl, 'Table values copied');
+                } catch {
+                  if (cardEl) showCardToast(cardEl, 'Could not access clipboard');
+                }
+              },
+            },
+            iconEl('table', 16, 'iui-export-item-icon'),
+            document.createTextNode('Copy table values'),
+          );
+          exportMenu.appendChild(valuesItem);
+        }
 
         const copyItem = h(
           'button',
@@ -298,7 +347,7 @@ export function mountBlock(
               e.stopPropagation();
               closeExportMenu();
               try {
-                await navigator.clipboard.writeText(lastRawText);
+                await writeClipboardText(lastRawText);
                 const cardEl = getCardEl();
                 if (cardEl) {
                   showCardToast(cardEl, 'JSON copied \u2713');

@@ -116,7 +116,7 @@ function initFixture(): void {
 
       streamingAllMount.innerHTML = '';
       if (streamingStatus) {
-        streamingStatus.textContent = 'Streaming all 12 types in 15-char chunks (light & dark)...';
+        streamingStatus.textContent = 'Streaming 14 included examples in 15-char chunks (light & dark)...';
       }
 
       let completedCount = 0;
@@ -155,7 +155,7 @@ function initFixture(): void {
               window.clearInterval(intervalId);
               completedCount++;
               if (completedCount === STREAM_SPEC_IDS.length && streamingStatus) {
-                streamingStatus.textContent = 'Completed streaming all 12 types in 15-char chunks (light & dark)!';
+                streamingStatus.textContent = 'Completed streaming all 14 included examples in 15-char chunks (light & dark)!';
               }
             } else {
               const partial = fullJson.slice(0, offset);

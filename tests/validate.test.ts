@@ -414,6 +414,85 @@ describe('validateSpec', () => {
     });
   });
 
+  describe('advanced charts, images, and dashboards', () => {
+    it('normalizes scatter and geographic points and requires radii for bubbles', () => {
+      const scatter = validateSpec({
+        type: 'chart', chartType: 'scatter',
+        datasets: [{ label: 'Latency', data: [{ x: '2', y: 12, label: 'A' }] }],
+      });
+      expect(scatter.ok).toBe(true);
+      if (scatter.ok && scatter.spec.type === 'chart') {
+        expect(scatter.spec.labels).toEqual([]);
+        expect(scatter.spec.datasets[0].data).toEqual([{ x: 2, y: 12, label: 'A' }]);
+      }
+
+      const bubbleMissingRadius = validateSpec({
+        type: 'chart', chartType: 'bubble', datasets: [{ label: 'A', data: [{ x: 1, y: 2 }] }],
+      });
+      expect(bubbleMissingRadius.ok).toBe(false);
+
+      const geo = validateSpec({
+        type: 'chart', chartType: 'geo', datasets: [{ label: 'Cities', data: [{ longitude: -73.9, latitude: 40.7, name: 'New York' }] }],
+      });
+      expect(geo.ok).toBe(true);
+      if (geo.ok && geo.spec.type === 'chart') {
+        expect(geo.spec.datasets[0].data).toEqual([{ x: -73.9, y: 40.7, label: 'New York' }]);
+      }
+      expect(validateSpec({
+        type: 'chart', chartType: 'geo', datasets: [{ label: 'Bad', data: [{ lon: 181, lat: 10 }] }],
+      }).ok).toBe(false);
+    });
+
+    it('validates heatmap grids and requires labels and data', () => {
+      const result = validateSpec({
+        type: 'chart', chartType: 'heatmap', labels: ['Mon', 'Tue'], unit: 'ms',
+        datasets: [{ label: 'API', data: [12, 24] }, { label: 'Cache', data: [4, 8] }],
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok && result.spec.type === 'chart') {
+        expect(result.spec.chartType).toBe('heatmap');
+        expect(result.spec.labels).toEqual(['Mon', 'Tue']);
+      }
+      expect(validateSpec({ type: 'chart', chartType: 'heatmap', labels: [], datasets: [{ label: 'API', data: [1] }] }).ok).toBe(false);
+    });
+
+    it('allows descriptive HTTPS image URLs and rejects unsafe or unlabeled images', () => {
+      const image = validateSpec({
+        type: 'image', title: 'Architecture sketch', src: 'https://cdn.example.com/architecture.png',
+        alt: 'Three service boxes linked by arrows', aspect: 'wide', caption: 'Request path',
+      });
+      expect(image.ok).toBe(true);
+      if (image.ok && image.spec.type === 'image') {
+        expect(image.spec.alt).toBe('Three service boxes linked by arrows');
+        expect(image.spec.aspect).toBe('wide');
+      }
+      expect(validateSpec({ type: 'image', src: 'http://cdn.example.com/a.png', alt: 'Diagram' }).ok).toBe(false);
+      expect(validateSpec({ type: 'image', src: 'https://user:pass@cdn.example.com/a.png', alt: 'Diagram' }).ok).toBe(false);
+      expect(validateSpec({ type: 'image', src: 'https://cdn.example.com/a.png' }).ok).toBe(false);
+    });
+
+    it('caps dashboards at eight panels and rejects nested dashboards', () => {
+      const panel = { visual: { type: 'callout', tone: 'info', text: 'Healthy' } };
+      const capped = validateSpec({ type: 'dashboard', items: Array.from({ length: 9 }, () => panel) });
+      expect(capped.ok).toBe(true);
+      if (capped.ok && capped.spec.type === 'dashboard') {
+        expect(capped.spec.items).toHaveLength(8);
+        expect(capped.warnings).toContain('Dashboard items capped at 8');
+      }
+
+      const nested = validateSpec({
+        type: 'dashboard',
+        items: [
+          { visual: { type: 'dashboard', items: [panel, panel] } },
+          panel,
+        ],
+      });
+      expect(nested.ok).toBe(false);
+
+      expect(validateSpec({ type: 'dashboard', items: [panel] }).ok).toBe(false);
+    });
+  });
+
   it('quiz tolerant parsing: letter answer (A/B), items alias, choices alias, explanation alias', () => {
     // Letter answer "A" -> index 0
     const letterA = validateSpec({

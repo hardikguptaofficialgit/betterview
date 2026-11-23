@@ -1,14 +1,14 @@
 .iui-table-wrap {
-  border-radius: var(--iui-radius-inner, 12px);
+  border-radius: 0;
   overflow: hidden;
-  border: 1px solid var(--iui-border);
-  background-color: var(--iui-bg);
+  border: 0;
+  background: transparent;
 }
 
 /* Gemini table style */
 .iui-root[data-host="gemini"] .iui-table-wrap {
-  border-radius: 12px;
-  border: 1px solid var(--iui-border);
+  border-radius: 0;
+  border: 0;
   background-color: transparent;
 }
 
@@ -16,14 +16,14 @@
   font-weight: 700;
   color: var(--iui-text);
   border-bottom: 1px solid var(--iui-border);
-  background-color: var(--iui-surface);
+  background-color: transparent;
 }
 
 .iui-root[data-host="gemini"] .iui-table-th-btn {
   font-weight: 700;
   color: var(--iui-text);
-  padding: 12px;
-  font-size: 14px;
+  padding: 8px;
+  font-size: 13px;
 }
 
 .iui-root[data-host="gemini"] .iui-table-tr {
@@ -31,19 +31,19 @@
 }
 
 .iui-root[data-host="gemini"] .iui-table-td {
-  padding: 12px;
-  font-size: 14px;
+  padding: 8px;
+  font-size: 13px;
   border-bottom: 1px solid var(--iui-border);
 }
 
 /* Grok table style: hairline border, 10px cell padding, 13-14px text */
 .iui-root[data-host="grok"] .iui-table-wrap {
-  border-radius: 8px;
-  border: 1px solid var(--iui-border);
+  border-radius: 0;
+  border: 0;
 }
 
 .iui-root[data-host="grok"] .iui-table-th-btn {
-  padding: 10px;
+  padding: 8px;
   font-size: 13px;
 }
 
@@ -57,11 +57,53 @@
 }
 
 /* Filter bar for > 6 rows */
+.iui-table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.iui-table-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--iui-border);
+  border-radius: 8px;
+  background: var(--iui-surface);
+  color: var(--iui-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.iui-table-copy-btn:hover {
+  background: var(--iui-bg);
+  border-color: var(--iui-muted);
+}
+
+.iui-table-copy-btn:focus-visible {
+  outline: 2px solid var(--iui-text);
+  outline-offset: 2px;
+}
+
+.iui-table-copy-fallback {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+}
+
 .iui-table-filter-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 0;
   gap: 12px;
 }
 

@@ -323,9 +323,9 @@
       </script>
     </section>
 
-    <!-- 8. Flow Sample 3: Wide flow (horizontal scrolling) -->
+    <!-- 8. Flow Sample 3: Wide flow (pan and zoom) -->
     <section class="fixture-section" id="section-flow-wide">
-      <h2>8. Flow: Wide flow (horizontal scrolling)</h2>
+      <h2>8. Flow: Wide flow (pan and zoom)</h2>
       <div class="fixture-mount" data-spec-id="flow-spec-wide"></div>
       <script type="application/json" id="flow-spec-wide">
       {
@@ -347,6 +347,14 @@
           { "from": "ingest", "to": "svc5" }
         ]
       }
+      </script>
+    </section>
+
+    <section class="fixture-section" id="section-flow-write-path">
+      <h2>Flow editor regression: URL shortener write path</h2>
+      <div class="fixture-mount" data-spec-id="flow-spec-write-path"></div>
+      <script type="application/json" id="flow-spec-write-path">
+      {"type":"flow","title":"Create Workflow (Write Path)","nodes":[{"id":"client","label":"Client","color":"blue"},{"id":"gateway","label":"API Gateway","color":"purple"},{"id":"validate","label":"Validate & route request","color":"amber"},{"id":"service","label":"URL Service","color":"purple"},{"id":"generator","label":"ID Generator","color":"orange"},{"id":"storage","label":"Database & Cache","color":"green"},{"id":"response","label":"Client (201 Response)","color":"blue"}],"edges":[{"from":"client","to":"gateway","label":"POST /shorten (long_url)"},{"from":"gateway","to":"validate"},{"from":"validate","to":"service"},{"from":"service","to":"generator","label":"Request unique ID"},{"from":"generator","to":"service","label":"Return Base62 key"},{"from":"service","to":"storage","label":"Persist mapping & warm cache"},{"from":"service","to":"response","label":"Return short URL"},{"from":"storage","to":"response","label":"Acknowledge write"}]}
       </script>
     </section>
 
@@ -611,10 +619,10 @@
 
     <!-- 23. Progressive Streaming Simulation (All Types) -->
     <section class="fixture-section" id="section-simulate-streaming">
-      <h2>23. Progressive Streaming Simulation (All Types)</h2>
+      <h2>23. Progressive Streaming Simulation (14 Included Examples)</h2>
       <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
         <button id="btn-simulate-streaming" class="theme-btn" type="button">Simulate streaming</button>
-        <span id="streaming-status" style="font-size: 13px; color: #6B6B6B;">Click to stream all 12 sample specs in 15-char chunks</span>
+        <span id="streaming-status" style="font-size: 13px; color: #6B6B6B;">Click to stream 14 included sample specs in 15-char chunks</span>
       </div>
       <div id="streaming-all-mount" style="display: flex; flex-direction: column; gap: 20px;"></div>
     </section>

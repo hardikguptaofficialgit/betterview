@@ -1,8 +1,8 @@
 .iui-generic-card {
-  border-radius: var(--iui-radius-card, 12px);
-  background-color: var(--iui-bg);
-  border: 1px solid var(--iui-border);
-  padding: 14px 16px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -23,10 +23,11 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background-color: var(--iui-surface);
-  border: 1px solid var(--iui-border);
+  padding: 8px 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--iui-border);
   box-sizing: border-box;
 }
 
@@ -75,10 +76,10 @@
 }
 
 .iui-generic-subcard {
-  padding: 10px 12px;
-  border-radius: 8px;
-  background-color: var(--iui-surface-2);
-  border: 1px solid var(--iui-border);
+  padding: 10px 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;

@@ -25,6 +25,8 @@ export const TYPE_META: Record<UIType, TypeMeta> = {
   code: { icon: 'code', color: 'sky', label: 'Code' },
   checklist: { icon: 'check', color: 'green', label: 'Checklist' },
   form: { icon: 'list', color: 'blue', label: 'Form' },
+  image: { icon: 'image', color: 'purple', label: 'Image' },
+  dashboard: { icon: 'layout-dashboard', color: 'stone', label: 'Dashboard' },
   generic: { icon: 'sparkle', color: 'stone', label: 'Details' },
 };
 
