@@ -88,100 +88,118 @@ describe('BetterView Popup', () => {
       writable: true,
     });
 
-    // Populate DOM structure
+    // Populate DOM structure matching redesigned popup
     document.body.innerHTML = `
-      <div class="popup-container">
+      <div class="bv-shell popup-container">
         <header class="header-row">
           <div class="header-brand">
             <picture id="header-logo" class="logo-picture">
               <source id="logo-source" media="(prefers-color-scheme: dark)" srcset="/brand/mark-white.png" />
-            <img id="logo-img" src="/brand/mark-black.png" alt="BetterView" width="20" height="20" />
-          </picture>
-          <span class="brand-title">BetterView AI</span>
+              <img id="logo-img" src="/brand/mark-black.png" alt="BetterView" width="18" height="18" />
+            </picture>
+            <span class="brand-title">BetterView AI</span>
+          </div>
+          <div class="header-actions">
+            <div id="status-line" class="status-line sr-only status-muted">Open Gemini, Grok, ChatGPT or Claude</div>
+            <button id="theme-toggle-btn" class="ghost-btn theme-toggle-btn" type="button" aria-label="Toggle theme"></button>
+          </div>
+        </header>
+
+        <div class="popup-body">
+          <section class="sites-section" id="setup-card" aria-label="Connected platforms">
+            <div class="site-list">
+              <div class="site-row-wrapper" id="row-gemini">
+                <div class="setup-row">
+                  <div class="site-row-left">
+                    <div id="logo-gemini" class="site-row-logo">
+                      <span class="btn-site-icon" id="icon-gemini"></span>
+                    </div>
+                    <div class="site-text-col">
+                      <span class="site-row-name">Gemini</span>
+                      <span id="setup-gemini-status" class="site-status-text">Not set up</span>
+                    </div>
+                  </div>
+                  <div class="site-row-action">
+                    <button id="setup-gemini-btn" class="pill-btn action-pill-btn setup-btn btn-primary" type="button" aria-label="Set up Gemini">
+                      <span class="btn-spinner hidden" id="spinner-gemini"></span>
+                      <span class="btn-label" id="label-gemini">Set up</span>
+                      <span class="btn-check" id="check-gemini"></span>
+                    </button>
+                  </div>
+                </div>
+                <div id="gemini-update-hint" class="gemini-update-hint hidden">Delete the old BetterView entry in Gemini Saved info</div>
+              </div>
+
+              <div class="hairline-divider" role="separator" aria-hidden="true"></div>
+
+              <div class="site-row-wrapper" id="row-grok">
+                <div class="setup-row">
+                  <div class="site-row-left">
+                    <div id="logo-grok" class="site-row-logo">
+                      <span class="btn-site-icon" id="icon-grok"></span>
+                    </div>
+                    <div class="site-text-col">
+                      <span class="site-row-name">Grok</span>
+                      <span id="setup-grok-status" class="site-status-text">Not set up</span>
+                    </div>
+                  </div>
+                  <div class="site-row-action">
+                    <button id="setup-grok-btn" class="pill-btn action-pill-btn setup-btn btn-primary" type="button" aria-label="Set up Grok">
+                      <span class="btn-spinner hidden" id="spinner-grok"></span>
+                      <span class="btn-label" id="label-grok">Set up</span>
+                      <span class="btn-check" id="check-grok"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="setup-status" class="setup-status-line sr-only"></div>
+          </section>
+
+          <section class="copy-prompt-section" id="try-it-card" aria-label="Sample prompt">
+            <button id="try-it-btn" class="ghost-btn copy-prompt-btn" type="button" aria-label="Copy prompt">
+              <span id="try-it-label">Copy prompt</span>
+            </button>
+          </section>
+
+          <section class="manual-setup-section" id="manual-setup-section">
+            <button id="manual-setup-toggle" class="manual-setup-toggle" type="button" aria-expanded="false" aria-controls="manual-setup-content">
+              <span class="manual-setup-title">Manual setup</span>
+              <span class="manual-setup-chevron" id="manual-setup-chevron"></span>
+            </button>
+            <div id="manual-setup-content" class="manual-setup-content" hidden>
+              <div class="manual-setup-inner">
+                <div id="system-instruction" class="instruction-preview" role="region" aria-label="System instruction preview" tabindex="0"></div>
+                <div class="manual-setup-action">
+                  <button id="copy-btn" class="pill-btn copy-btn" type="button">
+                    <span class="copy-label">Copy</span>
+                  </button>
+                </div>
+                <p class="manual-setup-hint">Paste into Gemini &rsaquo; Saved info, or Grok &rsaquo; Settings &rsaquo; Customize &rsaquo; Custom.</p>
+                <div class="watermark-row">
+                  <input type="checkbox" id="watermark-toggle" class="watermark-checkbox" checked />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="sr-only" aria-hidden="true">
+            <div class="segmented-control" id="theme-segmented" role="radiogroup" aria-label="Appearance theme" data-value="auto">
+              <div class="segmented-thumb" aria-hidden="true"></div>
+              <button type="button" class="segmented-btn is-active" data-value="auto" role="radio" aria-checked="true">Auto</button>
+              <button type="button" class="segmented-btn" data-value="light" role="radio" aria-checked="false">Light</button>
+              <button type="button" class="segmented-btn" data-value="dark" role="radio" aria-checked="false">Dark</button>
+            </div>
+            <select id="theme-select" class="visually-hidden" aria-hidden="true" tabindex="-1">
+              <option value="auto">Auto</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
         </div>
-        <div id="status-line" class="status-pill status-muted">Open Gemini, Grok, ChatGPT or Claude</div>
-      </header>
-
-      <section class="card setup-card" id="setup-card">
-          <div class="card-title">Setup</div>
-          <div class="setup-rows">
-            <div class="setup-row" id="row-gemini">
-              <div class="site-row-left">
-                <div id="logo-gemini" class="site-row-logo">
-                  <span class="btn-site-icon" id="icon-gemini"></span>
-                </div>
-                <div class="site-text-col">
-                  <span class="site-row-name">Gemini</span>
-                  <span id="setup-gemini-status" class="site-status-text">Not set up</span>
-                  <div id="gemini-update-hint" class="gemini-update-hint hidden">Delete the old BetterView entry in Gemini Saved info</div>
-                </div>
-              </div>
-              <div class="site-row-action">
-                <button id="setup-gemini-btn" class="pill-btn action-pill-btn setup-btn" type="button" aria-label="Set up Gemini">
-                  <span class="btn-spinner hidden" id="spinner-gemini"></span>
-                  <span class="btn-label" id="label-gemini">Set up</span>
-                  <span class="btn-check" id="check-gemini"></span>
-                </button>
-              </div>
-            </div>
-            <div class="setup-row" id="row-grok">
-              <div class="site-row-left">
-                <div id="logo-grok" class="site-row-logo">
-                  <span class="btn-site-icon" id="icon-grok"></span>
-                </div>
-                <div class="site-text-col">
-                  <span class="site-row-name">Grok</span>
-                  <span id="setup-grok-status" class="site-status-text">Not set up</span>
-                </div>
-              </div>
-              <div class="site-row-action">
-                <button id="setup-grok-btn" class="pill-btn action-pill-btn setup-btn" type="button" aria-label="Set up Grok">
-                  <span class="btn-spinner hidden" id="spinner-grok"></span>
-                  <span class="btn-label" id="label-grok">Set up</span>
-                  <span class="btn-check" id="check-grok"></span>
-                </button>
-              </div>
-            </div>
-          </div>
-          <div id="setup-status" class="setup-status-line sr-only"></div>
-        </section>
-
-        <section class="card appearance-card" id="appearance-card">
-          <div class="card-title">Appearance</div>
-          <div class="segmented-control" id="theme-segmented" role="radiogroup" aria-label="Appearance theme" data-value="auto">
-            <div class="segmented-thumb" aria-hidden="true"></div>
-            <button type="button" class="segmented-btn is-active" data-value="auto" role="radio" aria-checked="true">Auto</button>
-            <button type="button" class="segmented-btn" data-value="light" role="radio" aria-checked="false">Light</button>
-            <button type="button" class="segmented-btn" data-value="dark" role="radio" aria-checked="false">Dark</button>
-          </div>
-          <select id="theme-select" class="visually-hidden" aria-hidden="true" tabindex="-1">
-            <option value="auto">Auto</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-        </section>
-
-        <section class="manual-setup-section" id="manual-setup-section">
-          <button id="manual-setup-toggle" class="manual-setup-toggle" type="button" aria-expanded="false" aria-controls="manual-setup-content">
-            <span class="manual-setup-title">Manual setup</span>
-            <span class="manual-setup-chevron" id="manual-setup-chevron"></span>
-          </button>
-          <div id="manual-setup-content" class="manual-setup-content">
-            <div class="manual-setup-inner">
-              <div id="system-instruction" class="instruction-preview" role="region" aria-label="System instruction preview" tabindex="0"></div>
-              <div class="manual-setup-action">
-                <button id="copy-btn" class="pill-btn copy-btn" type="button">
-                  <span class="copy-label">Copy</span>
-                </button>
-              </div>
-              <p class="manual-setup-hint">Paste into Gemini &rsaquo; Saved info, or Grok &rsaquo; Settings &rsaquo; Customize &rsaquo; Custom.</p>
-            </div>
-          </div>
-        </section>
 
         <footer class="popup-footer">
           <a id="welcome-tour-link" class="footer-link" href="#" role="button">Welcome tour</a>
-          <span class="footer-dot" aria-hidden="true">&middot;</span>
           <span class="version-tag">v0.1.0</span>
           <a id="whats-new-link" class="footer-link hidden" href="#" role="button">What's new</a>
         </footer>
@@ -195,7 +213,7 @@ describe('BetterView Popup', () => {
     vi.useRealTimers();
   });
 
-  describe('Appearance: Segmented Control', () => {
+  describe('Appearance & Theme Toggle', () => {
     it('initializes to auto by default', async () => {
       cleanupPopup = initPopup();
       await vi.runAllTimersAsync();
@@ -214,7 +232,39 @@ describe('BetterView Popup', () => {
       expect(document.documentElement.getAttribute('data-theme')).toMatch(/^(light|dark)$/);
     });
 
-    it('updates state and settings when Light is clicked', async () => {
+    it('updates state and settings when header theme-toggle-btn is clicked', async () => {
+      cleanupPopup = initPopup();
+      await vi.runAllTimersAsync();
+
+      const toggleBtn = document.getElementById('theme-toggle-btn') as HTMLButtonElement;
+      expect(toggleBtn).not.toBeNull();
+
+      // Click to toggle from light (default resolved) to dark
+      toggleBtn.click();
+      await vi.runAllTimersAsync();
+
+      expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith(
+        expect.objectContaining({ theme: 'dark' }),
+        expect.any(Function),
+      );
+
+      const logoImg = document.getElementById('logo-img') as HTMLImageElement;
+      expect(logoImg.src).toContain('/brand/mark-white.png');
+
+      // Click again to toggle back to light
+      toggleBtn.click();
+      await vi.runAllTimersAsync();
+
+      expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith(
+        expect.objectContaining({ theme: 'light' }),
+        expect.any(Function),
+      );
+      expect(logoImg.src).toContain('/brand/mark-black.png');
+    });
+
+    it('updates state and settings when Light is clicked on segmented control', async () => {
       cleanupPopup = initPopup();
       await vi.runAllTimersAsync();
 
@@ -238,7 +288,7 @@ describe('BetterView Popup', () => {
       );
     });
 
-    it('updates state and settings when Dark is clicked', async () => {
+    it('updates state and settings when Dark is clicked on segmented control', async () => {
       cleanupPopup = initPopup();
       await vi.runAllTimersAsync();
 
@@ -260,7 +310,6 @@ describe('BetterView Popup', () => {
       cleanupPopup = initPopup();
       await vi.runAllTimersAsync();
 
-      // Update sync store first so loadSettings gets the new value
       syncStore.theme = 'dark';
       for (const listener of storageListeners) {
         listener({ theme: { newValue: 'dark' } }, 'sync');
@@ -276,7 +325,7 @@ describe('BetterView Popup', () => {
   });
 
   describe('Manual Setup Toggle', () => {
-    it('is collapsed by default with aria-expanded false', () => {
+    it('is collapsed by default with aria-expanded false and hidden attribute', () => {
       cleanupPopup = initPopup();
 
       const toggle = document.getElementById('manual-setup-toggle')!;
@@ -284,9 +333,10 @@ describe('BetterView Popup', () => {
 
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
       expect(content.classList.contains('is-expanded')).toBe(false);
+      expect(content.hasAttribute('hidden')).toBe(true);
     });
 
-    it('toggles expand on click and collapses on next click', () => {
+    it('toggles expand on click and collapses on next click with hidden attribute removed/added', () => {
       cleanupPopup = initPopup();
 
       const toggle = document.getElementById('manual-setup-toggle')!;
@@ -295,10 +345,12 @@ describe('BetterView Popup', () => {
       toggle.click();
       expect(toggle.getAttribute('aria-expanded')).toBe('true');
       expect(content.classList.contains('is-expanded')).toBe(true);
+      expect(content.hasAttribute('hidden')).toBe(false);
 
       toggle.click();
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
       expect(content.classList.contains('is-expanded')).toBe(false);
+      expect(content.hasAttribute('hidden')).toBe(true);
     });
 
     it('displays the system instruction preview', () => {
@@ -328,6 +380,29 @@ describe('BetterView Popup', () => {
 
       expect(copyLabel.textContent).toBe('Copy');
       expect(copyBtn.classList.contains('is-copied')).toBe(false);
+    });
+  });
+
+  describe('Copy Prompt Button', () => {
+    it('copies sample prompt to clipboard and shows Copied for 1.5s', async () => {
+      cleanupPopup = initPopup();
+
+      const tryItBtn = document.getElementById('try-it-btn')!;
+      const tryItLabel = document.getElementById('try-it-label')!;
+
+      tryItBtn.click();
+      await Promise.resolve();
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('Teach me how a web browser loads a webpage'),
+      );
+      expect(tryItLabel.textContent).toBe('Copied');
+      expect(tryItBtn.classList.contains('is-copied')).toBe(true);
+
+      vi.advanceTimersByTime(1500);
+
+      expect(tryItLabel.textContent).toBe('Copy prompt');
+      expect(tryItBtn.classList.contains('is-copied')).toBe(false);
     });
   });
 
@@ -363,29 +438,29 @@ describe('BetterView Popup', () => {
       expect(grokStatus.textContent).toBe('Not set up');
       expect(grokLabel.textContent).toBe('Set up');
 
-      // State 1: Current version -> Prompt added / Refresh
+      // State 1: Current version -> Ready / Redo
       for (const listener of storageListeners) {
         listener(
           { gemini_setup_status: { newValue: { status: 'added', version: CURRENT_INSTRUCTION_VERSION } } },
           'local',
         );
       }
-      expect(geminiStatus.textContent).toBe('Prompt added');
-      expect(geminiLabel.textContent).toBe('Refresh');
+      expect(geminiStatus.textContent).toBe('Ready');
+      expect(geminiLabel.textContent).toBe('Redo');
       expect(geminiBtn.classList.contains('is-done')).toBe(true);
 
       // Grok is still Not set up, and the global #setup-status is visually hidden (.sr-only)
       expect(grokStatus.textContent).toBe('Not set up');
       expect(statusEl.classList.contains('sr-only')).toBe(true);
 
-      // State 2: Older version -> Update available / Update
+      // State 2: Older version -> Needs update / Update
       for (const listener of storageListeners) {
         listener(
           { grok_setup_status: { newValue: { status: 'already', version: 2 } } },
           'local',
         );
       }
-      expect(grokStatus.textContent).toBe('Update available');
+      expect(grokStatus.textContent).toBe('Needs update');
       expect(grokLabel.textContent).toBe('Update');
       expect(grokBtn.classList.contains('is-done')).toBe(false);
 
@@ -416,7 +491,7 @@ describe('BetterView Popup', () => {
           'local',
         );
       }
-      expect(geminiStatus.textContent).toBe('Update available');
+      expect(geminiStatus.textContent).toBe('Needs update');
       expect(geminiBtn.textContent).toContain('Update');
       expect(geminiUpdateHint.classList.contains('hidden')).toBe(true);
 
@@ -427,7 +502,7 @@ describe('BetterView Popup', () => {
           'local',
         );
       }
-      expect(geminiStatus.textContent).toBe('Update available');
+      expect(geminiStatus.textContent).toBe('Needs update');
       expect(geminiUpdateHint.classList.contains('hidden')).toBe(false);
     });
 

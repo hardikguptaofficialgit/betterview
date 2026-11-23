@@ -7,33 +7,48 @@
   <link rel="stylesheet" href="/src/popup/popup.css" />
 </head>
 <body>
-  <main class="popup-container">
-    <!-- Top Header -->
+  <div class="bv-shell popup-container">
+    <!-- Header: 44px tall with 12px padding -->
     <header class="header-row">
       <div class="header-brand">
         <picture id="header-logo" class="logo-picture">
           <source id="logo-source" media="(prefers-color-scheme: dark)" srcset="/brand/mark-white.png" />
-          <img id="logo-img" src="/brand/mark-black.png" alt="BetterView AI" width="24" height="24" />
+          <img id="logo-img" src="/brand/mark-black.png" alt="BetterView AI" width="18" height="18" />
         </picture>
         <span class="brand-title">BetterView AI</span>
       </div>
 
+      <!-- Theme toggle is a 28px ghost icon button at the far right of the header -->
       <div class="header-actions">
-        <div id="status-line" class="status-line status-badge" role="status" aria-live="polite">
+        <div id="status-line" class="status-line sr-only" role="status" aria-live="polite">
           <span class="status-text">Open Gemini or Grok</span>
         </div>
+        <button id="theme-toggle-btn" class="ghost-btn theme-toggle-btn" type="button" aria-label="Toggle theme">
+          <svg class="theme-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="theme-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
       </div>
     </header>
 
-    <!-- Main Body -->
-    <div class="popup-body">
-      <!-- Section: Sites -->
-      <section class="sites-section" id="setup-card" aria-labelledby="sites-heading">
-        <div class="section-header">
-          <h2 id="sites-heading" class="section-label">Connected Platforms</h2>
-        </div>
+    <div class="bv-divider" role="separator" aria-hidden="true"></div>
 
-        <div class="card sites-container">
+    <!-- Main Content -->
+    <div class="popup-body">
+      <!-- Site rows: a compact list, each row 48px tall -->
+      <section class="sites-section" id="setup-card" aria-label="Connected platforms">
+        <div class="site-list">
           <!-- Gemini Row -->
           <div class="site-row-wrapper" id="row-gemini">
             <div class="setup-row">
@@ -43,16 +58,13 @@
                 </div>
                 <div class="site-text-col">
                   <span class="site-row-name">Gemini</span>
-                  <div class="site-status-row">
-                    <span class="site-status-dot dot-not-set-up" aria-hidden="true"></span>
-                    <span id="setup-gemini-status" class="site-status-text">Not set up</span>
-                  </div>
+                  <span id="setup-gemini-status" class="site-status-text">Not set up</span>
                 </div>
               </div>
               <div class="site-row-action">
-                <button id="setup-gemini-btn" class="setup-btn btn-primary" type="button" aria-label="Add BetterView prompt to Gemini">
+                <button id="setup-gemini-btn" class="setup-btn pill-btn btn-primary" type="button" aria-label="Set up Gemini">
                   <span class="btn-spinner hidden" id="spinner-gemini" aria-hidden="true"></span>
-                  <span class="btn-label" id="label-gemini">Add prompt</span>
+                  <span class="btn-label" id="label-gemini">Set up</span>
                   <span class="btn-check hidden" id="check-gemini" aria-hidden="true"></span>
                 </button>
               </div>
@@ -62,7 +74,7 @@
             </p>
           </div>
 
-          <div class="site-divider" role="separator" aria-hidden="true"></div>
+          <div class="hairline-divider" role="separator" aria-hidden="true"></div>
 
           <!-- Grok Row -->
           <div class="site-row-wrapper" id="row-grok">
@@ -73,16 +85,13 @@
                 </div>
                 <div class="site-text-col">
                   <span class="site-row-name">Grok</span>
-                  <div class="site-status-row">
-                    <span class="site-status-dot dot-not-set-up" aria-hidden="true"></span>
-                    <span id="setup-grok-status" class="site-status-text">Not set up</span>
-                  </div>
+                  <span id="setup-grok-status" class="site-status-text">Not set up</span>
                 </div>
               </div>
               <div class="site-row-action">
-                <button id="setup-grok-btn" class="setup-btn btn-primary" type="button" aria-label="Add BetterView prompt to Grok">
+                <button id="setup-grok-btn" class="setup-btn pill-btn btn-primary" type="button" aria-label="Set up Grok">
                   <span class="btn-spinner hidden" id="spinner-grok" aria-hidden="true"></span>
-                  <span class="btn-label" id="label-grok">Add prompt</span>
+                  <span class="btn-label" id="label-grok">Set up</span>
                   <span class="btn-check hidden" id="check-grok" aria-hidden="true"></span>
                 </button>
               </div>
@@ -93,43 +102,10 @@
         <div id="setup-status" class="setup-status-line sr-only" aria-live="polite"></div>
       </section>
 
-      <!-- Section: Appearance & Preferences -->
-      <section class="card appearance-card" id="appearance-card" aria-label="Preferences">
-        <div class="appearance-row">
-          <span class="card-label" id="theme-label">Appearance</span>
-          <div class="segmented-control" id="theme-segmented" role="radiogroup" aria-labelledby="theme-label" data-value="auto">
-            <div class="segmented-thumb" aria-hidden="true"></div>
-            <button type="button" class="segmented-btn is-active" data-value="auto" role="radio" aria-checked="true">Auto</button>
-            <button type="button" class="segmented-btn" data-value="light" role="radio" aria-checked="false">Light</button>
-            <button type="button" class="segmented-btn" data-value="dark" role="radio" aria-checked="false">Dark</button>
-          </div>
-        </div>
-
-        <div class="card-divider" role="separator" aria-hidden="true"></div>
-
-        <div class="watermark-row">
-          <label for="watermark-toggle" class="watermark-label">Watermark on exports</label>
-          <label class="switch" for="watermark-toggle">
-            <input type="checkbox" id="watermark-toggle" class="watermark-checkbox" checked />
-            <span class="switch-slider"></span>
-          </label>
-        </div>
-
-        <select id="theme-select" class="visually-hidden" aria-hidden="true" tabindex="-1">
-          <option value="auto">Auto</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-      </section>
-
-      <!-- Section: Try It -->
-      <section class="card try-it-row" id="try-it-card" aria-label="Sample prompt">
-        <div class="try-it-left">
-          <span class="try-it-title">Try a sample prompt</span>
-          <span class="try-it-hint">How a browser loads a webpage</span>
-        </div>
-        <button id="try-it-btn" class="ghost-btn try-it-btn" type="button" aria-label="Copy sample prompt">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <!-- Copy prompt: full-width 32px ghost button with a copy icon, radius 10px -->
+      <section class="copy-prompt-section" id="try-it-card" aria-label="Sample prompt">
+        <button id="try-it-btn" class="ghost-btn copy-prompt-btn" type="button" aria-label="Copy prompt">
+          <svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
@@ -137,8 +113,8 @@
         </button>
       </section>
 
-      <!-- Section: Manual Setup -->
-      <section class="card manual-setup-section" id="manual-setup-section">
+      <!-- Manual setup: collapsed disclosure row (chevron) with no leftover sliver or gap when closed -->
+      <section class="manual-setup-section" id="manual-setup-section">
         <button
           id="manual-setup-toggle"
           class="manual-setup-toggle"
@@ -147,10 +123,14 @@
           aria-controls="manual-setup-content"
         >
           <span class="manual-setup-title">Manual setup</span>
-          <span class="manual-setup-chevron" id="manual-setup-chevron" aria-hidden="true"></span>
+          <span class="manual-setup-chevron" id="manual-setup-chevron" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </span>
         </button>
 
-        <div id="manual-setup-content" class="manual-setup-content">
+        <div id="manual-setup-content" class="manual-setup-content" hidden>
           <div class="manual-setup-inner">
             <div class="instruction-container">
               <div class="instruction-header">
@@ -174,10 +154,36 @@
             <p class="manual-setup-hint">
               Paste into Gemini &rsaquo; Saved info, or Grok &rsaquo; Settings &rsaquo; Customize &rsaquo; Custom.
             </p>
+
+            <div class="watermark-row">
+              <label for="watermark-toggle" class="watermark-label">Watermark on exports</label>
+              <label class="switch" for="watermark-toggle">
+                <input type="checkbox" id="watermark-toggle" class="watermark-checkbox" checked />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
           </div>
         </div>
       </section>
+
+      <!-- Preferences hidden backwards-compatibility elements -->
+      <div class="sr-only" aria-hidden="true">
+        <div class="segmented-control" id="theme-segmented" role="radiogroup" aria-labelledby="theme-label" data-value="auto">
+          <div class="segmented-thumb" aria-hidden="true"></div>
+          <button type="button" class="segmented-btn is-active" data-value="auto" role="radio" aria-checked="true">Auto</button>
+          <button type="button" class="segmented-btn" data-value="light" role="radio" aria-checked="false">Light</button>
+          <button type="button" class="segmented-btn" data-value="dark" role="radio" aria-checked="false">Dark</button>
+        </div>
+        <select id="theme-select" class="visually-hidden" aria-hidden="true" tabindex="-1">
+          <option value="auto">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+        <span id="theme-label">Appearance</span>
+      </div>
     </div>
+
+    <div class="bv-divider" role="separator" aria-hidden="true"></div>
 
     <!-- Footer -->
     <footer class="popup-footer">
@@ -194,7 +200,7 @@
           rel="noopener noreferrer"
           aria-label="Support Me"
         >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
           </svg>
           <span>Support Me</span>
@@ -202,7 +208,7 @@
         <span class="version-tag">v0.1.0</span>
       </div>
     </footer>
-  </main>
+  </div>
 
   <script type="module" src="/src/popup/popup.ts"></script>
 </body>

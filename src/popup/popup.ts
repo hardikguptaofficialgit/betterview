@@ -9,6 +9,7 @@ export function initPopup(): () => void {
   const statusLine = document.getElementById('status-line');
   const copyBtn = document.getElementById('copy-btn') as HTMLButtonElement | null;
   const instructionEl = document.getElementById('system-instruction');
+  const themeToggleBtn = document.getElementById('theme-toggle-btn') as HTMLButtonElement | null;
   const themeSegmented = document.getElementById('theme-segmented');
   const themeSelect = document.getElementById('theme-select') as HTMLSelectElement | null;
   const watermarkToggle = document.getElementById('watermark-toggle') as HTMLInputElement | null;
@@ -43,33 +44,33 @@ export function initPopup(): () => void {
   const welcomeTourLink = document.getElementById('welcome-tour-link') as HTMLAnchorElement | null;
   const whatsNewLink = document.getElementById('whats-new-link') as HTMLAnchorElement | null;
 
-  // Render real brand marks into 28px logo containers
+  // Render real brand marks into 16px logo containers
   if (logoGemini && !logoGemini.querySelector('svg.bvi-gemini-logo')) {
-    const gSvg = geminiIconSvg(28);
+    const gSvg = geminiIconSvg(16);
     gSvg.classList.add('bvi-gemini-logo');
     logoGemini.prepend(gSvg);
   }
   if (logoGrok && !logoGrok.querySelector('svg.bvi-grok-logo')) {
-    const grkSvg = grokIconSvg(28);
+    const grkSvg = grokIconSvg(16);
     grkSvg.classList.add('bvi-grok-logo');
     logoGrok.prepend(grkSvg);
   }
 
   // Backwards compatibility with tests looking inside icon-gemini / icon-grok / check / chevron
   if (iconGemini && !iconGemini.hasChildNodes()) {
-    iconGemini.appendChild(geminiIconSvg(14));
+    iconGemini.appendChild(geminiIconSvg(16));
   }
   if (iconGrok && !iconGrok.hasChildNodes()) {
-    iconGrok.appendChild(grokIconSvg(14));
+    iconGrok.appendChild(grokIconSvg(16));
   }
   if (checkGemini && !checkGemini.hasChildNodes()) {
-    checkGemini.appendChild(iconEl('check', 13));
+    checkGemini.appendChild(iconEl('check', 12));
   }
   if (checkGrok && !checkGrok.hasChildNodes()) {
-    checkGrok.appendChild(iconEl('check', 13));
+    checkGrok.appendChild(iconEl('check', 12));
   }
-  if (manualChevron && !manualChevron.hasChildNodes()) {
-    manualChevron.appendChild(iconEl('caret-down', 14));
+  if (manualChevron && !manualChevron.querySelector('svg')) {
+    manualChevron.appendChild(iconEl('caret-down', 12));
   }
 
   // Populate system instruction preview with SETUP_INSTRUCTION
@@ -114,25 +115,25 @@ export function initPopup(): () => void {
     label?.classList.remove('hidden');
 
     let kind: StatusKind = 'not-set-up';
-    let statusText = 'Prompt not added';
-    let btnLabel = 'Add prompt';
+    let statusText = 'Not set up';
+    let btnLabel = 'Set up';
     let isGhost = false;
     let title = '';
 
     if (!data || !data.status) {
       kind = 'not-set-up';
-      statusText = 'Prompt not added';
-      btnLabel = 'Add prompt';
+      statusText = 'Not set up';
+      btnLabel = 'Set up';
     } else if (data.status === 'added' || data.status === 'already') {
       const ver = data.version ?? 1;
       if (ver >= CURRENT_INSTRUCTION_VERSION) {
         kind = 'ready';
-        statusText = 'Prompt added';
-        btnLabel = 'Refresh';
+        statusText = 'Ready';
+        btnLabel = 'Redo';
         isGhost = true;
       } else {
         kind = 'needs-update';
-        statusText = 'Update available';
+        statusText = 'Needs update';
         btnLabel = 'Update';
       }
     } else if (data.status === 'failed') {
@@ -299,12 +300,13 @@ export function initPopup(): () => void {
   if (tryItBtn) {
     tryItBtn.addEventListener('click', async () => {
       try {
-        const samplePrompt = 'Teach me how a web browser loads a webpage, starting from entering a URL to displaying the finished page. Break down every step in a beginner-friendly way, explain the underlying concepts, and use a clear flow diagram with practical examples to help me understand how everything works.';
+        const samplePrompt =
+          'Teach me how a web browser loads a webpage, starting from entering a URL to displaying the finished page. Break down every step in a beginner-friendly way, explain the underlying concepts, and use a clear flow diagram with practical examples to help me understand how everything works.';
         if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(samplePrompt);
         }
         if (tryItLabel) {
-          tryItLabel.textContent = 'Copied \u2713';
+          tryItLabel.textContent = 'Copied';
         }
         tryItBtn.classList.add('is-copied');
         if (tryItTimeoutId !== null) window.clearTimeout(tryItTimeoutId);
@@ -459,8 +461,10 @@ export function initPopup(): () => void {
       manualToggle.setAttribute('aria-expanded', String(nextExpanded));
       if (nextExpanded) {
         manualContent.classList.add('is-expanded');
+        manualContent.removeAttribute('hidden');
       } else {
         manualContent.classList.remove('is-expanded');
+        manualContent.setAttribute('hidden', '');
       }
     });
   }
@@ -491,6 +495,13 @@ export function initPopup(): () => void {
     }
     if (logoSource) {
       logoSource.srcset = resolved === 'dark' ? '/brand/mark-white.png' : '/brand/mark-black.png';
+    }
+
+    if (themeToggleBtn) {
+      themeToggleBtn.setAttribute(
+        'aria-label',
+        resolved === 'dark' ? 'Switch to light mode' : 'Switch to dark mode',
+      );
     }
 
     if (themeSegmented) {
@@ -534,6 +545,16 @@ export function initPopup(): () => void {
   if (watermarkToggle) {
     watermarkToggle.addEventListener('change', () => {
       saveSettings({ watermark: watermarkToggle.checked }).catch(console.error);
+    });
+  }
+
+  // Header theme toggle button: click toggles between light and dark
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const resolved = resolveTheme(currentThemeSetting);
+      const nextTheme: Settings['theme'] = resolved === 'dark' ? 'light' : 'dark';
+      saveSettings({ theme: nextTheme }).catch(console.error);
+      updateThemeUI(nextTheme);
     });
   }
 
