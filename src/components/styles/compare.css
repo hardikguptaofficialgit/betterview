@@ -1,30 +1,32 @@
 .iui-compare-card {
-  border-radius: var(--iui-radius-card, 18px);
+  border-radius: var(--iui-radius-card, 12px);
 }
 
 .iui-compare-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 0;
 }
 
 .iui-compare-panel {
   border-radius: 0;
-  padding: 8px 18px;
+  padding: 6px 14px;
   background: transparent;
-  border: 0;
+  border: none;
   box-shadow: none;
   display: flex;
   flex-direction: column;
 }
 
-.iui-compare-panel + .iui-compare-panel { border-left: 1px solid var(--iui-border); }
+.iui-compare-panel + .iui-compare-panel {
+  border-left: 1px solid color-mix(in srgb, var(--iui-text, #000) 10%, transparent);
+}
 
 .iui-compare-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .iui-compare-iconbox {
@@ -32,15 +34,20 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   background: transparent;
   border: none;
   color: var(--c-ink, var(--iui-text));
 }
 
+.iui-compare-iconbox svg {
+  width: 16px;
+  height: 16px;
+}
+
 .iui-compare-label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--iui-text);
 }
@@ -48,14 +55,16 @@
 .iui-compare-points {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
-@container iui (max-width: 560px) {
-  .iui-compare-panel { padding: 12px 0; }
+@container iui (max-width: 520px) {
+  .iui-compare-panel {
+    padding: 10px 0;
+  }
   .iui-compare-panel + .iui-compare-panel {
-    border-left: 0;
-    border-top: 1px solid var(--iui-border);
+    border-left: none;
+    border-top: 1px solid color-mix(in srgb, var(--iui-text, #000) 10%, transparent);
   }
 }
 
@@ -70,17 +79,22 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  color: var(--c-ink);
+  width: 14px;
+  height: 14px;
+  color: var(--c-ink, var(--iui-text));
   margin-top: 2px;
 }
 
+.iui-compare-point-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
 .iui-compare-dot {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   border-radius: 9999px;
-  background-color: var(--c-ink);
+  background-color: var(--iui-muted);
   flex-shrink: 0;
   margin-top: 7px;
   margin-left: 5px;
@@ -88,8 +102,8 @@
 }
 
 .iui-compare-point-text {
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.45;
   color: var(--iui-text);
   flex: 1;
 }

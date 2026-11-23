@@ -1,37 +1,34 @@
 .iui-stats-card {
-  border-radius: var(--iui-radius-card, 18px);
+  border-radius: var(--iui-radius-card, 12px);
 }
 
+/* Compact inline row of 2-4 values, not big boxes */
 .iui-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
-  gap: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 24px 32px;
+  flex-wrap: wrap;
+  padding: 4px 0;
 }
 
 .iui-stat-item {
   background: transparent;
-  border: 0;
+  border: none;
   border-radius: 0;
-  padding: 8px 12px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   box-sizing: border-box;
   box-shadow: none;
-}
-
-.iui-stat-item + .iui-stat-item { border-left: 1px solid var(--iui-border); }
-
-@container iui (max-width: 520px) {
-  .iui-stat-item { padding-inline: 0; }
-  .iui-stat-item + .iui-stat-item { border-left: 0; border-top: 1px solid var(--iui-border); }
+  min-width: 80px;
 }
 
 .iui-stat-label-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .iui-stat-label {
@@ -45,44 +42,55 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   background: transparent;
   border: none;
   color: var(--iui-muted);
 }
 
 .iui-stat-item-icon svg {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
 }
 
 .iui-stat-val-row {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .iui-stat-value {
-  font-size: 22px;
-  font-weight: 650;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--iui-text);
-  line-height: 1.2;
+  line-height: 1.25;
   font-variant-numeric: tabular-nums;
 }
 
 .iui-stat-delta {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 550;
   padding: 0;
-  border: 0;
-  border-radius: 0;
+  border: none;
   background: transparent;
+  line-height: 1.2;
+}
+
+.iui-stat-delta.c-mint {
+  color: #10b981;
+}
+
+.iui-stat-delta.c-rose {
+  color: #ef4444;
+}
+
+.iui-stat-delta.c-stone {
+  color: var(--iui-muted);
 }
 
 .iui-stat-hint {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--iui-muted);
-  line-height: 1.3;
+  line-height: 1.25;
 }

@@ -1,112 +1,214 @@
 .flow-card {
-  border-radius: var(--iui-radius-card, 18px);
   overflow: visible;
 }
 
 .flow-diagram {
+  position: relative;
   width: 100%;
-  padding: 6px 0 8px;
+  padding: 2px 0;
   box-sizing: border-box;
 }
 
+/* Small zoom controls, top-right, hidden until hover */
 .flow-controls {
+  position: absolute;
+  top: 4px;
+  right: 4px;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  margin: 0 0 8px;
+  gap: 2px;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  background: var(--iui-bg);
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 12%, transparent);
+  border-radius: 6px;
+  padding: 2px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.flow-diagram:hover .flow-controls,
+.flow-diagram:focus-within .flow-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (hover: none) {
+  .flow-controls {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .flow-control-btn {
-  min-width: 30px;
-  height: 30px;
-  padding: 0 9px;
-  border: 1px solid var(--iui-border);
-  border-radius: 7px;
-  background: var(--iui-bg);
-  color: var(--iui-text);
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--iui-muted);
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 100ms ease, color 100ms ease;
 }
 
 .flow-control-btn:hover {
-  background: var(--iui-surface);
+  background: color-mix(in srgb, var(--iui-text, #000) 8%, transparent);
+  color: var(--iui-text);
 }
 
 .flow-control-btn:focus-visible {
-  outline: 2px solid var(--iui-accent, #5488c7);
-  outline-offset: 2px;
+  outline: 2px solid var(--iui-accent);
+  outline-offset: 1px;
 }
 
 .flow-zoom-value {
-  min-width: 42px;
+  min-width: 34px;
   color: var(--iui-muted);
-  font-size: 11px;
+  font-size: 10.5px;
   text-align: center;
   font-variant-numeric: tabular-nums;
+  user-select: none;
 }
 
 .flow-viewport {
   position: relative;
   width: 100%;
-  height: clamp(400px, 60vh, 620px);
   overflow: hidden;
-  overscroll-behavior: contain;
-  border: 1px solid var(--iui-border);
-  border-radius: 10px;
-  background: var(--iui-bg);
-  cursor: grab;
-  touch-action: none;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-sizing: border-box;
 }
 
-.flow-viewport:active {
-  cursor: grabbing;
+.flow-inner {
+  position: relative;
+  transform-origin: top left;
 }
 
-.flow-graph-canvas {
+.flow-svg-overlay {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  background: var(--iui-bg);
-  outline: none;
-}
-
-.flow-graph-canvas:focus-visible {
-  outline: 2px solid var(--iui-accent, #5488c7);
-  outline-offset: -3px;
-}
-
-.flow-graph-canvas svg {
-  display: block;
+  pointer-events: none;
   overflow: visible;
 }
 
-.flow-instructions {
-  margin-top: 6px;
-  color: var(--iui-muted);
-  font-size: 10.5px;
-  line-height: 1.4;
-  text-align: right;
+.flow-edge-path {
+  color: var(--iui-muted, #71717a);
+  stroke: currentColor;
+  stroke-width: 1.25px;
+  fill: none;
 }
 
-@media (max-width: 600px) {
-  .flow-viewport {
-    height: clamp(320px, 58vh, 480px);
-  }
+.flow-edge-path.is-positive {
+  color: #10b981;
+}
 
-  .flow-controls {
-    gap: 4px;
-  }
+.flow-edge-path.is-negative {
+  color: #ef4444;
+}
 
-  .flow-control-btn {
-    min-width: 28px;
-    padding-inline: 7px;
-  }
+.flow-edge-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background-color: var(--iui-bg, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 12%, transparent);
+  border-radius: 9999px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--iui-muted);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
 
-  .flow-instructions {
-    text-align: left;
-  }
+.flow-edge-label.tone-positive {
+  color: #10b981;
+}
+
+.flow-edge-label.tone-negative {
+  color: #ef4444;
+}
+
+/* Nodes: compact rounded rects with 8px radius, padding 6px by 10px, 13px text, max width 180px */
+.flow-node {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  border-radius: 8px;
+  background-color: var(--iui-surface, #fafafa);
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 12%, transparent);
+  color: var(--iui-text, #0a0a0a);
+  text-align: center;
+  max-width: 180px;
+  word-break: break-word;
+  user-select: none;
+  z-index: 1;
+}
+
+/* Start and end nodes use pill shapes */
+.flow-node.is-pill {
+  border-radius: 9999px;
+  padding: 6px 14px;
+}
+
+/* Decision nodes use subtle accent tint, not bright yellow */
+.flow-node.is-decision {
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--iui-accent, #0b57d0) 10%, var(--iui-surface, #fafafa));
+  border-color: color-mix(in srgb, var(--iui-accent, #0b57d0) 25%, transparent);
+}
+
+.flow-node-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.flow-node-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--iui-text);
+  overflow-wrap: break-word;
+}
+
+.flow-node-sub {
+  font-size: 11px;
+  color: var(--iui-muted);
+  line-height: 1.25;
+  margin-top: 1px;
+}
+
+.flow-node-iconbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--iui-muted);
+  width: 14px;
+  height: 14px;
+}
+
+.flow-node-iconbox svg {
+  width: 14px;
+  height: 14px;
+  display: block;
 }

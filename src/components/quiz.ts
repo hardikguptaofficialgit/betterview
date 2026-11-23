@@ -5,183 +5,231 @@ import { iconEl } from '../core/icons';
 
 export function renderQuiz(spec: QuizSpec, _ctx: RenderContext): HTMLElement {
   const card = h('div', { class: 'iui-card iui-quiz-card' });
-
   const questions = spec.questions || [];
 
-  function build(): void {
+  let currentIndex = 0;
+  const answers = new Map<number, number>();
+  let isCompleted = false;
+
+  function calculateScore(): number {
+    let score = 0;
+    for (let i = 0; i < questions.length; i++) {
+      if (answers.get(i) === questions[i].answer) {
+        score++;
+      }
+    }
+    return score;
+  }
+
+  function render(): void {
     clear(card);
 
-    let answeredCount = 0;
-    let correctCount = 0;
+    if (questions.length === 0) {
+      if (spec.title) {
+        card.appendChild(h('div', { class: 'iui-title iui-quiz-title' }, spec.title));
+      }
+      card.appendChild(h('div', { class: 'iui-quiz-empty' }, 'No quiz questions available.'));
+      return;
+    }
 
-    // Header row
+    // Header row: Title on left, "1 of N" and prev/next chevrons on right
     const header = h('div', { class: 'iui-quiz-header' });
-    const titleEl = spec.title
-      ? h('div', { class: 'iui-title iui-quiz-title' }, spec.title)
-      : h('div', { class: 'iui-quiz-title-empty' });
+    const titleText = spec.title || '';
+    const titleEl = titleText
+      ? h('div', { class: 'iui-title iui-quiz-title' }, titleText)
+      : h('div', { class: 'iui-quiz-title-spacer' });
     header.appendChild(titleEl);
 
     const headerRight = h('div', { class: 'iui-quiz-header-right' });
-    const counterChip = h(
-      'span',
-      { class: 'iui-chip c-stone iui-quiz-counter', 'aria-live': 'polite' },
-      `0/${questions.length}`,
-    );
-    const scoreChip = h(
-      'span',
-      { class: 'iui-chip c-lavender iui-quiz-score' },
-      'Score 0',
-    );
-    scoreChip.style.display = 'none';
 
-    headerRight.appendChild(counterChip);
-    headerRight.appendChild(scoreChip);
+    if (!isCompleted) {
+      const counter = h(
+        'span',
+        { class: 'iui-quiz-counter', 'aria-live': 'polite' },
+        `${currentIndex + 1} of ${questions.length}`,
+      );
+      headerRight.appendChild(counter);
+
+      const navGroup = h('div', { class: 'iui-quiz-nav', role: 'group', 'aria-label': 'Quiz navigation' });
+
+      const prevBtn = h(
+        'button',
+        {
+          type: 'button',
+          class: 'iui-quiz-nav-btn',
+          'aria-label': 'Previous question',
+          title: 'Previous question',
+          disabled: currentIndex === 0,
+          onClick: () => {
+            if (currentIndex > 0) {
+              currentIndex--;
+              render();
+            }
+          },
+        },
+        iconEl('chevron-left', 14),
+      ) as HTMLButtonElement;
+
+      const nextBtn = h(
+        'button',
+        {
+          type: 'button',
+          class: 'iui-quiz-nav-btn',
+          'aria-label': 'Next question',
+          title: 'Next question',
+          disabled: currentIndex >= questions.length - 1,
+          onClick: () => {
+            if (currentIndex < questions.length - 1) {
+              currentIndex++;
+              render();
+            }
+          },
+        },
+        iconEl('chevron-right', 14),
+      ) as HTMLButtonElement;
+
+      navGroup.appendChild(prevBtn);
+      navGroup.appendChild(nextBtn);
+      headerRight.appendChild(navGroup);
+    } else {
+      const endCounter = h(
+        'span',
+        { class: 'iui-quiz-counter' },
+        `Completed`,
+      );
+      headerRight.appendChild(endCounter);
+    }
+
     header.appendChild(headerRight);
     card.appendChild(header);
 
-    // Questions list
-    const questionsContainer = h('div', { class: 'iui-quiz-questions' });
+    // Body: Result view or Current Question
+    if (isCompleted) {
+      const score = calculateScore();
+      const resultsWrap = h('div', { class: 'iui-quiz-results' });
+      const scoreText = h(
+        'div',
+        { class: 'iui-quiz-score-text' },
+        `You scored ${score} of ${questions.length}`,
+      );
 
-    for (let qIdx = 0; qIdx < questions.length; qIdx++) {
-      const qObj = questions[qIdx];
-      const qCard = h('div', { class: 'iui-quiz-q-card' });
-
-      // Question caption
-      const caption = h('div', { class: 'iui-quiz-q-caption' }, `Question ${qIdx + 1}`);
-      qCard.appendChild(caption);
-
-      // Question text
-      const qText = h('div', { class: 'iui-quiz-q-text' }, qObj.q);
-      qCard.appendChild(qText);
-
-      // Options
-      const optionsContainer = h('div', { class: 'iui-quiz-options' });
-      const qButtons: HTMLButtonElement[] = [];
-      const chipContainers: HTMLElement[] = [];
-      let isQuestionLocked = false;
-
-      const opts = qObj.options || [];
-      for (let optIdx = 0; optIdx < opts.length; optIdx++) {
-        const optText = opts[optIdx];
-        const letter = String.fromCharCode(65 + optIdx);
-
-        const letterBadge = h('span', { class: 'iui-quiz-letter' }, letter);
-        const textSpan = h('span', { class: 'iui-quiz-opt-text' }, optText);
-        const chipContainer = h('span', { class: 'iui-quiz-opt-chip' });
-        chipContainers.push(chipContainer);
-
-        const optBtn = h(
-          'button',
-          {
-            type: 'button',
-            class: 'iui-btn secondary iui-quiz-opt-btn',
-            style: `--opt-idx: ${optIdx};`,
-            onClick: () => {
-              if (isQuestionLocked) return;
-              isQuestionLocked = true;
-
-              // Lock options for this question
-              for (const btn of qButtons) {
-                btn.disabled = true;
-              }
-
-              const isPickCorrect = optIdx === qObj.answer;
-              answeredCount++;
-              if (isPickCorrect) {
-                correctCount++;
-              }
-
-              // Update counter & score
-              counterChip.textContent = `${answeredCount}/${questions.length}`;
-              scoreChip.textContent = `Score ${correctCount}`;
-              scoreChip.style.display = 'inline-flex';
-
-              // Highlight correct option
-              const correctBtn = qButtons[qObj.answer];
-              if (correctBtn) {
-                correctBtn.classList.add('is-correct', 'c-mint');
-                const correctChip = h(
-                  'span',
-                  { class: 'iui-chip c-mint iui-quiz-chip' },
-                  iconEl('check', 13),
-                  h('span', {}, 'Correct'),
-                );
-                chipContainers[qObj.answer].appendChild(correctChip);
-              }
-
-              // Highlight incorrect option if pick was wrong
-              if (!isPickCorrect) {
-                optBtn.classList.add('is-incorrect', 'c-rose');
-                const incorrectChip = h(
-                  'span',
-                  { class: 'iui-chip c-rose iui-quiz-chip' },
-                  iconEl('x', 13),
-                  h('span', {}, 'Incorrect'),
-                );
-                chipContainer.appendChild(incorrectChip);
-              }
-
-              // Show explain text if available
-              if (qObj.explain) {
-                const explainBox = h(
-                  'div',
-                  { class: 'iui-quiz-explain' },
-                  h('span', { class: 'iui-quiz-explain-icon' }, iconEl('info', 16)),
-                  h('div', { class: 'iui-quiz-explain-text' }, qObj.explain),
-                );
-                qCard.appendChild(explainBox);
-              }
-
-              // If all questions are answered, show result banner
-              if (answeredCount === questions.length) {
-                const fraction = correctCount / questions.length;
-                let toneClass = 'c-rose';
-                if (correctCount === questions.length) {
-                  toneClass = 'c-mint';
-                } else if (fraction >= 0.5) {
-                  toneClass = 'c-butter';
-                }
-
-                const banner = h(
-                  'div',
-                  { class: `iui-quiz-result-banner ${toneClass}` },
-                  h(
-                    'span',
-                    { class: 'iui-quiz-result-text' },
-                    `You scored ${correctCount}/${questions.length}`,
-                  ),
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      class: 'iui-btn iui-quiz-retry-btn',
-                      onClick: () => {
-                        build();
-                      },
-                    },
-                    'Retry',
-                  ),
-                );
-                card.appendChild(banner);
-              }
-            },
+      const retryBtn = h(
+        'button',
+        {
+          type: 'button',
+          class: 'iui-btn-ghost iui-quiz-retry-btn',
+          onClick: () => {
+            answers.clear();
+            currentIndex = 0;
+            isCompleted = false;
+            render();
           },
-          letterBadge,
-          textSpan,
-          chipContainer,
-        );
+        },
+        'Retry',
+      );
 
-        qButtons.push(optBtn);
-        optionsContainer.appendChild(optBtn);
-      }
-
-      qCard.appendChild(optionsContainer);
-      questionsContainer.appendChild(qCard);
+      resultsWrap.appendChild(scoreText);
+      resultsWrap.appendChild(retryBtn);
+      card.appendChild(resultsWrap);
+      return;
     }
 
-    card.appendChild(questionsContainer);
+    const currentQ = questions[currentIndex];
+    const qContainer = h('div', { class: 'iui-quiz-q-container' });
+
+    // Question text
+    const qText = h('div', { class: 'iui-quiz-q-text' }, currentQ.q);
+    qContainer.appendChild(qText);
+
+    // Options: compact rows (36px) with letter in small outlined circle
+    const optionsContainer = h('div', { class: 'iui-quiz-options' });
+    const selectedAnswer = answers.get(currentIndex);
+    const hasAnswered = selectedAnswer !== undefined;
+
+    const opts = currentQ.options || [];
+    for (let optIdx = 0; optIdx < opts.length; optIdx++) {
+      const optText = opts[optIdx];
+      const letter = String.fromCharCode(65 + optIdx);
+
+      const isPicked = selectedAnswer === optIdx;
+      const isCorrectOption = optIdx === currentQ.answer;
+
+      const btnClasses = ['iui-quiz-opt-row'];
+      if (hasAnswered) {
+        if (isCorrectOption) {
+          btnClasses.push('is-correct');
+        } else if (isPicked) {
+          btnClasses.push('is-incorrect');
+        }
+      }
+
+      const letterCircle = h('span', { class: 'iui-quiz-letter-circle' }, letter);
+      const textSpan = h('span', { class: 'iui-quiz-opt-text' }, optText);
+
+      const optBtn = h(
+        'button',
+        {
+          type: 'button',
+          class: btnClasses.join(' '),
+          disabled: hasAnswered,
+          onClick: () => {
+            if (hasAnswered) return;
+            answers.set(currentIndex, optIdx);
+
+            // Re-render to show correct/incorrect and explanation
+            render();
+
+            // If this was the last question or all are answered, check if we should auto-finish or show results
+            if (answers.size === questions.length) {
+              setTimeout(() => {
+                if (!card.isConnected) return;
+                // Wait briefly so user sees the explanation, then offer results
+                const finishNotice = card.querySelector('.iui-quiz-finish-prompt');
+                if (!finishNotice) {
+                  const finishBar = h(
+                    'div',
+                    { class: 'iui-quiz-finish-bar' },
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        class: 'iui-btn-ghost iui-quiz-finish-btn',
+                        onClick: () => {
+                          isCompleted = true;
+                          render();
+                        },
+                      },
+                      'View final score \u2192',
+                    ),
+                  );
+                  card.appendChild(finishBar);
+                }
+              }, 400);
+            }
+          },
+        },
+        letterCircle,
+        textSpan,
+      );
+
+      optionsContainer.appendChild(optBtn);
+    }
+    qContainer.appendChild(optionsContainer);
+
+    // One-line explanation after an answer
+    if (hasAnswered && currentQ.explain) {
+      const explainEl = h(
+        'div',
+        { class: 'iui-quiz-explain' },
+        h('span', { class: 'iui-quiz-explain-icon' }, iconEl('info', 14)),
+        h('span', { class: 'iui-quiz-explain-text' }, currentQ.explain),
+      );
+      qContainer.appendChild(explainEl);
+    }
+
+    card.appendChild(qContainer);
   }
 
-  build();
+  render();
   return card;
 }

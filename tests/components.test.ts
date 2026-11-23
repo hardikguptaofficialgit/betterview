@@ -138,8 +138,8 @@ describe('Chart palettes and helpers', () => {
     expect(ds.backgroundColor).toBe(LIGHT_SOLIDS[0]);
     expect(ds.borderColor).toBe(LIGHT_INKS[0]);
     expect(ds.borderWidth).toBe(1);
-    expect(ds.borderRadius).toBe(8);
-    expect(ds.maxBarThickness).toBe(48);
+    expect(ds.borderRadius).toBe(4);
+    expect(ds.maxBarThickness).toBe(28);
   });
 
   it('buildChartConfig configures line chart with smooth curves, hover targets and no area fill', () => {
@@ -155,9 +155,10 @@ describe('Chart palettes and helpers', () => {
 
     const config = buildChartConfig(spec, 'light');
     expect(config.type).toBe('line');
-    // 2 datasets -> legend shown at bottom
+    // 2 datasets -> legend shown at top left
     expect(config.options?.plugins?.legend?.display).toBe(true);
-    expect(config.options?.plugins?.legend?.position).toBe('bottom');
+    expect(config.options?.plugins?.legend?.position).toBe('top');
+    expect(config.options?.plugins?.legend?.align).toBe('start');
 
     const ds0 = config.data.datasets[0] as any;
     expect(ds0.tension).toBe(0.35);
@@ -183,8 +184,8 @@ describe('Chart palettes and helpers', () => {
 
     const lightConfig = buildChartConfig(spec, 'light');
     expect(lightConfig.type).toBe('doughnut');
-    // Legend always shown for doughnut even with 1 dataset
-    expect(lightConfig.options?.plugins?.legend?.display).toBe(true);
+    // Legend only shown when more than one series
+    expect(lightConfig.options?.plugins?.legend?.display).toBe(false);
     // Scales should be undefined for pie/doughnut
     expect(lightConfig.options?.scales).toBeUndefined();
 
@@ -333,20 +334,36 @@ describe('RENDERERS registry', () => {
             answer: 0,
             explain: 'Port 80 is used for HTTP.',
           },
+          {
+            q: 'What is port 443?',
+            options: ['HTTPS', 'DNS'],
+            answer: 0,
+            explain: 'Port 443 is used for HTTPS.',
+          },
         ],
       },
       ctx,
     );
     expect(quizEl.classList.contains('iui-card')).toBe(true);
+    expect(quizEl.textContent).toContain('1 of 2');
     expect(quizEl.textContent).toContain('What is port 80?');
-    const optButtons = quizEl.querySelectorAll<HTMLButtonElement>('.iui-quiz-opt-btn');
+    expect(quizEl.textContent).not.toContain('What is port 443?');
+
+    const optButtons = quizEl.querySelectorAll<HTMLButtonElement>('.iui-quiz-opt-row');
     expect(optButtons).toHaveLength(3);
 
     // Click correct option
     optButtons[0].click();
-    expect(optButtons[0].classList.contains('is-correct')).toBe(true);
-    expect(quizEl.textContent).toContain('Score 1');
+    const updatedButtons = quizEl.querySelectorAll<HTMLButtonElement>('.iui-quiz-opt-row');
+    expect(updatedButtons[0].classList.contains('is-correct')).toBe(true);
     expect(quizEl.textContent).toContain('Port 80 is used for HTTP.');
+
+    // Navigation works
+    const nextBtn = quizEl.querySelector<HTMLButtonElement>('button[aria-label="Next question"]')!;
+    expect(nextBtn).not.toBeNull();
+    nextBtn.click();
+    expect(quizEl.textContent).toContain('2 of 2');
+    expect(quizEl.textContent).toContain('What is port 443?');
   });
 
   it('renders an interactive checklist with progress and bulk completion controls', () => {
@@ -525,24 +542,21 @@ describe('Flow diagrams', () => {
     const card = renderFlow(spec, ctx);
     const diagram = card.querySelector<HTMLElement>('.flow-diagram')!;
     const viewport = card.querySelector<HTMLElement>('.flow-viewport')!;
-    const canvas = card.querySelector<HTMLElement>('.flow-graph-canvas')!;
+    const flowInner = card.querySelector<HTMLElement>('.flow-inner')!;
 
     expect(diagram.getAttribute('role')).toBe('region');
     expect(viewport.getAttribute('role')).toBe('region');
-    expect(viewport.getAttribute('aria-label')).toBe('Interactive flow canvas: OAuth flow, 3 nodes');
-    expect(canvas.getAttribute('role')).toBe('application');
-    expect(canvas.getAttribute('tabindex')).toBe('0');
-    expect(canvas.dataset.flowNodeCount).toBe('3');
-    expect(canvas.dataset.flowEdgeCount).toBe('2');
-    expect(card.querySelectorAll('.flow-control-btn')).toHaveLength(4);
-    expect(card.querySelector('[aria-label="Fit flow in canvas"]')).not.toBeNull();
-    expect(card.querySelector('.flow-svg-overlay')).toBeNull();
-    expect(card.querySelector('.flow-node')).toBeNull();
+    expect(viewport.getAttribute('aria-label')).toBe('Flow diagram: OAuth flow, 3 nodes');
+    expect(flowInner).not.toBeNull();
+    expect(card.querySelectorAll('.flow-node')).toHaveLength(3);
+    expect(card.querySelectorAll('.flow-edge-path')).toHaveLength(2);
+    expect(card.querySelectorAll('.flow-control-btn')).toHaveLength(3);
+    expect(card.querySelector('.flow-svg-overlay')).not.toBeNull();
     expect(diagram.querySelector('.iui-sr-only')?.textContent).toContain('Resource owner → Client application (Starts login)');
     expect(diagram.querySelector('.iui-sr-only')?.textContent).toContain('Client application → Authorization server (Requests authorization)');
 
     card.querySelector<HTMLButtonElement>('[aria-label="Zoom in"]')!.click();
-    expect(card.querySelector('.flow-zoom-value')?.textContent).toBe('110%');
+    expect(card.querySelector('.flow-zoom-value')?.textContent).toBe('115%');
     cleanups.forEach((cleanup) => cleanup());
   });
 
@@ -585,16 +599,14 @@ describe('Flow diagrams', () => {
     const card = renderFlow(spec, ctx);
     const diagram = card.querySelector<HTMLElement>('.flow-diagram')!;
     const viewport = card.querySelector<HTMLElement>('.flow-viewport')!;
-    const canvas = card.querySelector<HTMLElement>('.flow-graph-canvas')!;
 
     expect(viewport.getAttribute('role')).toBe('region');
-    expect(viewport.hasAttribute('tabindex')).toBe(false);
-    expect(canvas.getAttribute('tabindex')).toBe('0');
-    expect(canvas.dataset.flowNodeCount).toBe('12');
-    expect(canvas.dataset.flowEdgeCount).toBe('13');
+    expect(viewport.getAttribute('aria-label')).toBe('Flow diagram: URL shortener architecture, 12 nodes');
+    expect(card.querySelectorAll('.flow-node')).toHaveLength(12);
+    expect(card.querySelectorAll('.flow-edge-path')).toHaveLength(13);
     expect(diagram.querySelectorAll('.iui-sr-only li')).toHaveLength(13);
     expect(diagram.querySelector('.iui-sr-only')?.textContent).toContain('Client app → Shorten API (POST /shorten)');
-    expect(card.querySelectorAll('.flow-control-btn')).toHaveLength(4);
+    expect(card.querySelectorAll('.flow-control-btn')).toHaveLength(3);
 
     cleanups.forEach((cleanup) => cleanup());
   });

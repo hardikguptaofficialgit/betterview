@@ -136,9 +136,10 @@ export function buildChartConfig(
       backgroundColor: solids[idx % solids.length],
       borderColor: inks[idx % inks.length],
       borderWidth: 1,
-      borderRadius: 8,
-      borderSkipped: false,
-      maxBarThickness: 48,
+      borderRadius: 4,
+      borderSkipped: 'bottom',
+      maxBarThickness: 28,
+      grouped: true,
     }));
   } else if (spec.chartType === 'line' || spec.chartType === 'area') {
     chartDatasets = spec.datasets.map((ds, idx) => ({
@@ -195,6 +196,7 @@ export function buildChartConfig(
   if (spec.chartType === 'bar' || spec.chartType === 'line' || spec.chartType === 'area') {
     scales = {
       x: {
+        stacked: false,
         grid: {
           display: false,
         },
@@ -205,18 +207,19 @@ export function buildChartConfig(
           color: mutedColor,
           maxRotation: 0,
           minRotation: 0,
-          autoSkip: true,
-          maxTicksLimit: 8,
+          autoSkip: false,
           font: {
             family: fontStack,
-            size: 12,
+            size: 11,
           },
         },
       },
       y: {
+        stacked: false,
         beginAtZero: spec.chartType === 'bar',
         grid: {
-          color: borderColor,
+          display: true,
+          color: 'color-mix(in srgb, var(--iui-text, #000) 6%, transparent)',
           lineWidth: 1,
           drawTicks: false,
         },
@@ -225,10 +228,10 @@ export function buildChartConfig(
         },
         ticks: {
           color: mutedColor,
-          padding: 10,
+          padding: 8,
           font: {
             family: fontStack,
-            size: 12,
+            size: 11,
           },
         },
       },
@@ -283,7 +286,7 @@ export function buildChartConfig(
     };
   }
 
-  const showLegend = spec.datasets.length > 1 || isPieOrDoughnut;
+  const showLegend = spec.datasets.length > 1;
 
   const animationConfig = animated
     ? {
@@ -305,18 +308,19 @@ export function buildChartConfig(
       plugins: {
         legend: {
           display: showLegend,
-          position: 'bottom',
+          position: 'top',
+          align: 'start',
           labels: {
             usePointStyle: true,
             pointStyle: 'circle',
             color: mutedColor,
             font: {
               family: fontStack,
-              size: 12,
+              size: 11,
             },
-            padding: 18,
-            boxWidth: 8,
-            boxHeight: 8,
+            padding: 12,
+            boxWidth: 6,
+            boxHeight: 6,
           },
         },
         title: {
@@ -384,7 +388,7 @@ export function renderChart(spec: ChartSpec, ctx: RenderContext): HTMLElement {
   }
 
   const isPieOrDoughnut = spec.chartType === 'pie' || spec.chartType === 'doughnut';
-  const height = isPieOrDoughnut ? '280px' : '300px';
+  const height = isPieOrDoughnut ? '200px' : '220px';
 
   const ariaLabel = spec.title
     ? `${spec.chartType} chart: ${spec.title}`

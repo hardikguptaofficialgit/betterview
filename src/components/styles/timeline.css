@@ -1,15 +1,16 @@
 .iui-timeline-card {
-  border-radius: var(--iui-radius-card, 18px);
+  border-radius: var(--iui-radius-card, 12px);
 }
 
 .iui-timeline-list {
   display: flex;
   flex-direction: column;
+  padding: 4px 0;
 }
 
 .iui-timeline-row {
   display: flex;
-  gap: 14px;
+  gap: 12px;
 }
 
 .iui-timeline-track {
@@ -17,89 +18,76 @@
   flex-direction: column;
   align-items: center;
   flex-shrink: 0;
-  width: 16px;
+  width: 14px;
 }
 
+/* Small dot */
 .iui-timeline-dot {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
   border-radius: 9999px;
-  background-color: var(--c-solid, var(--c-ink, #F2DC8A));
-  border: 2px solid var(--iui-bg);
-  box-shadow: 0 0 0 1px var(--iui-border);
+  background-color: var(--iui-muted);
+  border: none;
+  box-shadow: none;
   flex-shrink: 0;
-  margin-top: 5px;
+  margin-top: 6px;
 }
 
 .iui-timeline-dot.has-icon {
-  width: 20px;
-  height: 20px;
-  display: flex;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
-  color: var(--iui-text);
+  color: var(--iui-muted);
   background: transparent;
   border: none;
-  box-shadow: none;
-  border-radius: 0;
+  margin-top: 1px;
 }
 
+.iui-timeline-dot.has-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Thin rail */
 .iui-timeline-line {
-  width: 1.5px;
-  background-color: var(--iui-border);
+  width: 1px;
+  background-color: color-mix(in srgb, var(--iui-text, #000) 12%, transparent);
   flex: 1;
-  min-height: 24px;
+  min-height: 18px;
   margin-top: 4px;
   margin-bottom: 4px;
-  transform-origin: top;
-  animation: iui-timeline-line-grow 400ms cubic-bezier(.2,.8,.2,1) forwards;
-}
-
-@keyframes iui-timeline-line-grow {
-  from {
-    transform: scaleY(0);
-  }
-  to {
-    transform: scaleY(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .iui-timeline-line {
-    animation: none !important;
-    transform: none !important;
-  }
 }
 
 .iui-timeline-content {
   flex: 1;
   min-width: 0;
-  padding-bottom: 18px;
+  padding-bottom: 14px;
 }
 
 .iui-timeline-content.is-last {
-  padding-bottom: 0;
+  padding-bottom: 2px;
 }
 
 .iui-timeline-time {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--iui-muted);
   font-weight: 500;
   margin-bottom: 2px;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .iui-timeline-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--iui-text);
   line-height: 1.4;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .iui-timeline-text {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--iui-muted);
-  line-height: 1.55;
+  line-height: 1.45;
 }

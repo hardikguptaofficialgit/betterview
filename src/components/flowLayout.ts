@@ -1,3 +1,317 @@
+import dagre from '@dagrejs/dagre';
+import type { FlowNode, FlowEdge, FlowGroup } from '../core/types';
+
+export interface DagreNode {
+  id: string;
+  label: string;
+  sub?: string;
+  icon?: string;
+  decision?: boolean;
+  isStart?: boolean;
+  isEnd?: boolean;
+  color?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface DagreEdge {
+  from: string;
+  to: string;
+  label?: string;
+  tone?: 'positive' | 'negative' | 'neutral';
+  points: { x: number; y: number }[];
+  labelX?: number;
+  labelY?: number;
+  labelWidth?: number;
+  labelHeight?: number;
+}
+
+export interface DagreLayoutResult {
+  width: number;
+  height: number;
+  rankdir: 'TB' | 'LR';
+  nodes: DagreNode[];
+  edges: DagreEdge[];
+}
+
+let measureCanvas: HTMLCanvasElement | null = null;
+
+export function measureTextWidth(text: string, font = '13px system-ui, sans-serif'): number {
+  if (typeof document !== 'undefined') {
+    try {
+      if (!measureCanvas) measureCanvas = document.createElement('canvas');
+      const ctx = measureCanvas.getContext('2d');
+      if (ctx) {
+        ctx.font = font;
+        return ctx.measureText(text).width;
+      }
+    } catch {}
+  }
+  const charWidth = font.includes('11px') ? 6.5 : 7.5;
+  return text.length * charWidth;
+}
+
+export function measureNodeText(label: string, sub?: string, hasIcon = false): { width: number; height: number } {
+  const maxAvailableTextWidth = hasIcon ? 138 : 158;
+  const words = (label || '').split(/\s+/);
+  let lineCount = 1;
+  let currentLine = '';
+  let maxLineWidth = 0;
+
+  for (const word of words) {
+    const testLine = currentLine ? currentLine + ' ' + word : word;
+    const testWidth = measureTextWidth(testLine, '13px system-ui, sans-serif');
+    if (testWidth > maxAvailableTextWidth && currentLine) {
+      lineCount++;
+      currentLine = word;
+      maxLineWidth = Math.max(maxLineWidth, measureTextWidth(word, '13px system-ui, sans-serif'));
+    } else {
+      currentLine = testLine;
+      maxLineWidth = Math.max(maxLineWidth, testWidth);
+    }
+  }
+
+  const textWidth = Math.min(maxAvailableTextWidth, Math.max(maxLineWidth, 32));
+  const nodeWidth = Math.min(180, Math.max(72, Math.ceil(textWidth + 20 + (hasIcon ? 20 : 0))));
+
+  let textHeight = lineCount * 18;
+  if (sub) {
+    textHeight += 16;
+  }
+  const nodeHeight = Math.max(34, textHeight + 12);
+  return { width: nodeWidth, height: nodeHeight };
+}
+
+export function measureEdgeLabel(label?: string): { width: number; height: number } {
+  if (!label) return { width: 0, height: 0 };
+  const textWidth = measureTextWidth(label, '11px system-ui, sans-serif');
+  return {
+    width: Math.max(24, Math.ceil(textWidth + 14)),
+    height: 18,
+  };
+}
+
+export function isSimpleChain(nodes: { id: string }[], edges: { from: string; to: string }[]): boolean {
+  if (nodes.length > 4) return false;
+  if (nodes.length <= 1) return true;
+  if (edges.length !== nodes.length - 1) return false;
+
+  const inDegree: Record<string, number> = {};
+  const outDegree: Record<string, number> = {};
+  for (const n of nodes) {
+    inDegree[n.id] = 0;
+    outDegree[n.id] = 0;
+  }
+  for (const e of edges) {
+    if (inDegree[e.to] !== undefined) inDegree[e.to]++;
+    if (outDegree[e.from] !== undefined) outDegree[e.from]++;
+  }
+
+  let startNodes = 0;
+  let endNodes = 0;
+  for (const n of nodes) {
+    const inD = inDegree[n.id];
+    const outD = outDegree[n.id];
+    if (inD === 0 && outD === 1) startNodes++;
+    else if (inD === 1 && outD === 0) endNodes++;
+    else if (inD === 1 && outD === 1) {}
+    else return false;
+  }
+
+  return startNodes === 1 && endNodes === 1;
+}
+
+export function dagreLayoutFlow(
+  nodes: FlowNode[],
+  edges: FlowEdge[],
+  groups?: FlowGroup[],
+): DagreLayoutResult {
+  if (!nodes || nodes.length === 0) {
+    return { width: 0, height: 0, rankdir: 'TB', nodes: [], edges: [] };
+  }
+
+  const rankdir = isSimpleChain(nodes, edges) ? 'LR' : 'TB';
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({
+    rankdir,
+    nodesep: 28,
+    ranksep: 44,
+    edgesep: 12,
+  });
+  g.setDefaultEdgeLabel(() => ({}));
+
+  const inDegree: Record<string, number> = {};
+  const outDegree: Record<string, number> = {};
+  for (const n of nodes) {
+    inDegree[n.id] = 0;
+    outDegree[n.id] = 0;
+  }
+  for (const e of edges) {
+    if (inDegree[e.to] !== undefined) inDegree[e.to]++;
+    if (outDegree[e.from] !== undefined) outDegree[e.from]++;
+  }
+
+  const groupMap = new Map((groups || []).map((grp) => [grp.id, grp]));
+
+  for (const node of nodes) {
+    const isStart = inDegree[node.id] === 0;
+    const isEnd = outDegree[node.id] === 0;
+    const isDecision =
+      !!node.decision ||
+      node.label.trim().endsWith('?') ||
+      (outDegree[node.id] >= 2 &&
+        edges.some((e) => e.from === node.id && /^(yes|no|true|false)$/i.test((e.label || '').trim())));
+
+    const { width, height } = measureNodeText(node.label, node.sub, !!node.icon);
+    const group = node.group ? groupMap.get(node.group) : undefined;
+    const color = node.color || group?.color;
+
+    g.setNode(node.id, {
+      id: node.id,
+      label: node.label,
+      sub: node.sub,
+      icon: node.icon,
+      decision: isDecision,
+      isStart,
+      isEnd,
+      color,
+      width,
+      height,
+    });
+  }
+
+  for (const edge of edges) {
+    const hasLabel = !!edge.label && edge.label.trim().length > 0;
+    const labelDim = hasLabel ? measureEdgeLabel(edge.label) : { width: 0, height: 0 };
+    const labelText = edge.label ? edge.label.trim() : '';
+
+    let tone = edge.tone || 'neutral';
+    if (!edge.tone && hasLabel) {
+      if (/^(yes|true)$/i.test(labelText)) tone = 'positive';
+      else if (/^(no|false)$/i.test(labelText)) tone = 'negative';
+    }
+
+    g.setEdge(edge.from, edge.to, {
+      from: edge.from,
+      to: edge.to,
+      label: labelText,
+      width: labelDim.width,
+      height: labelDim.height,
+      labelpos: 'c',
+      tone,
+    });
+  }
+
+  dagre.layout(g);
+
+  const layoutNodes: DagreNode[] = [];
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const id of g.nodes()) {
+    const n = g.node(id);
+    if (!n) continue;
+    layoutNodes.push({
+      id: n.id || id,
+      label: n.label,
+      sub: n.sub,
+      icon: n.icon,
+      decision: n.decision,
+      isStart: n.isStart,
+      isEnd: n.isEnd,
+      color: n.color,
+      x: n.x,
+      y: n.y,
+      width: n.width,
+      height: n.height,
+    });
+
+    minX = Math.min(minX, n.x - n.width / 2);
+    minY = Math.min(minY, n.y - n.height / 2);
+    maxX = Math.max(maxX, n.x + n.width / 2);
+    maxY = Math.max(maxY, n.y + n.height / 2);
+  }
+
+  const layoutEdges: DagreEdge[] = [];
+  for (const e of g.edges()) {
+    const edgeData = g.edge(e);
+    if (!edgeData) continue;
+    const points = (edgeData.points || []).map((p: any) => ({ x: p.x, y: p.y }));
+    for (const p of points) {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+    if (edgeData.x !== undefined && edgeData.y !== undefined && edgeData.label) {
+      const halfW = (edgeData.width || 0) / 2;
+      const halfH = (edgeData.height || 0) / 2;
+      minX = Math.min(minX, edgeData.x - halfW);
+      minY = Math.min(minY, edgeData.y - halfH);
+      maxX = Math.max(maxX, edgeData.x + halfW);
+      maxY = Math.max(maxY, edgeData.y + halfH);
+    }
+
+    layoutEdges.push({
+      from: e.v,
+      to: e.w,
+      label: edgeData.label,
+      tone: edgeData.tone,
+      points,
+      labelX: edgeData.x,
+      labelY: edgeData.y,
+      labelWidth: edgeData.width,
+      labelHeight: edgeData.height,
+    });
+  }
+
+  const padding = 12;
+  const offsetX = -minX + padding;
+  const offsetY = -minY + padding;
+  const totalWidth = Math.ceil(Math.max(120, maxX - minX + padding * 2));
+  const totalHeight = Math.ceil(Math.max(60, maxY - minY + padding * 2));
+
+  for (const node of layoutNodes) {
+    node.x += offsetX;
+    node.y += offsetY;
+  }
+  for (const edge of layoutEdges) {
+    for (const p of edge.points) {
+      p.x += offsetX;
+      p.y += offsetY;
+    }
+    if (edge.labelX !== undefined) edge.labelX += offsetX;
+    if (edge.labelY !== undefined) edge.labelY += offsetY;
+  }
+
+  return {
+    width: totalWidth,
+    height: totalHeight,
+    rankdir,
+    nodes: layoutNodes,
+    edges: layoutEdges,
+  };
+}
+
+export function renderSmoothDagrePath(points: { x: number; y: number }[]): string {
+  if (!points || points.length <= 1) return '';
+  if (points.length === 2) {
+    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+  }
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const xc = (points[i].x + points[i + 1].x) / 2;
+    const yc = (points[i].y + points[i + 1].y) / 2;
+    d += ` Q ${points[i].x} ${points[i].y}, ${xc} ${yc}`;
+  }
+  d += ` L ${points[points.length - 1].x} ${points[points.length - 1].y}`;
+  return d;
+}
+
 export interface LayoutResult {
   ranks: string[][];
   rankOf: Record<string, number>;

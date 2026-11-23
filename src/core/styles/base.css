@@ -1,16 +1,28 @@
 :host {
   all: initial;
   display: block;
-  margin: 16px 0;
+  margin: 12px 0;
+  scroll-margin-bottom: 140px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+:host(:last-child),
+:host(:last-of-type) {
+  margin-bottom: 24px;
 }
 
 .iui-root {
   box-sizing: border-box;
   font-family: var(--iui-font, Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-  font-size: var(--iui-fs, 13.5px);
-  line-height: var(--iui-lh, 1.55);
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--iui-text);
   background: transparent;
+  scroll-margin-bottom: 140px;
+  text-transform: none;
 }
 
 .iui-root *,
@@ -25,14 +37,14 @@
   --iui-bg: #FFFFFF;
   --iui-surface: #FAFAFA;
   --iui-surface-2: #F4F4F5;
-  --iui-border: rgba(0, 0, 0, 0.08);
+  --iui-border: rgba(0, 0, 0, 0.12);
   --iui-text: #0A0A0A;
   --iui-muted: #6B6B6B;
   --iui-subtle: #A3A3A3;
   --iui-accent: #0A0A0A;
   --iui-accent-bg: #F4F4F5;
-  --iui-radius-card: 18px;
-  --iui-radius-inner: 12px;
+  --iui-radius-card: 12px;
+  --iui-radius-inner: 8px;
   --iui-font: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --iui-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -41,14 +53,14 @@
   --iui-bg: #0f0f10;
   --iui-surface: #18181A;
   --iui-surface-2: #222225;
-  --iui-border: rgba(255, 255, 255, 0.08);
+  --iui-border: rgba(255, 255, 255, 0.12);
   --iui-text: #FAFAFA;
   --iui-muted: #A3A3A3;
   --iui-subtle: #71717A;
   --iui-accent: #FAFAFA;
   --iui-accent-bg: #27272A;
-  --iui-radius-card: 18px;
-  --iui-radius-inner: 12px;
+  --iui-radius-card: 12px;
+  --iui-radius-inner: 8px;
   --iui-font: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --iui-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -59,14 +71,14 @@
   --iui-bg: #FFFFFF;
   --iui-surface: #F0F4F9;
   --iui-surface-2: #E9EEF6;
-  --iui-border: #E1E3E1;
+  --iui-border: rgba(31, 31, 31, 0.12);
   --iui-text: #1F1F1F;
   --iui-muted: #444746;
   --iui-subtle: #747775;
   --iui-accent: #0B57D0;
   --iui-accent-bg: #D3E3FD;
-  --iui-radius-card: 16px;
-  --iui-radius-inner: 12px;
+  --iui-radius-card: 12px;
+  --iui-radius-inner: 8px;
   --iui-font: "Google Sans Text", "Google Sans", Roboto, Arial, sans-serif;
   --iui-mono: "Google Sans Mono", "Roboto Mono", ui-monospace, monospace;
 }
@@ -75,14 +87,14 @@
   --iui-bg: #131314;
   --iui-surface: #1E1F20;
   --iui-surface-2: #282A2C;
-  --iui-border: #3C4043;
+  --iui-border: rgba(227, 227, 227, 0.12);
   --iui-text: #E3E3E3;
   --iui-muted: #C4C7C5;
   --iui-subtle: #8E918F;
   --iui-accent: #A8C7FA;
   --iui-accent-bg: rgba(8,66,160,.4);
-  --iui-radius-card: 16px;
-  --iui-radius-inner: 12px;
+  --iui-radius-card: 12px;
+  --iui-radius-inner: 8px;
   --iui-font: "Google Sans Text", "Google Sans", Roboto, Arial, sans-serif;
   --iui-mono: "Google Sans Mono", "Roboto Mono", ui-monospace, monospace;
 }
@@ -93,7 +105,7 @@
   --iui-bg: #FFFFFF;
   --iui-surface: #FAFAFA;
   --iui-surface-2: #F2F2F2;
-  --iui-border: rgba(0,0,0,.08);
+  --iui-border: rgba(0, 0, 0, 0.12);
   --iui-text: #0D0D0D;
   --iui-muted: #6B6B6B;
   --iui-subtle: #9A9A9A;
@@ -109,7 +121,7 @@
   --iui-bg: #141414;
   --iui-surface: #1C1C1C;
   --iui-surface-2: #242424;
-  --iui-border: rgba(255,255,255,.08);
+  --iui-border: rgba(255, 255, 255, 0.12);
   --iui-text: #F5F5F5;
   --iui-muted: #A3A3A3;
   --iui-subtle: #737373;
@@ -537,34 +549,21 @@
 
 /* Card: base */
 .iui-card {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  padding: 0;
+  background: var(--iui-surface, transparent);
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 12%, transparent);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
   box-sizing: border-box;
-  box-shadow: none;
-  animation: iui-card-rise 240ms cubic-bezier(.2,.8,.2,1) forwards;
-}
-
-/* Gemini Cards: consistent 12px radius, hairline border */
-.iui-root[data-host="gemini"] .iui-card {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
-}
-
-/* Grok Cards: hairline borders, flat surfaces, tight density */
-.iui-root[data-host="grok"] .iui-card {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
+  box-shadow: none !important;
+  max-width: 100%;
+  max-height: 520px;
+  overflow-y: auto;
+  scroll-margin-bottom: 140px;
+  animation: iui-card-rise 200ms cubic-bezier(.2,.8,.2,1) forwards;
 }
 
 .iui-card.tinted {
@@ -576,7 +575,7 @@
 @keyframes iui-card-rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -589,7 +588,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   min-height: 28px;
   overflow: visible;
   position: relative;
@@ -598,56 +597,33 @@
 .iui-header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
   flex: 1;
 }
 
+/* Header icon: plain 16px glyph in muted text color, NO background square, NO container, NO pill */
 .iui-type-iconbox {
-  width: 20px;
-  height: 20px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  width: 16px !important;
+  height: 16px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--iui-text);
+  color: var(--iui-muted) !important;
 }
 
 .iui-type-iconbox svg {
   display: block;
-  width: 17px;
-  height: 17px;
+  width: 16px !important;
+  height: 16px !important;
+  stroke: var(--iui-muted) !important;
   stroke-width: 1.8;
-}
-
-.iui-root[data-theme="dark"] .iui-type-iconbox {
-  color: var(--iui-muted);
-}
-
-/* Gemini: bare icon */
-.iui-root[data-host="gemini"] .iui-type-iconbox {
-  width: 20px;
-  height: 20px;
-  background: transparent;
-  border: none;
-  color: var(--iui-text);
-}
-
-/* Grok: bare icon */
-.iui-root[data-host="grok"] .iui-type-iconbox {
-  width: 20px;
-  height: 20px;
-  background: transparent;
-  border: none;
-  color: var(--iui-text);
-}
-
-.iui-root[data-host="grok"] .iui-type-iconbox svg {
-  width: 18px;
-  height: 18px;
 }
 
 .iui-title-group {

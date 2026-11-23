@@ -1,36 +1,16 @@
 .iui-stepper-card {
-  border-radius: var(--iui-radius-card, 18px);
+  border-radius: var(--iui-radius-card, 12px);
 }
 
 .iui-stepper-list {
   display: flex;
   flex-direction: column;
+  padding: 4px 0;
 }
 
 .iui-stepper-step {
   display: flex;
   gap: 12px;
-  animation: iui-step-fade-up 220ms cubic-bezier(.2,.8,.2,1) both;
-  animation-delay: calc(var(--step-idx, 0) * 50ms);
-}
-
-@keyframes iui-step-fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .iui-stepper-step {
-    animation: none !important;
-    transform: none !important;
-    opacity: 1 !important;
-  }
 }
 
 .iui-stepper-track {
@@ -38,17 +18,18 @@
   flex-direction: column;
   align-items: center;
   flex-shrink: 0;
-  width: 28px;
+  width: 22px;
 }
 
+/* Small dot / step number */
 .iui-stepper-circle {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background-color: var(--c-bg);
-  border: 1px solid var(--c-line);
-  color: var(--c-ink);
-  font-size: 13px;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background-color: var(--iui-surface, #f4f4f5);
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 15%, transparent);
+  color: var(--iui-text);
+  font-size: 11px;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -57,9 +38,10 @@
   user-select: none;
 }
 
+/* Thin rail */
 .iui-stepper-line {
   width: 1px;
-  background-color: var(--iui-border);
+  background-color: color-mix(in srgb, var(--iui-text, #000) 12%, transparent);
   flex: 1;
   min-height: 16px;
   margin-top: 4px;
@@ -69,12 +51,12 @@
 .iui-stepper-content {
   flex: 1;
   min-width: 0;
-  padding-bottom: 16px;
-  padding-top: 4px;
+  padding-bottom: 14px;
+  padding-top: 1px;
 }
 
 .iui-stepper-content.is-last {
-  padding-bottom: 0;
+  padding-bottom: 2px;
 }
 
 .iui-stepper-btn {
@@ -89,8 +71,8 @@
 }
 
 .iui-stepper-btn:focus-visible {
-  outline: 2px solid var(--iui-text);
-  outline-offset: 2px;
+  outline: 2px solid var(--iui-accent);
+  outline-offset: 1px;
   border-radius: 4px;
 }
 
@@ -101,7 +83,7 @@
 }
 
 .iui-stepper-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--iui-text);
   line-height: 1.4;
@@ -121,9 +103,9 @@
 }
 
 .iui-stepper-detail {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--iui-muted);
-  line-height: 1.55;
+  line-height: 1.45;
   margin-top: 4px;
 }
 

@@ -5,7 +5,6 @@ import quizCss from './styles/quiz.css?inline';
 import flowCss from './styles/flow.css?inline';
 import mermaidCss from './styles/mermaid.css?inline';
 import calloutCss from './styles/callout.css?inline';
-import maxGraphCss from '@maxgraph/core/css/common.css?inline';
 import statsCss from './styles/stats.css?inline';
 import tabsCss from './styles/tabs.css?inline';
 import timelineCss from './styles/timeline.css?inline';
@@ -24,7 +23,6 @@ export const COMPONENT_STYLES: string[] = [
   stepperCss,
   quizCss,
   flowCss,
-  maxGraphCss,
   mermaidCss,
   calloutCss,
   statsCss,

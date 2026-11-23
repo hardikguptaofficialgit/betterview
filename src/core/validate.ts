@@ -122,6 +122,8 @@ function validateFlow(raw: Record<string, unknown>, warnings: string[]): { ok: t
       group = '';
     }
 
+    const decision = typeof rec.decision === 'boolean' ? rec.decision : undefined;
+
     nodeMap.set(id, {
       id,
       label,
@@ -129,6 +131,7 @@ function validateFlow(raw: Record<string, unknown>, warnings: string[]): { ok: t
       ...(icon ? { icon } : {}),
       ...(color ? { color } : {}),
       ...(group ? { group } : {}),
+      ...(decision !== undefined ? { decision } : {}),
     });
   }
 
@@ -172,7 +175,16 @@ function validateFlow(raw: Record<string, unknown>, warnings: string[]): { ok: t
     }
 
     const label = cleanString(rec.label);
-    edges.push({ from, to, ...(label ? { label } : {}) });
+    const rawTone = cleanString(rec.tone).toLowerCase();
+    const tone = (rawTone === 'positive' || rawTone === 'negative' || rawTone === 'neutral')
+      ? (rawTone as 'positive' | 'negative' | 'neutral')
+      : undefined;
+    edges.push({
+      from,
+      to,
+      ...(label ? { label } : {}),
+      ...(tone ? { tone } : {}),
+    });
 
     if (edges.length >= 120) {
       warnings.push('Edges capped at 120');

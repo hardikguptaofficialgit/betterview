@@ -1,31 +1,25 @@
 .iui-chart-card {
-  /* Keep header tooltips visible outside the chart card bounds. */
   overflow: visible;
-  gap: 10px;
+  gap: 8px;
 }
 
 .iui-chart-card > .iui-title {
   margin: 0;
-  font-size: 15px;
-  font-weight: 620;
-  letter-spacing: -0.018em;
-  line-height: 1.35;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .iui-chart-plot {
   width: 100%;
   min-width: 0;
-  border-radius: 12px;
-  padding: 8px 2px 2px;
+  border: none;
+  background: transparent;
+  padding: 4px 0 0;
+  box-sizing: border-box;
 }
 
 .iui-chart-plot canvas {
   display: block;
   max-width: 100%;
-}
-
-@media (max-width: 480px) {
-  .iui-chart-plot {
-    padding-inline: 0;
-  }
 }

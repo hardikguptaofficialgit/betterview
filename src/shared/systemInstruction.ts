@@ -132,23 +132,23 @@ function generateCompactCatalog(): string {
   ).join(' · ');
 }
 
-export const CURRENT_INSTRUCTION_VERSION = 11;
+export const CURRENT_INSTRUCTION_VERSION = 12;
 
-export const SETUP_INSTRUCTION = `[BetterView v11] Answer normally in text and markdown; text is the main answer. Add a fenced ui block with one valid JSON object only when useful (max 2); no visuals for short/casual replies, and never invent facts. Use double-quoted JSON.
+export const SETUP_INSTRUCTION = `[BetterView v12] Keep the normal text answer. Add at most 1-2 \`\`\`ui blocks where they genuinely help. No visuals for short/casual replies, and never invent facts. Never generate or insert images for diagrams, charts, flows, tables or quizzes. Always use a \`\`\`ui block instead. Use double-quoted JSON.
 
-STYLE: Minimal, compact, document-like; no outer container/background panel; Never nest cards or box items. Keep labels readable. Small flows stay top-down; large/branching flows may use pan/zoom or split into titled diagrams. Never invent image URLs. Use image only when requested and with a real HTTPS src plus descriptive alt text.
-Types: flow{nodes[id,label],edges[from,to,label?]} stepper{steps[title,detail?]} table{columns,rows} compare{items[label,tone,points]} quiz{questions[q,options,answer]} chart{chartType:bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo,labels,datasets} scatter/bubble data[{x,y,r?}]; geo data[{lon,lat,label?}]; heatmap numeric rows. mermaid{code} callout{tone,text} stats{items[label,value]} tabs{tabs[label,content]} timeline{events[title,text]} followups{suggestions} math{latex} code{language,code} checklist{items[text,checked?]} form{fields[id,label,type]} image{src,alt,caption?} dashboard{items:[{title?,visual:{...}}]} (2-8 non-dashboard visuals).`;
+STYLE: Minimal, compact, document-like; no outer container or background panel; Never nest cards. Keep labels readable. Keep flows to 12 nodes or fewer, use short node labels (6 words or fewer); large/branching flows may use pan/zoom. Use 3-5 quiz questions. Keep charts to 8 categories or fewer. Never invent image URLs. Use image only when requested with real HTTPS src and alt text.
+Types: flow{nodes[id,label],edges[from,to,label?]} stepper{steps[title,detail?]} table{columns,rows} compare{items[label,tone,points]} quiz{questions[q,options,answer]} chart{chartType:bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo,labels,datasets} scatter/bubble data[{x,y,r?}]; geo data[{lon,lat,label?}]; heatmap numeric rows. mermaid{code} callout{tone,text} stats{items[label,value]} tabs{tabs[label,content]} timeline{events[title,text]} followups{suggestions} math{latex} code{language,code} checklist{items[text,checked?]} form{fields[id,label,type]} image{src,alt,caption?} dashboard{items:[{title?,visual:{...}}]}.`;
 
-export const SYSTEM_INSTRUCTION = `[BetterView v11] Answer in plain text/Markdown; text stands alone. Add one fenced ui block with one valid JSON object only when helpful (max 2); short/casual replies get none. Never invent facts. Images only when requested, with a real HTTPS src and descriptive alt. Never invent image URLs.
+export const SYSTEM_INSTRUCTION = `[BetterView v12] Keep normal text answer. Add at most 1-2 \`\`\`ui blocks where genuinely helpful; short/casual replies get none. Never invent facts. Never generate or insert images for diagrams, charts, flows, tables or quizzes. Always use a \`\`\`ui block instead. Images only when requested, with real HTTPS src and descriptive alt. Never invent image URLs.
 
-VISUAL STYLE: Minimal, compact, document-like. Use no outer container. Never nest cards; favor concise labels, whitespace, and restrained colors. Small flows stay top-down; for large or branching graphs use the readable pan/zoom canvas or titled sections.
+VISUAL STYLE: Minimal, compact; no outer container. Never nest cards; concise labels and restrained colors. Flows to 12 nodes or fewer (<=6 words/label); for large or branching graphs use the readable pan/zoom canvas or titled sections. 3-5 quiz questions. Charts to 8 categories.
 
 Type catalog:
 ${generateCatalogSection()}
 
-Chart modes: bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo. Scatter/bubble points use {"x":number,"y":number,"r"?:number} (bubble needs r); heatmap rows are numeric. Geo datasets use {"lon":number,"lat":number,"label"?:string}. Dashboards contain 2-8 panels; do not nest dashboards. Images need a real HTTPS src and descriptive alt.`;
+Chart modes: bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo. Scatter/bubble points use {"x":number,"y":number,"r"?:number} (bubble needs r); heatmap rows are numeric. Geo datasets use {"lon":number,"lat":number,"label"?:string}. Dashboards contain 2-8 panels; do not nest dashboards.`;
 
-export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v11] Markdown; ui only when helpful; casual/short: no ui; max 2 blocks; never invent facts or image URLs. Images only when requested, with real HTTPS src and descriptive alt. STYLE: compact; no outer container. No nested cards; host colors, concise readable labels. Small flows top-down; large flows pan/zoom or use titled sections.
+export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v12] Keep the normal text answer. Add at most 1-2 \`\`\`ui blocks where they genuinely help; casual/short: no ui; max 2 blocks; never invent facts or image URLs. Never generate or insert images for diagrams, charts, flows, tables or quizzes. Always use a \`\`\`ui block instead. Images only when requested, with real HTTPS src and descriptive alt. STYLE: compact; no outer container. No nested cards; host colors, concise readable labels. Keep flows to 12 nodes or fewer (6 words or fewer labels); large flows pan/zoom or use titled sections. 3-5 quiz questions. Charts to 8 categories or fewer.
 Types: ${generateCompactCatalog()}
 Charts: bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo; scatter/bubble points {x,y,r?}, geo points {lon,lat,label?}, heatmap rows numeric. Dashboards: 2-8 panels; no nesting.`;
 

@@ -5,7 +5,9 @@ import {
   segmentIntersectsBox,
   BoxRect,
   EdgeRoute,
+  dagreLayoutFlow,
 } from '../src/components/flowLayout';
+import type { FlowNode, FlowEdge } from '../src/core/types';
 
 function assertNoIntersectionWithNonEndpoints(
   route: EdgeRoute,
@@ -369,5 +371,79 @@ describe('layoutFlow', () => {
     const res2 = layoutFlow(nodes, edges);
     expect(res.ranks).toEqual(res2.ranks);
     expect(res.rankOf).toEqual(res2.rankOf);
+  });
+
+  it('dagre layout has no node/node or label/node overlap for a 10-node graph with labelled edges', () => {
+    const nodes: FlowNode[] = [
+      { id: '1', label: 'Start step' },
+      { id: '2', label: 'Auth check' },
+      { id: '3', label: 'Fetch token' },
+      { id: '4', label: 'Validate input' },
+      { id: '5', label: 'Process queue' },
+      { id: '6', label: 'Notify user' },
+      { id: '7', label: 'Audit logger' },
+      { id: '8', label: 'Backup sync' },
+      { id: '9', label: 'Finalize tx' },
+      { id: '10', label: 'Complete flow' },
+    ];
+    const edges: FlowEdge[] = [
+      { from: '1', to: '2', label: 'Initialize' },
+      { from: '2', to: '3', label: 'Valid credentials' },
+      { from: '2', to: '4', label: 'Cached session' },
+      { from: '3', to: '5', label: 'Token granted' },
+      { from: '4', to: '5', label: 'Payload verified' },
+      { from: '5', to: '6', label: 'Immediate event' },
+      { from: '5', to: '7', label: 'Audit event' },
+      { from: '6', to: '8', label: 'Ack sync' },
+      { from: '7', to: '9', label: 'Record saved' },
+      { from: '8', to: '10', label: 'Finished' },
+      { from: '9', to: '10', label: 'Committed' },
+    ];
+
+    const result = dagreLayoutFlow(nodes, edges);
+    expect(result.nodes).toHaveLength(10);
+    expect(result.edges).toHaveLength(11);
+
+    // Verify no node/node overlap
+    for (let i = 0; i < result.nodes.length; i++) {
+      const a = result.nodes[i];
+      const boxA = {
+        left: a.x - a.width / 2,
+        right: a.x + a.width / 2,
+        top: a.y - a.height / 2,
+        bottom: a.y + a.height / 2,
+      };
+
+      for (let j = i + 1; j < result.nodes.length; j++) {
+        const b = result.nodes[j];
+        const boxB = {
+          left: b.x - b.width / 2,
+          right: b.x + b.width / 2,
+          top: b.y - b.height / 2,
+          bottom: b.y + b.height / 2,
+        };
+
+        const overlapX = Math.max(0, Math.min(boxA.right, boxB.right) - Math.max(boxA.left, boxB.left));
+        const overlapY = Math.max(0, Math.min(boxA.bottom, boxB.bottom) - Math.max(boxA.top, boxB.top));
+        expect(overlapX > 0 && overlapY > 0).toBe(false);
+      }
+
+      // Verify no label/node overlap
+      for (const edge of result.edges) {
+        if (!edge.label || edge.labelX === undefined || edge.labelY === undefined || !edge.labelWidth || !edge.labelHeight) {
+          continue;
+        }
+        const labelBox = {
+          left: edge.labelX - edge.labelWidth / 2,
+          right: edge.labelX + edge.labelWidth / 2,
+          top: edge.labelY - edge.labelHeight / 2,
+          bottom: edge.labelY + edge.labelHeight / 2,
+        };
+
+        const overlapX = Math.max(0, Math.min(boxA.right, labelBox.right) - Math.max(boxA.left, labelBox.left));
+        const overlapY = Math.max(0, Math.min(boxA.bottom, labelBox.bottom) - Math.max(boxA.top, labelBox.top));
+        expect(overlapX > 0 && overlapY > 0).toBe(false);
+      }
+    }
   });
 });

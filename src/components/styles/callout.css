@@ -1,17 +1,19 @@
 .iui-callout-card {
-  border-radius: var(--iui-radius-card, 18px);
+  border-radius: var(--iui-radius-card, 12px);
 }
 
+/* Thin left accent bar with a soft tint */
 .iui-callout-box {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 8px 12px;
   border-radius: 0 8px 8px 0;
-  border: 0;
-  border-left: 3px solid var(--c-line, var(--iui-border));
-  background-color: transparent;
-  color: var(--c-ink, var(--iui-text));
+  border: none;
+  border-left: 2px solid var(--c-ink, var(--iui-accent, #0b57d0));
+  background-color: color-mix(in srgb, var(--c-ink, var(--iui-accent, #0b57d0)) 8%, transparent);
+  color: var(--iui-text);
+  box-sizing: border-box;
 }
 
 .iui-callout-iconbox {
@@ -19,12 +21,18 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   background: transparent;
   border: none;
-  color: var(--c-ink, var(--iui-text));
+  color: var(--c-ink, var(--iui-accent, #0b57d0));
   margin-top: 1px;
+}
+
+.iui-callout-iconbox svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
 }
 
 .iui-callout-content {
@@ -33,15 +41,15 @@
 }
 
 .iui-callout-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--c-ink, var(--iui-text));
-  margin-bottom: 4px;
+  color: var(--iui-text);
+  margin-bottom: 2px;
   line-height: 1.4;
 }
 
 .iui-callout-text {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--iui-text);
-  line-height: 1.5;
+  line-height: 1.45;
 }

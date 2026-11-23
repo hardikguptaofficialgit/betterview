@@ -182,12 +182,12 @@ export function mountBlock(
 
     const header = h('div', { class: 'iui-card-header' });
 
-    // Left: compact Lucide icon + title group
+    // Left: plain 16px icon + title group
     const headerLeft = h('div', { class: 'iui-header-left' });
     const iconBox = h(
       'div',
-      { class: `iui-type-iconbox c-${iconColor}`, 'aria-hidden': 'true' },
-      typeIconEl(spec.type, 18),
+      { class: 'iui-type-iconbox', 'aria-hidden': 'true' },
+      typeIconEl(spec.type, 16),
     );
     headerLeft.appendChild(iconBox);
 

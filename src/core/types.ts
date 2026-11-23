@@ -87,12 +87,14 @@ export interface FlowNode {
   icon?: string;
   color?: Color;
   group?: string;
+  decision?: boolean;
 }
 
 export interface FlowEdge {
   from: string;
   to: string;
   label?: string;
+  tone?: 'positive' | 'negative' | 'neutral';
 }
 
 export interface FlowGroup {

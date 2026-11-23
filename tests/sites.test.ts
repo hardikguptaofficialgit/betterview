@@ -30,17 +30,17 @@ import { grokIconSvg } from '../src/core/brandIcons';
 describe('System Instruction', () => {
   it('SETUP_INSTRUCTION conforms to constraints', () => {
     expect(SETUP_INSTRUCTION.length).toBeLessThanOrEqual(1400);
-    expect(SETUP_INSTRUCTION.startsWith('[BetterView v11]')).toBe(true);
+    expect(SETUP_INSTRUCTION.startsWith('[BetterView v12]')).toBe(true);
     expect(SETUP_INSTRUCTION).toContain('ui');
     expect(SETUP_INSTRUCTION).toContain('no outer container');
     expect(SETUP_INSTRUCTION).toContain('background panel');
     expect(getCompactInstruction()).toBe(SETUP_INSTRUCTION);
   });
 
-  it('Instruction tests: version is 11, marker present, and visual guidance stays concise', () => {
-    expect(CURRENT_INSTRUCTION_VERSION).toBe(11);
+  it('Instruction tests: version is 12, marker present, and visual guidance stays concise', () => {
+    expect(CURRENT_INSTRUCTION_VERSION).toBe(12);
     const compact = getCompactInstruction();
-    expect(compact).toContain('[BetterView v11]');
+    expect(compact).toContain('[BetterView v12]');
     expect(compact).toContain('Never invent image URLs');
     expect(compact).toContain('Never nest cards');
     expect(compact).toContain('no outer container');
@@ -48,6 +48,11 @@ describe('System Instruction', () => {
     expect(compact).toContain('dashboard{items:');
     expect(compact).toContain('image{src,alt');
     expect(compact.length).toBeLessThanOrEqual(1400);
+    expect(compact).toContain('Never generate or insert images for diagrams, charts, flows, tables or quizzes. Always use a ```ui block instead.');
+    expect(compact).toContain('Keep the normal text answer. Add at most 1-2 ```ui blocks where they genuinely help.');
+    expect(compact).toContain('Keep flows to 12 nodes or fewer, use short node labels (6 words or fewer)');
+    expect(compact).toContain('Use 3-5 quiz questions.');
+    expect(compact).toContain('Keep charts to 8 categories or fewer.');
     expect(SYSTEM_INSTRUCTION).toContain('Never invent image URLs');
     expect(SYSTEM_INSTRUCTION).toContain('Never nest cards');
     expect(SYSTEM_INSTRUCTION).toContain('no outer container');
@@ -439,7 +444,7 @@ describe('fillGeminiMemoryDialog in fake overlay container', () => {
 
     await fillGeminiMemoryDialog(overlay, { waitTimeoutMs: 2000, pollIntervalMs: 50 });
 
-    expect(textarea.value.startsWith('[BetterView v11] ')).toBe(true);
+    expect(textarea.value.startsWith('[BetterView v12] ')).toBe(true);
     expect(textarea.value).toBe(getCompactInstruction());
     expect(submitClicked).toBe(true);
 
@@ -1086,7 +1091,7 @@ describe('runGrokSetup', () => {
 
     const result = await runGrokSetup();
     expect(result.status).toBe('added');
-    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value.startsWith('[BetterView v11]')).toBe(true);
+    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value.startsWith('[BetterView v12]')).toBe(true);
     document.body.replaceChildren();
   });
 
@@ -1104,7 +1109,7 @@ describe('runGrokSetup', () => {
     const result = await runGrokSetup();
     const textarea = region.querySelector('textarea')!;
     expect(result.status).toBe('added');
-    expect(textarea.value.startsWith('[BetterView v11]')).toBe(true);
+    expect(textarea.value.startsWith('[BetterView v12]')).toBe(true);
 
     region.remove();
   });
@@ -1115,14 +1120,14 @@ describe('runGrokSetup', () => {
     region.setAttribute('aria-label', 'Customize');
     region.innerHTML = `
       <button role="combobox">Custom</button>
-      <textarea aria-label="Instructions">[BetterView v11] current instruction</textarea>
+      <textarea aria-label="Instructions">[BetterView v12] current instruction</textarea>
       <button>Save</button>
     `;
     document.body.appendChild(region);
 
     const result = await runGrokSetup();
     expect(result.status).toBe('already');
-    expect(region.querySelector('textarea')?.value).toBe('[BetterView v11] current instruction');
+    expect(region.querySelector('textarea')?.value).toBe('[BetterView v12] current instruction');
 
     region.remove();
   });

@@ -25,9 +25,9 @@ describe('hostTheme', () => {
     document.documentElement.removeAttribute('data-theme');
     document.body.classList.remove('dark');
   });
-  it("selectHostTheme('gemini','light').radius-card === '16px' and font includes 'Google Sans'; ('grok','dark').bg === '#141414'; unknown host returns default theme", () => {
+  it("selectHostTheme('gemini','light').radius-card === '12px' and font includes 'Google Sans'; ('grok','dark').bg === '#141414'; unknown host returns default theme", () => {
     const geminiLight = selectHostTheme('gemini', 'light');
-    expect(geminiLight['radius-card']).toBe('16px');
+    expect(geminiLight['radius-card']).toBe('12px');
     expect(geminiLight.font).toContain('Google Sans');
 
     const grokDark = selectHostTheme('grok', 'dark');
@@ -110,7 +110,7 @@ describe('hostTheme', () => {
     expect(root.getAttribute('data-host')).toBe('gemini');
     expect(root.getAttribute('data-theme')).toBe('light');
     expect(root.style.getPropertyValue('--iui-bg')).toBe('#FFFFFF');
-    expect(root.style.getPropertyValue('--iui-radius-card')).toBe('16px');
+    expect(root.style.getPropertyValue('--iui-radius-card')).toBe('12px');
 
     // Call setTheme('dark') and verify tokens update
     handle.setTheme('dark');
@@ -123,7 +123,7 @@ describe('hostTheme', () => {
     container.remove();
   });
 
-  it('uses the current rendered type and callout tone for the card header on first and later renders', () => {
+  it('renders clean header row with plain 16px icon (no background container or tint) and updates title', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const target = document.createElement('div');
@@ -142,8 +142,14 @@ describe('hostTheme', () => {
     });
     const root = container.querySelector('.iui-host')?.shadowRoot?.querySelector('.iui-root');
 
-    expect(root?.querySelector('.iui-type-iconbox')?.classList.contains('c-amber')).toBe(true);
-    expect(root?.querySelector('.iui-type-iconbox')?.getAttribute('aria-hidden')).toBe('true');
+    const iconBox = root?.querySelector('.iui-type-iconbox');
+    expect(iconBox).not.toBeNull();
+    expect(iconBox?.getAttribute('aria-hidden')).toBe('true');
+    // Header icon has NO background container or color tint pill
+    expect(iconBox?.classList.contains('c-amber')).toBe(false);
+    expect(iconBox?.classList.contains('c-mint')).toBe(false);
+    expect(iconBox?.querySelector('svg')).not.toBeNull();
+    expect(iconBox?.querySelector('svg')?.getAttribute('width')).toBe('16');
     expect(root?.querySelector('.iui-title')?.textContent).toBe('Heads up');
     expect(root?.querySelector('.iui-title')?.getAttribute('role')).toBe('heading');
 
@@ -154,7 +160,8 @@ describe('hostTheme', () => {
       text: 'You can continue.',
     }));
 
-    expect(root?.querySelector('.iui-type-iconbox')?.classList.contains('c-mint')).toBe(true);
+    const updatedIconBox = root?.querySelector('.iui-type-iconbox');
+    expect(updatedIconBox?.classList.contains('c-mint')).toBe(false);
     expect(root?.querySelector('.iui-title')?.textContent).toBe('All clear');
 
     handle.destroy();

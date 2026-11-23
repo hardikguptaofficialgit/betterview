@@ -1,292 +1,237 @@
-import {
-  BaseGraph,
-  ConnectorShape,
-  EdgeMarker,
-  EdgeMarkerRegistry,
-  FitPlugin,
-  HierarchicalLayout,
-  InternalEvent,
-  Perimeter,
-  PerimeterRegistry,
-  PanningHandler,
-  RectangleShape,
-  SelectionCellsHandler,
-  SelectionHandler,
-  ShapeRegistry,
-  registerOrthogonalEdgeStyle,
-} from '@maxgraph/core';
-import type { CellStyle } from '@maxgraph/core';
 import { FlowSpec } from '../core/types';
 import { RenderContext } from './index';
-import { h } from '../core/dom';
-import { buildFlowGraphModel } from './flowGraph';
-
-const LIGHT_STROKES: Record<string, string> = {
-  blue: '#8ABFEA', sky: '#8ABFEA', green: '#87C9A5', teal: '#79C5BA', mint: '#87C9A5',
-  amber: '#D8C16D', butter: '#D8C16D', orange: '#E7A87E', peach: '#E7A87E',
-  red: '#E49AAA', pink: '#E49AAA', rose: '#E49AAA', purple: '#A99AE5', lavender: '#A99AE5',
-  gray: '#B2B2AE', stone: '#B2B2AE',
-};
-
-const DARK_STROKES: Record<string, string> = {
-  blue: '#6FA8D6', sky: '#6FA8D6', green: '#6DBF95', teal: '#63B7AC', mint: '#6DBF95',
-  amber: '#CDB45A', butter: '#CDB45A', orange: '#D9946C', peach: '#D9946C',
-  red: '#D47F95', pink: '#D47F95', rose: '#D47F95', purple: '#9585D6', lavender: '#9585D6',
-  gray: '#8F8F8B', stone: '#8F8F8B',
-};
-
-let graphStylesRegistered = false;
-
-function registerGraphStyles(): void {
-  if (graphStylesRegistered) return;
-  if (!ShapeRegistry.get('rectangle')) ShapeRegistry.add('rectangle', RectangleShape);
-  if (!ShapeRegistry.get('connector')) ShapeRegistry.add('connector', ConnectorShape);
-  if (!PerimeterRegistry.get('rectanglePerimeter')) PerimeterRegistry.add('rectanglePerimeter', Perimeter.RectanglePerimeter);
-  if (!EdgeMarkerRegistry.get('classic')) EdgeMarkerRegistry.add('classic', EdgeMarker.createArrow(2));
-  registerOrthogonalEdgeStyle();
-  graphStylesRegistered = true;
-}
-
-function controlButton(label: string, ariaLabel: string, onClick: () => void): HTMLButtonElement {
-  return h('button', {
-    class: 'flow-control-btn',
-    type: 'button',
-    'aria-label': ariaLabel,
-    title: ariaLabel,
-    onClick,
-  }, label) as HTMLButtonElement;
-}
+import { clear, h } from '../core/dom';
+import { iconEl } from '../core/icons';
+import { dagreLayoutFlow, renderSmoothDagrePath } from './flowLayout';
 
 export function renderFlow(spec: FlowSpec, ctx: RenderContext): HTMLElement {
   const card = h('div', { class: 'iui-card flow-card' });
-  if (spec.title) card.appendChild(h('div', { class: 'iui-title flow-title' }, spec.title));
-
-  const model = buildFlowGraphModel(spec);
-  const diagram = h('div', { class: 'flow-diagram', role: 'region' });
-  const srList = h('ol', { class: 'iui-sr-only' });
-  const nodeLabels = new Map(model.nodes.map((node) => [node.id, node.accessibleLabel]));
-  for (const edge of model.edges) {
-    const source = nodeLabels.get(edge.from) || edge.from;
-    const target = nodeLabels.get(edge.to) || edge.to;
-    srList.appendChild(h('li', {}, `${source} → ${target}${edge.label ? ` (${edge.label})` : ''}`));
+  if (spec.title) {
+    card.appendChild(h('div', { class: 'iui-title flow-title' }, spec.title));
   }
-  if (model.edges.length === 0) {
-    for (const node of model.nodes) srList.appendChild(h('li', {}, node.accessibleLabel));
+
+  const nodes = spec.nodes || [];
+  const edges = spec.edges || [];
+  const groups = spec.groups || [];
+
+  const layout = dagreLayoutFlow(nodes, edges, groups);
+
+  const diagram = h('div', { class: 'flow-diagram', role: 'region' });
+
+  // Accessible screen reader list
+  const srList = h('ol', { class: 'iui-sr-only' });
+  const nodeNameMap = new Map(nodes.map((n) => [n.id, n.label]));
+  for (const edge of edges) {
+    const s = nodeNameMap.get(edge.from) || edge.from;
+    const t = nodeNameMap.get(edge.to) || edge.to;
+    srList.appendChild(h('li', {}, `${s} \u2192 ${t}${edge.label ? ` (${edge.label})` : ''}`));
+  }
+  if (edges.length === 0) {
+    for (const node of nodes) srList.appendChild(h('li', {}, node.label));
   }
   diagram.appendChild(srList);
 
+  // Zoom controls: small, top-right, hidden until hover
   const controls = h('div', { class: 'flow-controls', role: 'group', 'aria-label': 'Flow zoom controls' });
+  const zoomOutBtn = h('button', {
+    class: 'flow-control-btn',
+    type: 'button',
+    'aria-label': 'Zoom out',
+    title: 'Zoom out',
+  }, '\u2212') as HTMLButtonElement;
+
   const zoomValue = h('span', { class: 'flow-zoom-value', 'aria-live': 'polite' }, '100%');
+
+  const zoomInBtn = h('button', {
+    class: 'flow-control-btn',
+    type: 'button',
+    'aria-label': 'Zoom in',
+    title: 'Zoom in',
+  }, '+') as HTMLButtonElement;
+
+  const resetBtn = h('button', {
+    class: 'flow-control-btn',
+    type: 'button',
+    'aria-label': 'Reset zoom',
+    title: 'Reset zoom',
+  }, 'Reset') as HTMLButtonElement;
+
+  controls.append(zoomOutBtn, zoomValue, zoomInBtn, resetBtn);
+  diagram.appendChild(controls);
+
+  // Viewport & Inner canvas
   const viewport = h('div', {
     class: 'flow-viewport',
     role: 'region',
-    'aria-label': `Interactive flow canvas: ${spec.title || 'Untitled'}, ${model.nodes.length} nodes`,
-  });
-  const canvas = h('div', {
-    class: 'flow-graph-canvas',
-    role: 'application',
-    tabindex: '0',
-    'aria-label': `Diagram with ${model.nodes.length} movable nodes and ${model.edges.length} connected edges`,
-  });
-  canvas.dataset.flowNodeCount = String(model.nodes.length);
-  canvas.dataset.flowEdgeCount = String(model.edges.length);
-  viewport.appendChild(canvas);
-
-  const instructions = h('div', { class: 'flow-instructions' }, 'Drag a block to move it · drag empty space to pan · use the controls to zoom');
-  instructions.id = `flow-help-${Math.random().toString(36).slice(2, 9)}`;
-  canvas.setAttribute('aria-describedby', instructions.id);
-
-  registerGraphStyles();
-  InternalEvent.disableContextMenu(canvas);
-  const graph = new BaseGraph({
-    container: canvas,
-    plugins: [PanningHandler, SelectionHandler, SelectionCellsHandler, FitPlugin],
+    'aria-label': `Flow diagram: ${spec.title || 'Untitled'}, ${nodes.length} nodes`,
   });
 
-  const isDark = ctx.theme === 'dark';
-  const nodeFill = isDark ? '#1C1C1E' : '#FFFFFF';
-  const textColor = isDark ? '#F5F5F5' : '#1F1F1F';
-  const edgeTextColor = isDark ? '#DDDDDF' : '#3F3F46';
-  const neutralEdge = isDark ? '#85858A' : '#8A8A8F';
-  const edgeLabelFill = nodeFill;
-  const groupStyles = new Map((spec.groups || []).map((group) => [group.id, group]));
-  const cellById = new Map<string, ReturnType<BaseGraph['insertVertex']>>();
-  const parent = graph.getDefaultParent();
+  const flowInner = h('div', {
+    class: 'flow-inner',
+  });
+  flowInner.style.width = `${layout.width}px`;
+  flowInner.style.height = `${layout.height}px`;
+  flowInner.style.position = 'relative';
 
-  graph.setTooltips(false);
-  graph.getView().setAllowEval(false);
-  graph.container.style.backgroundColor = nodeFill;
-  graph.container.style.touchAction = 'none';
+  const uid = Math.random().toString(36).slice(2, 8);
+  const arrowMarkerId = `flow-arrow-${uid}`;
 
-  const defaultVertexStyle = graph.getStylesheet().getDefaultVertexStyle();
-  defaultVertexStyle.perimeter = 'rectanglePerimeter';
-  const defaultEdgeStyle = graph.getStylesheet().getDefaultEdgeStyle();
-  defaultEdgeStyle.edgeStyle = 'orthogonalEdgeStyle';
-  defaultEdgeStyle.endArrow = 'classic';
+  // SVG overlay for edges
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const svgOverlay = document.createElementNS(svgNs, 'svg');
+  svgOverlay.setAttribute('class', 'flow-svg-overlay');
+  svgOverlay.setAttribute('width', String(layout.width));
+  svgOverlay.setAttribute('height', String(layout.height));
+  svgOverlay.setAttribute('viewBox', `0 0 ${layout.width} ${layout.height}`);
+  svgOverlay.style.position = 'absolute';
+  svgOverlay.style.inset = '0';
+  svgOverlay.style.width = `${layout.width}px`;
+  svgOverlay.style.height = `${layout.height}px`;
+  svgOverlay.style.pointerEvents = 'none';
+  svgOverlay.style.overflow = 'visible';
 
-  graph.batchUpdate(() => {
-    for (const node of model.nodes) {
-      const group = node.groupId ? groupStyles.get(node.groupId) : undefined;
-      const color = LIGHT_STROKES[node.color] ? node.color : group?.color || 'stone';
-      const stroke = (isDark ? DARK_STROKES : LIGHT_STROKES)[color] || neutralEdge;
-      const style: CellStyle = {
-        rounded: true,
-        arcSize: 12,
-        fillColor: nodeFill,
-        strokeColor: node.decision ? (isDark ? DARK_STROKES.amber : LIGHT_STROKES.amber) : stroke,
-        strokeWidth: node.decision ? 1.6 : 1.35,
-        dashed: node.decision,
-        fontColor: textColor,
-        fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, sans-serif',
-        fontSize: 13,
-        align: 'center',
-        verticalAlign: 'middle',
-        whiteSpace: 'wrap',
-        overflow: 'hidden',
-        spacing: 10,
-      };
-      const cell = graph.insertVertex({
-        parent,
-        id: node.id,
-        value: node.label,
-        position: [0, 0],
-        size: [232, node.sub ? 78 : 58],
-        style,
-      });
-      cellById.set(node.id, cell);
+  // Arrow marker def
+  const defs = document.createElementNS(svgNs, 'defs');
+  const marker = document.createElementNS(svgNs, 'marker');
+  marker.setAttribute('id', arrowMarkerId);
+  marker.setAttribute('viewBox', '0 0 6 6');
+  marker.setAttribute('refX', '5');
+  marker.setAttribute('refY', '3');
+  marker.setAttribute('markerWidth', '4.5');
+  marker.setAttribute('markerHeight', '4.5');
+  marker.setAttribute('orient', 'auto-start-reverse');
+
+  const markerPath = document.createElementNS(svgNs, 'path');
+  markerPath.setAttribute('d', 'M 0 0.75 L 5 3 L 0 5.25 z');
+  markerPath.setAttribute('fill', 'currentColor');
+  marker.appendChild(markerPath);
+  defs.appendChild(marker);
+  svgOverlay.appendChild(defs);
+
+  // Render edges
+  for (const edge of layout.edges) {
+    const pathD = renderSmoothDagrePath(edge.points);
+    if (!pathD) continue;
+
+    const path = document.createElementNS(svgNs, 'path');
+    path.setAttribute('d', pathD);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '1.25');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('marker-end', `url(#${arrowMarkerId})`);
+
+    const edgeToneClass = edge.tone === 'positive'
+      ? 'is-positive'
+      : edge.tone === 'negative'
+        ? 'is-negative'
+        : 'is-neutral';
+    path.setAttribute('class', `flow-edge-path ${edgeToneClass}`);
+
+    svgOverlay.appendChild(path);
+  }
+  flowInner.appendChild(svgOverlay);
+
+  // Render edge labels (tiny 11px pills with host background color masking line under them)
+  for (const edge of layout.edges) {
+    if (!edge.label || edge.labelX === undefined || edge.labelY === undefined) continue;
+
+    const pill = h('span', {
+      class: `flow-edge-label ${edge.tone ? `tone-${edge.tone}` : ''}`,
+      style: `left: ${edge.labelX}px; top: ${edge.labelY}px;`,
+    }, edge.label);
+    flowInner.appendChild(pill);
+  }
+
+  // Render nodes: compact rounded rects with 8px radius (pill for start/end), padding 6px by 10px, 13px text
+  for (const node of layout.nodes) {
+    const isPill = node.isStart || node.isEnd;
+    const isDecision = node.decision;
+
+    const nodeClasses = ['flow-node'];
+    if (isPill) nodeClasses.push('is-pill');
+    if (isDecision) nodeClasses.push('is-decision');
+    if (node.color) nodeClasses.push(`c-${node.color}`);
+
+    const nodeEl = h('div', {
+      class: nodeClasses.join(' '),
+      style: `left: ${node.x - node.width / 2}px; top: ${node.y - node.height / 2}px; width: ${node.width}px; height: ${node.height}px;`,
+    });
+
+    if (node.icon) {
+      const iconBox = h('span', { class: 'flow-node-iconbox' }, iconEl(node.icon, 14));
+      nodeEl.appendChild(iconBox);
     }
 
-    for (const edge of model.edges) {
-      const source = cellById.get(edge.from);
-      const target = cellById.get(edge.to);
-      if (!source || !target) continue;
-      const toneColor = edge.tone === 'positive'
-        ? (isDark ? '#79C89A' : '#337D55')
-        : edge.tone === 'negative'
-          ? (isDark ? '#E39AA7' : '#A63A4E')
-          : neutralEdge;
-      graph.insertEdge({
-        parent,
-        source,
-        target,
-        value: edge.label || '',
-        style: {
-          edgeStyle: 'orthogonalEdgeStyle',
-          rounded: true,
-          strokeColor: toneColor,
-          strokeWidth: 1.6,
-          startArrow: 'none',
-          endArrow: 'classic',
-          fontColor: edge.tone === 'neutral' ? edgeTextColor : toneColor,
-          fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, sans-serif',
-          fontSize: 11,
-          labelBackgroundColor: edgeLabelFill,
-          align: 'center',
-          verticalAlign: 'middle',
-          whiteSpace: 'wrap',
-        },
-      });
+    const textCol = h('div', { class: 'flow-node-text' });
+    const labelEl = h('span', { class: 'flow-node-label' }, node.label);
+    textCol.appendChild(labelEl);
+
+    if (node.sub) {
+      const subEl = h('span', { class: 'flow-node-sub' }, node.sub);
+      textCol.appendChild(subEl);
     }
-  });
 
-  const layout = new HierarchicalLayout(graph, 'north');
-  layout.intraCellSpacing = 36;
-  layout.interRankCellSpacing = 52;
-  layout.interHierarchySpacing = 48;
-  layout.parallelEdgeSpacing = 18;
-  layout.execute(parent);
-  graph.refresh();
-
-  const panning = graph.getPlugin<PanningHandler>(PanningHandler.pluginId);
-  if (panning) {
-    panning.setPanningEnabled(true);
-    panning.useLeftButtonForPanning = true;
-    panning.ignoreCell = false;
-  }
-  const selection = graph.getPlugin<SelectionHandler>(SelectionHandler.pluginId);
-  if (selection) {
-    selection.moveEnabled = true;
-    selection.cloneEnabled = false;
-    selection.rotationEnabled = false;
+    nodeEl.appendChild(textCol);
+    flowInner.appendChild(nodeEl);
   }
 
-  const fitPlugin = graph.getPlugin<FitPlugin>(FitPlugin.pluginId);
-  if (fitPlugin) {
-    fitPlugin.minFitScale = 0.84;
-    fitPlugin.maxFitScale = 1.1;
-  }
-
-  const updateZoomLabel = () => {
-    zoomValue.textContent = `${Math.round(graph.getView().scale * 100)}%`;
-  };
-  const zoomTo = (requestedScale: number) => {
-    const view = graph.getView();
-    const previousScale = view.scale || 1;
-    const nextScale = Math.max(0.6, Math.min(1.8, requestedScale));
-    const centerX = canvas.clientWidth / 2;
-    const centerY = canvas.clientHeight / 2;
-    const translate = view.translate;
-    view.scaleAndTranslate(
-      nextScale,
-      translate.x + centerX / nextScale - centerX / previousScale,
-      translate.y + centerY / nextScale - centerY / previousScale,
-    );
-    updateZoomLabel();
-  };
-
-  const zoomOut = controlButton('−', 'Zoom out', () => zoomTo(graph.getView().scale - 0.1));
-  const zoomIn = controlButton('+', 'Zoom in', () => zoomTo(graph.getView().scale + 0.1));
-  const reset = controlButton('Reset', 'Reset flow zoom', () => {
-    graph.getView().scaleAndTranslate(1, 24, 24);
-    updateZoomLabel();
-  });
-  const fit = controlButton('Fit', 'Fit flow in canvas', () => {
-    if (!fitPlugin) return;
-    fitPlugin.minFitScale = 0.6;
-    fitPlugin.maxFitScale = 1.15;
-    fitPlugin.fitCenter({ margin: 24 });
-    fitPlugin.minFitScale = 0.84;
-    fitPlugin.maxFitScale = 1.1;
-    updateZoomLabel();
-  });
-  controls.append(zoomOut, zoomValue, zoomIn, reset, fit);
-  diagram.append(controls, viewport, instructions);
+  viewport.appendChild(flowInner);
+  diagram.appendChild(viewport);
   card.appendChild(diagram);
 
-  let initialFitPending = true;
-  let disposed = false;
-  const fitInitialView = () => {
-    if (disposed || !canvas.isConnected || !initialFitPending || canvas.clientWidth === 0 || canvas.clientHeight === 0) return;
-    if (fitPlugin) fitPlugin.fitCenter({ margin: 24 });
-    initialFitPending = false;
-    updateZoomLabel();
+  // Zoom and fit logic: fit to width by default (scale down, never past 100%)
+  let userZoom = 1;
+  let baseScale = 1;
+
+  function updateLayout(): void {
+    const containerWidth = viewport.clientWidth || card.clientWidth || layout.width;
+    if (containerWidth > 0 && layout.width > 0) {
+      baseScale = Math.min(1, containerWidth / layout.width);
+    } else {
+      baseScale = 1;
+    }
+
+    const effectiveScale = baseScale * userZoom;
+    flowInner.style.transform = `scale(${effectiveScale})`;
+    flowInner.style.transformOrigin = 'top left';
+
+    const scaledHeight = Math.ceil(layout.height * effectiveScale);
+    viewport.style.height = `${scaledHeight}px`;
+    viewport.style.overflow = userZoom > 1 ? 'auto' : 'hidden';
+
+    zoomValue.textContent = `${Math.round(userZoom * 100)}%`;
+  }
+
+  zoomInBtn.onclick = () => {
+    userZoom = Math.min(2.5, +(userZoom + 0.15).toFixed(2));
+    updateLayout();
   };
-  const refreshGraph = () => {
-    if (disposed || !canvas.isConnected) return;
-    graph.refresh();
-    fitInitialView();
+
+  zoomOutBtn.onclick = () => {
+    userZoom = Math.max(0.5, +(userZoom - 0.15).toFixed(2));
+    updateLayout();
+  };
+
+  resetBtn.onclick = () => {
+    userZoom = 1;
+    updateLayout();
   };
 
   const resizeObserver = typeof ResizeObserver !== 'undefined'
-    ? new ResizeObserver(() => {
-        refreshGraph();
-      })
+    ? new ResizeObserver(() => updateLayout())
     : null;
   resizeObserver?.observe(viewport);
+
   ctx.onCleanup(() => {
-    disposed = true;
     resizeObserver?.disconnect();
-    graph.destroy();
   });
 
   requestAnimationFrame(() => {
-    requestAnimationFrame(refreshGraph);
+    updateLayout();
+    requestAnimationFrame(() => updateLayout());
   });
-  if (typeof document !== 'undefined' && 'fonts' in document) {
-    void (document as any).fonts?.ready?.then(() => {
-      refreshGraph();
-    });
-  }
 
   return card;
 }
