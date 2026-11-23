@@ -1,6 +1,7 @@
 :root,
 [data-theme="light"] {
-  --bg: transparent;
+  color-scheme: light;
+  --bg: #FFFFFF;
   --surface: #FFFFFF;
   --surface-hover: #F4F4F5;
   --surface-active: #E4E4E7;
@@ -11,11 +12,12 @@
   --on-accent: #FFFFFF;
   --color-error: #DC2626;
   --focus-ring: 0 0 0 2px #FFFFFF, 0 0 0 4px #18181B;
-  --shadow-shell: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-shell: none;
 }
 
 [data-theme="dark"] {
-  --bg: transparent;
+  color-scheme: dark;
+  --bg: #121214;
   --surface: #121214;
   --surface-hover: #1E1E22;
   --surface-active: #27272A;
@@ -26,7 +28,25 @@
   --on-accent: #09090B;
   --color-error: #EF4444;
   --focus-ring: 0 0 0 2px #121214, 0 0 0 4px #FAFAFA;
-  --shadow-shell: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --shadow-shell: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121214;
+    --surface: #121214;
+    --surface-hover: #1E1E22;
+    --surface-active: #27272A;
+    --border-hairline: rgba(250, 250, 250, 0.10);
+    --text: #FAFAFA;
+    --muted: #A1A1AA;
+    --accent: #FAFAFA;
+    --on-accent: #09090B;
+    --color-error: #EF4444;
+    --focus-ring: 0 0 0 2px #121214, 0 0 0 4px #FAFAFA;
+    --shadow-shell: none;
+  }
 }
 
 *,
@@ -42,15 +62,26 @@ body {
   width: 320px;
   min-width: 320px;
   max-width: 320px;
+  height: auto;
   margin: 0;
   padding: 0;
-  background: transparent;
+  background-color: var(--surface);
   color: var(--text);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
   line-height: 1.4;
   user-select: none;
   overflow: hidden;
+}
+
+html[data-theme="light"],
+html[data-theme="light"] body {
+  background-color: var(--surface);
+}
+
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+  background-color: var(--surface);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -60,12 +91,14 @@ body {
   }
 }
 
-/* Inner shell with 8px margin, 16px radius, hairline border, shadow */
+/* Shell fills popup window */
 .bv-shell {
-  margin: 8px;
-  border-radius: 16px;
-  border: 1px solid var(--border-hairline);
-  box-shadow: var(--shadow-shell);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
   overflow: hidden;
   background-color: var(--surface);
   display: flex;
