@@ -2,7 +2,7 @@
 
 BetterView AI is a Chrome extension that renders JSON visual blocks inside Gemini (`gemini.google.com`), Grok (`grok.com`), ChatGPT (`chatgpt.com`), and Claude (`claude.ai`). Components are isolated in a Shadow DOM so their styling does not leak into the host chat.
 
-BetterView AI supports 18 visual types:
+BetterView AI supports 19 visual types:
 1. **Flow** (`flow`): Interactive process and architecture diagrams with movable nodes, attached orthogonal connectors, groups, and decision branches. Drag a node and its edges follow; pan the canvas or use zoom and fit controls for larger flows.
 2. **Stepper** (`stepper`): Sequential steps and tutorials.
 3. **Table** (`table`): Sortable data tables with numeric and unit-aware sorting.
@@ -21,6 +21,7 @@ BetterView AI supports 18 visual types:
 16. **Form** (`form`): Structured text, choice, and range inputs.
 17. **Image** (`image`): An illustration or infographic from a real HTTPS URL, with required descriptive alt text.
 18. **Dashboard** (`dashboard`): A compact grid of 2–8 supported visual panels; nested dashboards are not allowed.
+19. **Tree** (`tree`): Expandable hierarchy and mind-map views with search, node details, and diagram or outline layouts.
 
 ---
 
@@ -100,7 +101,7 @@ To view the local light/dark rendering examples and Gemini/Grok host simulations
 npm run fixture
 ```
 
-Open `fixture-dist/fixture.html` directly in your browser. The fixture demonstrates the visual examples, including a URL-shortener write-path graph for moving nodes and checking attached edges, plus simulated Gemini/Grok DOMs for block detection and streaming. Automated tests cover the newer chart modes, image/dashboard components, and ChatGPT/Claude adapters. The offline fixture does not fetch external images; image visuals require an HTTPS source and may be blocked by the host page's policy.
+Open `fixture-dist/fixture.html` directly in your browser. The fixture demonstrates the visual examples in light and dark themes, including Tree diagram/outline interactions, expanded timeline filtering, a URL-shortener write-path graph for moving nodes and checking attached edges, and simulated Gemini/Grok DOMs for block detection and streaming. Automated tests cover chart modes, table view switching, image/dashboard components, Tree schema/rendering, and ChatGPT/Claude adapters. The offline fixture does not fetch external images; image visuals require an HTTPS source and may be blocked by the host page's policy.
 
 ---
 
@@ -386,6 +387,34 @@ Only credential-free HTTPS URLs are accepted, and descriptive `alt` text is requ
 }
 ```
 Dashboards support 2–8 panels. Each panel has a `visual` using another supported visual type; nested dashboards and generic fallback panels are not allowed.
+
+### 19. Tree (`tree`)
+```json
+{
+  "type": "tree",
+  "title": "Product architecture",
+  "layout": "vertical",
+  "root": {
+    "id": "product",
+    "label": "Product",
+    "note": "Main application",
+    "children": [
+      {
+        "id": "client",
+        "label": "Client",
+        "badge": "Web",
+        "color": "blue",
+        "collapsed": false,
+        "children": [
+          { "id": "ui", "label": "User interface", "note": "Accessible components" }
+        ]
+      },
+      { "id": "api", "label": "API", "color": "green", "collapsed": true }
+    ]
+  }
+}
+```
+`layout` accepts `vertical`, `horizontal`, or `outline` (default: vertical). Each node needs a non-empty `label` and may include `id`, `note` (up to 500 characters), `badge` (up to 60 characters), `color`, `collapsed`, and recursive `children`. The validator caps trees at 6 levels and 80 nodes; excess descendants are omitted with a warning. The rendered tree includes node search, expand/collapse controls, a Diagram/Outline view switch, and selectable node details. In Diagram view, use the arrow keys to move between visible nodes, Right/Left to expand or collapse branches and enter/leave a branch, Home/End to jump to the first or last visible node, and Enter/Space to select a node.
 
 ---
 

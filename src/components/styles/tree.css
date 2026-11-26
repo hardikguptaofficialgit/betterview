@@ -1,0 +1,552 @@
+/* ==============================
+   Mind Map / Hierarchy Tree
+   ============================== */
+
+.iui-tree-card {
+  overflow: visible;
+}
+
+/* Header */
+.iui-tree-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.iui-tree-title {
+  margin: 0;
+}
+
+.iui-tree-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Search input */
+.iui-tree-search {
+  flex: 1 1 140px;
+  min-width: 100px;
+  max-width: 220px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 15%, transparent);
+  border-radius: 999px;
+  background: var(--iui-bg, #fff);
+  color: var(--iui-text, #0a0a0a);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.iui-tree-search:focus {
+  border-color: var(--iui-accent, #0b57d0);
+}
+
+.iui-tree-search::placeholder {
+  color: var(--iui-muted, #71717a);
+}
+
+/* Expand / Collapse buttons */
+.iui-tree-ctrl-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 15%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--iui-muted, #71717a);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 100ms ease, color 100ms ease;
+}
+
+.iui-tree-ctrl-btn:hover {
+  background: color-mix(in srgb, var(--iui-text, #000) 6%, transparent);
+  color: var(--iui-text, #0a0a0a);
+}
+
+/* View toggle: Diagram / Outline */
+.iui-tree-toggle {
+  display: flex;
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 15%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.iui-tree-toggle-btn {
+  height: 28px;
+  padding: 0 11px;
+  border: none;
+  background: transparent;
+  color: var(--iui-muted, #71717a);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 100ms ease, color 100ms ease;
+}
+
+.iui-tree-toggle-btn.is-active {
+  background: var(--iui-accent, #0b57d0);
+  color: #fff;
+}
+
+.iui-tree-toggle-btn:not(.is-active):hover {
+  background: color-mix(in srgb, var(--iui-text, #000) 6%, transparent);
+  color: var(--iui-text, #0a0a0a);
+}
+
+/* Detail bar */
+.iui-tree-detail-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background: color-mix(in srgb, var(--iui-accent, #0b57d0) 7%, var(--iui-surface, #fafafa));
+  border: 1px solid color-mix(in srgb, var(--iui-accent, #0b57d0) 20%, transparent);
+  border-radius: 8px;
+  animation: iui-tree-fadein 160ms ease;
+}
+
+@keyframes iui-tree-fadein {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.iui-tree-detail-content {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.iui-tree-detail-label {
+  font-weight: 600;
+  color: var(--iui-text, #0a0a0a);
+}
+
+.iui-tree-detail-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--iui-accent, #0b57d0);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.iui-tree-detail-note {
+  color: var(--iui-muted, #71717a);
+  font-size: 12px;
+}
+
+.iui-tree-detail-close {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--iui-muted, #71717a);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 100ms ease;
+}
+
+.iui-tree-detail-close:hover {
+  background: color-mix(in srgb, var(--iui-text, #000) 10%, transparent);
+  color: var(--iui-text, #0a0a0a);
+}
+
+/* ==============================
+   OUTLINE VIEW
+   ============================== */
+
+.iui-tree-outline-root {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.iui-tree-ol-item {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  outline: none;
+}
+
+.iui-tree-ol-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 100ms ease;
+  min-height: 28px;
+}
+
+.iui-tree-ol-row:hover {
+  background: color-mix(in srgb, var(--iui-text, #000) 5%, transparent);
+}
+
+.iui-tree-ol-item:focus > .iui-tree-ol-row,
+.iui-tree-ol-row:focus {
+  outline: 2px solid var(--iui-accent, #0b57d0);
+  outline-offset: 1px;
+}
+
+.iui-tree-ol-row.is-selected {
+  background: color-mix(in srgb, var(--iui-accent, #0b57d0) 12%, transparent);
+}
+
+.iui-tree-ol-row.is-ancestor {
+  background: color-mix(in srgb, var(--iui-accent, #0b57d0) 5%, transparent);
+}
+
+.iui-tree-ol-item.is-selected > .iui-tree-ol-row {
+  background: color-mix(in srgb, var(--iui-accent, #0b57d0) 12%, transparent);
+}
+
+.iui-tree-ol-item.is-ancestor > .iui-tree-ol-row {
+  background: color-mix(in srgb, var(--iui-accent, #0b57d0) 5%, transparent);
+}
+
+.iui-tree-ol-chevron {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--iui-muted, #71717a);
+  font-size: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 100ms ease;
+  padding: 0;
+}
+
+.iui-tree-ol-chevron:hover {
+  color: var(--iui-text, #0a0a0a);
+  background: color-mix(in srgb, var(--iui-text, #000) 8%, transparent);
+}
+
+.iui-tree-ol-leaf-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--iui-text, #000) 25%, transparent);
+  margin: 0 6px;
+}
+
+.iui-tree-ol-label {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--iui-text, #0a0a0a);
+  word-break: break-word;
+  font-weight: 500;
+}
+
+.iui-tree-ol-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--iui-accent, #0b57d0);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.iui-tree-ol-count-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--iui-text, #000) 10%, transparent);
+  color: var(--iui-muted, #71717a);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.iui-tree-ol-children {
+  list-style: none;
+  padding-left: 20px;
+  margin: 0;
+  border-left: 1px solid color-mix(in srgb, var(--iui-text, #000) 10%, transparent);
+  margin-left: 9px;
+}
+
+/* Search miss - dim but don't hide */
+.iui-tree-ol-item.is-search-miss > .iui-tree-ol-row {
+  opacity: 0.35;
+}
+
+.iui-tree-dn-node.is-search-miss,
+.iui-tree-dn-node.is-search-miss .iui-tree-dn-label {
+  opacity: 0.35;
+}
+
+.iui-tree-ol-item.is-search-match > .iui-tree-ol-row .iui-tree-ol-label {
+  font-weight: 700;
+}
+
+/* ==============================
+   DIAGRAM VIEW
+   ============================== */
+
+.iui-tree-diagram {
+  overflow-x: auto;
+  padding: 8px 4px;
+}
+
+/* Vertical layout: children below, center aligned */
+.iui-tree-v .iui-tree-dn-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.iui-tree-v .iui-tree-dn-children {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 20px;
+  position: relative;
+  flex-wrap: wrap;
+}
+
+/* Vertical connector lines via pseudo-elements */
+.iui-tree-v .iui-tree-dn-wrapper > .iui-tree-dn-node {
+  position: relative;
+}
+
+.iui-tree-v .iui-tree-dn-wrapper > .iui-tree-dn-node::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1.5px;
+  height: 20px;
+  background: color-mix(in srgb, var(--iui-text, #000) 15%, transparent);
+}
+
+.iui-tree-v .iui-tree-dn-children > .iui-tree-dn-wrapper > .iui-tree-dn-node::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1.5px;
+  height: 20px;
+  background: color-mix(in srgb, var(--iui-text, #000) 15%, transparent);
+}
+
+/* A collapsed node has no connector leading into its hidden children. */
+.iui-tree-v .iui-tree-dn-wrapper.is-collapsed > .iui-tree-dn-node::after {
+  display: none;
+}
+
+/* Horizontal layout: children to the right */
+.iui-tree-h .iui-tree-dn-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+}
+
+.iui-tree-h .iui-tree-dn-children {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  padding-left: 24px;
+  position: relative;
+}
+
+.iui-tree-h .iui-tree-dn-wrapper > .iui-tree-dn-node::after {
+  content: '';
+  position: absolute;
+  right: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 1.5px;
+  background: color-mix(in srgb, var(--iui-text, #000) 15%, transparent);
+}
+
+.iui-tree-h .iui-tree-dn-wrapper.is-collapsed > .iui-tree-dn-node::after {
+  display: none;
+}
+
+.iui-tree-h .iui-tree-dn-children > .iui-tree-dn-wrapper > .iui-tree-dn-node::before {
+  content: '';
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 1.5px;
+  background: color-mix(in srgb, var(--iui-text, #000) 15%, transparent);
+}
+
+/* Node box */
+.iui-tree-dn-node {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 10px;
+  min-width: 72px;
+  max-width: 180px;
+  border: 1.5px solid color-mix(in srgb, var(--iui-text, #000) 14%, transparent);
+  border-radius: 8px;
+  background: var(--iui-surface, #fafafa);
+  color: var(--iui-text, #0a0a0a);
+  cursor: pointer;
+  user-select: none;
+  word-break: break-word;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+  outline: none;
+}
+
+.iui-tree-dn-node:hover {
+  border-color: var(--iui-accent, #0b57d0);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+}
+
+.iui-tree-dn-node:focus-visible {
+  outline: 2px solid var(--iui-accent, #0b57d0);
+  outline-offset: 2px;
+}
+
+.iui-tree-dn-node.is-selected {
+  border-color: var(--iui-accent, #0b57d0);
+  background: color-mix(in srgb, var(--iui-accent, #0b57d0) 10%, var(--iui-surface, #fafafa));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.iui-tree-dn-node.is-ancestor {
+  border-color: color-mix(in srgb, var(--iui-accent, #0b57d0) 50%, transparent);
+}
+
+.iui-tree-dn-label-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.iui-tree-dn-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--iui-text, #0a0a0a);
+  word-break: break-word;
+}
+
+.iui-tree-dn-note {
+  font-size: 11px;
+  color: var(--iui-muted, #71717a);
+  line-height: 1.3;
+  margin-top: 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.iui-tree-dn-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--iui-accent, #0b57d0);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.iui-tree-dn-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--iui-text, #000) 10%, transparent);
+  color: var(--iui-muted, #71717a);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.iui-tree-dn-chevron {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  color: var(--iui-muted, #71717a);
+  font-size: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: color 100ms ease;
+  padding: 0;
+}
+
+.iui-tree-dn-chevron:hover {
+  color: var(--iui-text, #0a0a0a);
+  background: color-mix(in srgb, var(--iui-text, #000) 8%, transparent);
+}
+
+/* Content area scroll wrapper */
+.iui-tree-content {
+  overflow-x: auto;
+  min-height: 60px;
+}
+
+/* Dark mode refinements */
+.iui-root[data-theme="dark"] .iui-tree-dn-node {
+  background: color-mix(in srgb, var(--iui-text, #fff) 4%, var(--iui-bg, #18181b));
+}
+
+.iui-root[data-theme="dark"] .iui-tree-dn-node.is-selected {
+  background: color-mix(in srgb, var(--iui-accent, #4f9eff) 15%, var(--iui-bg, #18181b));
+}
+
+.iui-root[data-theme="dark"] .iui-tree-search {
+  background: color-mix(in srgb, var(--iui-text, #fff) 5%, var(--iui-bg, #18181b));
+}

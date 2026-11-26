@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
-import { diffChildren, diffAndAppendChildren } from '../src/core/incremental';
+import { createTypeSkeleton, diffChildren, diffAndAppendChildren, TYPE_META } from '../src/core/incremental';
 
 describe('diffChildren', () => {
   it('identifies new items when existing set is empty', () => {
@@ -45,6 +45,16 @@ describe('diffChildren', () => {
     expect(diff.added).toHaveLength(2);
     expect(diff.added[0].item.id).toBe('node-2');
     expect(diff.added[1].item.id).toBe('node-3');
+  });
+});
+
+describe('Tree incremental rendering', () => {
+  it('provides tree-specific metadata and a reserved hierarchy skeleton', () => {
+    expect(TYPE_META.tree).toEqual({ icon: 'network', color: 'teal', label: 'Tree' });
+    const skeleton = createTypeSkeleton('tree');
+    expect(skeleton.classList.contains('iui-skeleton-card')).toBe(true);
+    expect(skeleton.querySelector('.iui-skel-tree-wrap')).not.toBeNull();
+    expect(skeleton.querySelectorAll('.iui-skel-stepper-row')).toHaveLength(3);
   });
 });
 

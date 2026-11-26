@@ -10,6 +10,18 @@ import {
 } from '../src/components/table';
 import { TableSpec } from '../src/core/types';
 
+const { renderChartMock } = vi.hoisted(() => ({
+  renderChartMock: vi.fn((spec: any) => {
+    const el = document.createElement('div');
+    el.className = 'iui-chart-card';
+    el.dataset.labels = spec.labels.join('|');
+    el.dataset.values = spec.datasets.map((dataset: any) => dataset.data.join('|')).join(';');
+    return el;
+  }),
+}));
+
+vi.mock('../src/components/chart', () => ({ renderChart: renderChartMock }));
+
 describe('Table: detectColumnType and value parsing', () => {
   it('serializes source values as plain tab-separated rows with headers', () => {
     expect(serializeTableValues(
@@ -247,5 +259,47 @@ describe('Table: live filtering for > 6 rows', () => {
     filterInput!.dispatchEvent(new Event('input', { bubbles: true }));
     expect(card.querySelectorAll('.iui-table-tbody tr')).toHaveLength(8);
     expect(filterCount?.textContent).toBe('8 of 8 rows');
+  });
+
+  it('keeps the chart view in sync with filtered and sorted rows', () => {
+    renderChartMock.mockClear();
+    const card = renderTable({
+      type: 'table',
+      columns: ['Service', 'Requests'],
+      rows: [
+        ['Alpha', '10'], ['Beta', '20'], ['Gamma', '30'], ['Delta', '40'],
+        ['Epsilon', '50'], ['Zeta', '60'], ['Eta', '70'],
+      ],
+    }, { theme: 'light', onCleanup: () => {} });
+
+    const viewButtons = card.querySelectorAll<HTMLButtonElement>('.iui-table-view-btn');
+    expect(card.querySelector('.iui-table-view-switch')?.getAttribute('role')).toBe('group');
+    expect(Array.from(viewButtons).map((button) => button.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false']);
+    viewButtons[1].click();
+    expect(Array.from(viewButtons).map((button) => button.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
+    expect(renderChartMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      labels: ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta'],
+      datasets: [expect.objectContaining({ data: [10, 20, 30, 40, 50, 60, 70] })],
+    }), expect.anything());
+
+    const filter = card.querySelector<HTMLInputElement>('.iui-table-filter-input')!;
+    filter.value = 'a';
+    filter.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(renderChartMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      labels: ['Alpha', 'Beta', 'Gamma', 'Delta', 'Zeta', 'Eta'],
+      datasets: [expect.objectContaining({ data: [10, 20, 30, 40, 60, 70] })],
+    }), expect.anything());
+
+    card.querySelectorAll<HTMLButtonElement>('.iui-table-th-btn')[1].click();
+    expect(renderChartMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      labels: ['Alpha', 'Beta', 'Gamma', 'Delta', 'Zeta', 'Eta'],
+      datasets: [expect.objectContaining({ data: [10, 20, 30, 40, 60, 70] })],
+    }), expect.anything());
+    card.querySelectorAll<HTMLButtonElement>('.iui-table-th-btn')[1].click();
+    expect(renderChartMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      labels: ['Eta', 'Zeta', 'Delta', 'Gamma', 'Beta', 'Alpha'],
+      datasets: [expect.objectContaining({ data: [70, 60, 40, 30, 20, 10] })],
+    }), expect.anything());
+    expect(card.querySelector('.iui-table-chart-view .iui-chart-card')?.getAttribute('data-labels')).toBe('Eta|Zeta|Delta|Gamma|Beta|Alpha');
   });
 });

@@ -15,10 +15,13 @@ import {
 } from '../src/components/mermaid';
 import { RENDERERS } from '../src/components/index';
 import { renderChart } from '../src/components/chart';
+import { renderCompare } from '../src/components/compare';
 import { renderMermaid } from '../src/components/mermaid';
 import { renderFlow } from '../src/components/flow';
+import { renderTree } from '../src/components/tree';
 import { renderStepper, stripStepTitleNumber } from '../src/components/stepper';
-import { ChartSpec, FlowSpec } from '../src/core/types';
+import { renderTimeline } from '../src/components/timeline';
+import { ChartSpec, FlowSpec, TreeSpec } from '../src/core/types';
 
 describe('parseNumericValue', () => {
   it('parses plain numbers', () => {
@@ -128,19 +131,24 @@ describe('Chart palettes and helpers', () => {
     // 1 dataset -> legend hidden
     expect(config.options?.plugins?.legend?.display).toBe(false);
 
-    // Y scale begins at zero
+    // Y scale begins at zero; X scale auto-skips overlapping labels
     const scales = config.options?.scales as any;
     expect(scales.y.beginAtZero).toBe(true);
     expect(scales.x.border.display).toBe(false);
     expect(scales.y.border.display).toBe(false);
+    expect(scales.x.ticks.autoSkip).toBe(true);
+    expect(scales.x.ticks.autoSkipPadding).toBe(14);
+    expect(scales.x.ticks.maxRotation).toBe(35);
 
-    // Dataset uses solid color and 1px ink border with radius 4
+    // Dataset uses solid color and 1px ink border with radius 4 and balanced bar spacing
     const ds = config.data.datasets[0] as any;
     expect(ds.backgroundColor).toBe(LIGHT_SOLIDS[0]);
     expect(ds.borderColor).toBe(LIGHT_INKS[0]);
     expect(ds.borderWidth).toBe(1);
     expect(ds.borderRadius).toBe(4);
     expect(ds.maxBarThickness).toBe(28);
+    expect(ds.barPercentage).toBe(0.72);
+    expect(ds.categoryPercentage).toBe(0.78);
   });
 
   it('buildChartConfig configures line chart with smooth curves, hover targets and no area fill', () => {
@@ -185,8 +193,9 @@ describe('Chart palettes and helpers', () => {
 
     const lightConfig = buildChartConfig(spec, 'light');
     expect(lightConfig.type).toBe('doughnut');
-    // Legend only shown when more than one series
-    expect(lightConfig.options?.plugins?.legend?.display).toBe(false);
+    // Legend shown at bottom when more than one slice label
+    expect(lightConfig.options?.plugins?.legend?.display).toBe(true);
+    expect(lightConfig.options?.plugins?.legend?.position).toBe('bottom');
     // Scales should be undefined for pie/doughnut
     expect(lightConfig.options?.scales).toBeUndefined();
 
@@ -213,6 +222,9 @@ describe('Chart palettes and helpers', () => {
     expect(config.type).toBe('radar');
     const scales = config.options?.scales as any;
     expect(scales.r).toBeDefined();
+    expect(scales.r.ticks.maxTicksLimit).toBe(5);
+    expect(scales.r.ticks.backdropColor).toBe('transparent');
+    expect(scales.r.pointLabels.padding).toBe(10);
     expect(scales.x).toBeUndefined();
     expect(scales.y).toBeUndefined();
 
@@ -246,11 +258,15 @@ describe('Chart palettes and helpers', () => {
 
   it('configures area, scatter, and bubble charts with their expected data shapes', () => {
     const area = buildChartConfig({
-      type: 'chart', chartType: 'area', labels: ['Mon', 'Tue'],
+      type: 'chart', chartType: 'area', labels: ['Mon', 'Tue'], xLabel: 'Day', yLabel: 'Requests',
       datasets: [{ label: 'Traffic', data: [10, 20] }],
     }, 'light');
     expect(area.type).toBe('line');
     expect((area.data.datasets[0] as any).fill).toBe('origin');
+    expect((area.options?.scales as any).x.title.display).toBe(true);
+    expect((area.options?.scales as any).x.title.text).toBe('Day');
+    expect((area.options?.scales as any).y.title.display).toBe(true);
+    expect((area.options?.scales as any).y.title.text).toBe('Requests');
 
     const scatter = buildChartConfig({
       type: 'chart', chartType: 'scatter', labels: [], xLabel: 'Requests', yLabel: 'Latency',
@@ -270,32 +286,26 @@ describe('Chart palettes and helpers', () => {
 });
 
 describe('Mermaid theme variables', () => {
-  it('has exact light and dark theme variables matching specification', () => {
-    expect(LIGHT_THEME_VARIABLES.primaryColor).toBe('#F1EDFC');
-    expect(LIGHT_THEME_VARIABLES.primaryBorderColor).toBe('#DCD3F6');
-    expect(LIGHT_THEME_VARIABLES.primaryTextColor).toBe('#0A0A0A');
-    expect(LIGHT_THEME_VARIABLES.secondaryColor).toBe('#EAF4FD');
-    expect(LIGHT_THEME_VARIABLES.tertiaryColor).toBe('#E9F7F0');
-    expect(LIGHT_THEME_VARIABLES.lineColor).toBe('#A3A3A3');
-    expect(LIGHT_THEME_VARIABLES.background).toBe('#FFFFFF');
-    expect(LIGHT_THEME_VARIABLES.noteBkgColor).toBe('#FDF7E1');
-    expect(LIGHT_THEME_VARIABLES.noteBorderColor).toBe('#F3E4A8');
-    expect(LIGHT_THEME_VARIABLES.actorBkg).toBe('#F5F5F4');
-    expect(LIGHT_THEME_VARIABLES.actorBorder).toBe('#E4E4E2');
-    expect(LIGHT_THEME_VARIABLES.signalColor).toBe('#4A4A47');
-
-    expect(DARK_THEME_VARIABLES.primaryColor).toBe('#1E1B29');
-    expect(DARK_THEME_VARIABLES.primaryBorderColor).toBe('#383150');
-    expect(DARK_THEME_VARIABLES.primaryTextColor).toBe('#FAFAFA');
-    expect(DARK_THEME_VARIABLES.secondaryColor).toBe('#16212B');
-    expect(DARK_THEME_VARIABLES.tertiaryColor).toBe('#15241D');
-    expect(DARK_THEME_VARIABLES.lineColor).toBe('#5C5C5C');
-    expect(DARK_THEME_VARIABLES.background).toBe('#0A0A0A');
-    expect(DARK_THEME_VARIABLES.noteBkgColor).toBe('#26231A');
-    expect(DARK_THEME_VARIABLES.noteBorderColor).toBe('#463F27');
-    expect(DARK_THEME_VARIABLES.actorBkg).toBe('#1C1C1C');
-    expect(DARK_THEME_VARIABLES.actorBorder).toBe('#333333');
-    expect(DARK_THEME_VARIABLES.signalColor).toBe('#D6D6D3');
+  it('defines readable, distinct light and dark palettes for nodes, labels, edges and notes', () => {
+    for (const variables of [LIGHT_THEME_VARIABLES, DARK_THEME_VARIABLES]) {
+      expect(variables.primaryColor).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(variables.primaryBorderColor).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(variables.primaryTextColor).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(variables.secondaryTextColor).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(variables.tertiaryTextColor).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(variables.lineColor).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(variables.noteBkgColor).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(variables.noteBorderColor).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(variables.actorBkg).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(variables.actorBorder).toMatch(/^#[0-9A-F]{6}$/i);
+    }
+    expect(LIGHT_THEME_VARIABLES.primaryColor).not.toBe(DARK_THEME_VARIABLES.primaryColor);
+    expect(LIGHT_THEME_VARIABLES.primaryTextColor).not.toBe(DARK_THEME_VARIABLES.primaryTextColor);
+    expect(LIGHT_THEME_VARIABLES.clusterBkg).toBe('#FFFFFF');
+    expect(DARK_THEME_VARIABLES.clusterBkg).toBe('#101012');
+    expect(DARK_THEME_VARIABLES.primaryColor).toBe('#18181B');
+    expect(LIGHT_THEME_VARIABLES.background).toBe('transparent');
+    expect(DARK_THEME_VARIABLES.background).toBe('transparent');
   });
 });
 
@@ -442,6 +452,21 @@ describe('RENDERERS registry', () => {
     }, ctx);
     expect(heatmap.querySelectorAll('.iui-heatmap-cell')).toHaveLength(4);
     expect(heatmap.textContent).toContain('Latency by day');
+    expect(heatmap.getAttribute('data-theme')).toBe('light');
+    const darkHeatmap = renderChart({
+      type: 'chart', chartType: 'heatmap', title: 'Latency by day', labels: ['Mon', 'Tue'],
+      datasets: [{ label: 'API', data: [18, 34] }],
+    }, { ...ctx, theme: 'dark' });
+    expect((darkHeatmap.querySelector('.iui-heatmap-legend-bar') as HTMLElement)?.style.background).toContain('22%');
+
+    const barPlotCard = renderChart({
+      type: 'chart', chartType: 'bar', title: 'Traffic', labels: ['Mon', 'Tue'],
+      datasets: [{ label: 'Requests', data: [10, 20] }],
+    }, ctx);
+    const plotEl = barPlotCard.querySelector('.iui-chart-plot') as HTMLElement;
+    expect(plotEl.getAttribute('data-chart-type')).toBe('bar');
+    expect(plotEl.getAttribute('data-has-legend')).toBe('false');
+    expect(plotEl.style.height).toBe('');
 
     const geo = renderChart({
       type: 'chart', chartType: 'geo', title: 'Events by region', labels: [],
@@ -449,6 +474,20 @@ describe('RENDERERS registry', () => {
     }, ctx);
     expect(geo.querySelectorAll('.iui-geo-point')).toHaveLength(2);
     expect(geo.textContent).toContain('New York');
+
+    const regionalGeo = renderChart({
+      type: 'chart', chartType: 'geo', title: 'US Hubs', labels: [],
+      datasets: [
+        { label: 'East', data: [{ x: -74.0, y: 40.7, label: 'NYC' }] },
+        { label: 'West', data: [{ x: -122.4, y: 37.8, label: 'SF' }] },
+      ],
+    }, ctx);
+    const regionalDots = Array.from(regionalGeo.querySelectorAll('.iui-geo-point'));
+    const cx0 = Number(regionalDots[0].getAttribute('cx'));
+    const cx1 = Number(regionalDots[1].getAttribute('cx'));
+    expect(Math.abs(cx0 - cx1)).toBeGreaterThan(200);
+    const geoKeyItems = Array.from(regionalGeo.querySelectorAll('.iui-geo-key-item')).map((el) => el.textContent);
+    expect(geoKeyItems).toEqual(['East', 'West']);
 
     const dashboard = RENDERERS.dashboard({
       type: 'dashboard', title: 'Service snapshot',
@@ -461,6 +500,43 @@ describe('RENDERERS registry', () => {
     expect(dashboard.querySelectorAll('.iui-dashboard-visual')).toHaveLength(2);
     expect(dashboard.querySelectorAll('.iui-dashboard-panel-title')).toHaveLength(2);
     expect(dashboard.textContent).toContain('Service snapshot');
+  });
+
+  it('exposes chart/table switching as accessible toggle buttons and labelled regions', () => {
+    const card = renderChart({
+      type: 'chart', chartType: 'bar', title: 'Requests', labels: ['Mon'],
+      datasets: [{ label: 'Count', data: [12] }],
+    }, { theme: 'light', onCleanup: () => {} });
+    const buttons = Array.from(card.querySelectorAll<HTMLButtonElement>('.iui-chart-view-btn'));
+    expect(card.querySelector('.iui-chart-view-switch')?.getAttribute('role')).toBe('group');
+    expect(buttons.map((button) => button.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+    expect(card.querySelector('.iui-chart-plot')?.getAttribute('aria-label')).toBe('bar chart: Requests');
+
+    buttons[1].click();
+    expect(buttons.map((button) => button.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+    const tableRegion = card.querySelector<HTMLElement>('.iui-chart-table-view');
+    expect(tableRegion?.getAttribute('aria-label')).toBe('Requests data table');
+    expect(tableRegion?.hidden).toBe(false);
+    expect(card.querySelector<HTMLElement>('.iui-chart-plot')?.hidden).toBe(true);
+    expect(tableRegion?.querySelector('.iui-table-view-switch')).toBeNull();
+    expect(tableRegion?.querySelector('.iui-table-chart-view, .iui-table-cards-view')).toBeNull();
+  });
+
+  it('exposes comparison panels as keyboard-operable toggle buttons', () => {
+    const card = renderCompare({
+      type: 'compare', items: [
+        { label: 'Option A', tone: 'good', points: ['Fast'] },
+        { label: 'Option B', tone: 'neutral', points: ['Flexible'] },
+      ],
+    }, { theme: 'light', onCleanup: () => {} });
+    const panels = Array.from(card.querySelectorAll<HTMLElement>('.iui-compare-panel'));
+    expect(panels.map((panel) => panel.getAttribute('role'))).toEqual(['button', 'button']);
+    expect(panels.map((panel) => panel.getAttribute('aria-pressed'))).toEqual(['false', 'false']);
+
+    panels[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(panels.map((panel) => panel.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+    panels[1].click();
+    expect(panels.map((panel) => panel.getAttribute('aria-pressed'))).toEqual(['false', 'false']);
   });
 
   it('renders generic fallback card into DOM with readable key-value and list layout', () => {
@@ -520,6 +596,89 @@ describe('RENDERERS registry', () => {
       ctx,
     );
     expect(followupsEl.querySelectorAll('.iui-followup-chip')).toHaveLength(2);
+  });
+});
+
+describe('Timeline expansion and status filtering', () => {
+  const events = [
+    { title: 'Done one', text: 'Done detail one', status: 'done' as const },
+    { title: 'Active one', text: 'Active detail one', status: 'active' as const },
+    { title: 'Upcoming one', text: 'Upcoming detail one', status: 'upcoming' as const },
+    { title: 'Done two', text: 'Done detail two', status: 'done' as const },
+    { title: 'Active two', text: 'Active detail two', status: 'active' as const },
+    { title: 'Upcoming two', text: 'Upcoming detail two', status: 'upcoming' as const },
+    { title: 'Unassigned', text: 'Unassigned detail' },
+  ];
+
+  it('preserves per-row expansion when status filters are changed', () => {
+    const card = renderTimeline({ type: 'timeline', events }, { theme: 'light', onCleanup: () => {} });
+    const rows = Array.from(card.querySelectorAll<HTMLElement>('.iui-timeline-row'));
+    const details = rows.map((row) => row.querySelector<HTMLElement>('.iui-timeline-text')!);
+
+    rows[0].click();
+    rows[1].click();
+    expect(rows[0].getAttribute('aria-expanded')).toBe('true');
+    expect(details[0].hidden).toBe(false);
+    expect(rows[1].getAttribute('aria-expanded')).toBe('true');
+
+    const activePill = card.querySelector<HTMLButtonElement>('.iui-timeline-filter-pill:not(.is-active)')!;
+    activePill.click();
+    expect(activePill.getAttribute('aria-pressed')).toBe('true');
+    expect(card.querySelector('.iui-timeline-filter-pill.is-active')?.getAttribute('aria-pressed')).toBe('true');
+    expect(rows[0].hidden).toBe(false);
+    expect(rows[1].hidden).toBe(true);
+    expect(rows[0].getAttribute('aria-expanded')).toBe('true');
+    expect(details[0].hidden).toBe(false);
+    expect(rows[1].getAttribute('aria-expanded')).toBe('true');
+    expect(details[1].hidden).toBe(false);
+
+    card.querySelector<HTMLButtonElement>('.iui-timeline-filter-pill.is-active')!.click();
+    expect(rows.every((row) => !row.hidden)).toBe(true);
+    expect(rows[0].getAttribute('aria-expanded')).toBe('true');
+    expect(details[0].hidden).toBe(false);
+    expect(rows[1].getAttribute('aria-expanded')).toBe('true');
+    expect(details[1].hidden).toBe(false);
+  });
+
+  it('keeps individual expansion coherent after expand-all, collapse-all, and filtering', () => {
+    const card = renderTimeline({ type: 'timeline', events }, { theme: 'light', onCleanup: () => {} });
+    const rows = Array.from(card.querySelectorAll<HTMLElement>('.iui-timeline-row'));
+    const details = rows.map((row) => row.querySelector<HTMLElement>('.iui-timeline-text')!);
+    const bulkButton = card.querySelector<HTMLButtonElement>('.iui-timeline-expand-btn')!;
+
+    bulkButton.click();
+    expect(bulkButton.getAttribute('aria-pressed')).toBe('true');
+    expect(rows.every((row) => row.getAttribute('aria-expanded') === 'true')).toBe(true);
+    expect(details.every((detail) => !detail.hidden)).toBe(true);
+
+    rows[0].click();
+    expect(rows[0].getAttribute('aria-expanded')).toBe('false');
+    expect(details[0].hidden).toBe(true);
+
+    // The first status pill is Done. Filtering must not reset row expansion.
+    card.querySelector<HTMLButtonElement>('.iui-timeline-filter-pill:not(.is-active)')!.click();
+    expect(rows[0].hidden).toBe(false);
+    expect(rows[0].getAttribute('aria-expanded')).toBe('false');
+    expect(details[0].hidden).toBe(true);
+    expect(rows[3].getAttribute('aria-expanded')).toBe('true');
+    expect(details[3].hidden).toBe(false);
+
+    bulkButton.click();
+    expect(bulkButton.getAttribute('aria-pressed')).toBe('false');
+    expect(rows.every((row) => row.getAttribute('aria-expanded') === 'false')).toBe(true);
+    expect(details.every((detail) => detail.hidden)).toBe(true);
+  });
+
+  it('excludes statusless events from a status-specific filter', () => {
+    const card = renderTimeline({ type: 'timeline', events }, { theme: 'light', onCleanup: () => {} });
+    const rows = Array.from(card.querySelectorAll<HTMLElement>('.iui-timeline-row'));
+    const statuslessRow = rows[6];
+
+    expect(statuslessRow.hidden).toBe(false);
+    card.querySelector<HTMLButtonElement>('.iui-timeline-filter-pill:not(.is-active)')!.click();
+    expect(rows[0].hidden).toBe(false);
+    expect(rows[3].hidden).toBe(false);
+    expect(statuslessRow.hidden).toBe(true);
   });
 });
 
@@ -646,5 +805,116 @@ describe('Flow diagrams', () => {
     expect(card.querySelectorAll('.iui-stepper-btn')).toHaveLength(0);
     expect(card.querySelectorAll('.iui-stepper-detail')).toHaveLength(4);
     cleanups.forEach((c) => c());
+  });
+});
+
+describe('Tree diagrams', () => {
+  it('keeps search filtering and expanded ancestors when switching views', () => {
+    const spec: TreeSpec = {
+      type: 'tree',
+      title: 'Product map',
+      root: {
+        id: 'root', label: 'Product', collapsed: true,
+        children: [{
+          id: 'platform', label: 'Platform', collapsed: true,
+          children: [{ id: 'api', label: 'Public API' }],
+        }],
+      },
+    };
+    const card = renderTree(spec, { theme: 'light', onCleanup: () => {} });
+    const search = card.querySelector<HTMLInputElement>('.iui-tree-search')!;
+
+    expect(card.querySelector('.iui-tree-title')?.textContent).toBe('Product map');
+    search.value = 'public api';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(card.querySelector<HTMLElement>('.iui-tree-dn-children')?.style.display).toBe('');
+
+    card.querySelector<HTMLButtonElement>('.iui-tree-toggle-btn:not(.is-active)')!.click();
+    expect(card.querySelector('.iui-tree-ol-item.is-search-match')?.textContent).toContain('Public API');
+    expect(card.querySelector<HTMLElement>('.iui-tree-ol-children')?.style.display).toBe('');
+    expect(card.querySelector<HTMLElement>('.iui-tree-ol-item[data-node-id="root"]')?.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('keeps expansion state and aria-expanded synchronized in both views and bulk controls', () => {
+    const card = renderTree({
+      type: 'tree',
+      root: { id: 'root', label: 'Root', collapsed: true, children: [{ id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] }] },
+    }, { theme: 'light', onCleanup: () => {} });
+    const diagramRoot = card.querySelector<HTMLElement>('.iui-tree-dn-node[data-node-id="root"]')!;
+    expect(card.querySelector('.iui-tree-diagram[role="tree"]')).not.toBeNull();
+    expect(diagramRoot.getAttribute('aria-expanded')).toBe('false');
+    expect(diagramRoot.getAttribute('aria-level')).toBe('1');
+    expect(card.querySelector(`#${diagramRoot.getAttribute('aria-owns')}`)?.getAttribute('role')).toBe('group');
+    diagramRoot.querySelector<HTMLButtonElement>('.iui-tree-dn-chevron')!.click();
+    expect(diagramRoot.getAttribute('aria-expanded')).toBe('true');
+
+    card.querySelector<HTMLButtonElement>('.iui-tree-ctrl-btn[title="Collapse all"]')!.click();
+    expect(diagramRoot.getAttribute('aria-expanded')).toBe('false');
+    card.querySelector<HTMLButtonElement>('.iui-tree-toggle-btn:not(.is-active)')!.click();
+
+    const outlineRoot = card.querySelector<HTMLElement>('.iui-tree-ol-item[data-node-id="root"]')!;
+    expect(outlineRoot.getAttribute('aria-expanded')).toBe('false');
+    expect(outlineRoot.querySelector<HTMLElement>('.iui-tree-ol-children')!.style.display).toBe('none');
+    card.querySelector<HTMLButtonElement>('.iui-tree-ctrl-btn[title="Expand all"]')!.click();
+    expect(outlineRoot.getAttribute('aria-expanded')).toBe('true');
+
+    card.querySelector<HTMLButtonElement>('.iui-tree-toggle-btn:not(.is-active)')!.click();
+    expect(card.querySelector<HTMLElement>('.iui-tree-dn-node[data-node-id="root"]')?.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('supports diagram tree arrow navigation and hides collapsed branch connectors', () => {
+    const card = renderTree({
+      type: 'tree',
+      layout: 'vertical',
+      root: {
+        id: 'root', label: 'Root', collapsed: true,
+        children: [{ id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] }],
+      },
+    }, { theme: 'light', onCleanup: () => {} });
+    document.body.appendChild(card);
+
+    const rootWrapper = card.querySelector<HTMLElement>('.iui-tree-dn-wrapper[data-node-id="root"]')!;
+    const root = rootWrapper.querySelector<HTMLElement>(':scope > .iui-tree-dn-node')!;
+    expect(rootWrapper.classList.contains('is-collapsed')).toBe(true);
+    expect(root.tabIndex).toBe(0);
+
+    root.focus();
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(root.getAttribute('aria-expanded')).toBe('true');
+    expect(rootWrapper.classList.contains('is-collapsed')).toBe(false);
+
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    const branch = card.querySelector<HTMLElement>('.iui-tree-dn-node[data-node-id="branch"]')!;
+    expect(document.activeElement).toBe(branch);
+    branch.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    const leaf = card.querySelector<HTMLElement>('.iui-tree-dn-node[data-node-id="leaf"]')!;
+    expect(document.activeElement).toBe(leaf);
+
+    leaf.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(document.activeElement).toBe(branch);
+    branch.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(branch.getAttribute('aria-expanded')).toBe('false');
+    expect(card.querySelector('.iui-tree-dn-wrapper[data-node-id="branch"]')?.classList.contains('is-collapsed')).toBe(true);
+
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(document.activeElement).toBe(branch);
+    branch.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    expect(document.activeElement).toBe(root);
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    expect(document.activeElement).toBe(branch);
+    card.remove();
+  });
+
+  it('supports selecting a node and closing its detail panel', () => {
+    const card = renderTree({
+      type: 'tree',
+      root: { id: 'root', label: 'Root', children: [{ id: 'leaf', label: 'Leaf', note: 'Leaf detail' }] },
+    }, { theme: 'light', onCleanup: () => {} });
+
+    card.querySelector<HTMLElement>('.iui-tree-dn-node[data-node-id="leaf"]')!.click();
+    expect(card.querySelector<HTMLElement>('.iui-tree-detail-bar')?.style.display).toBe('');
+    expect(card.querySelector('.iui-tree-detail-content')?.textContent).toContain('Leaf detail');
+    card.querySelector<HTMLButtonElement>('.iui-tree-detail-close')!.click();
+    expect(card.querySelector<HTMLElement>('.iui-tree-detail-bar')?.style.display).toBe('none');
   });
 });

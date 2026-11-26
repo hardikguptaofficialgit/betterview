@@ -8,12 +8,17 @@
   align-items: flex-start;
   gap: 10px;
   padding: 8px 12px;
-  border-radius: 0 8px 8px 0;
+  border-radius: 8px;
   border: none;
-  border-left: 2px solid var(--c-ink, var(--iui-accent, #0b57d0));
+  border-left: 3px solid var(--c-ink, var(--iui-accent, #0b57d0));
   background-color: color-mix(in srgb, var(--c-ink, var(--iui-accent, #0b57d0)) 8%, transparent);
   color: var(--iui-text);
   box-sizing: border-box;
+}
+
+.iui-callout-box.c-bad {
+  border-left-color: var(--iui-danger, #ef4444);
+  background-color: color-mix(in srgb, var(--iui-danger, #ef4444) 8%, transparent);
 }
 
 .iui-callout-iconbox {

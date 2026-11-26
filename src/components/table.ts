@@ -1,9 +1,10 @@
-import { TableSpec } from '../core/types';
+import { ChartSpec, TableSpec } from '../core/types';
 import { RenderContext } from './index';
 import { clear, h } from '../core/dom';
 import { iconEl } from '../core/icons';
 import { renderMathText } from '../core/mathParser';
 import { showCardToast } from '../core/export';
+import { renderChart } from './chart';
 
 export function parseNumericValue(raw: string): number | null {
   if (typeof raw !== 'string') return null;
@@ -88,7 +89,11 @@ export function compareCellValues(valA: string, valB: string, type: ColumnType):
   return valA.localeCompare(valB, undefined, { numeric: true });
 }
 
-export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
+export function renderTable(
+  spec: TableSpec,
+  ctx: RenderContext,
+  options: { allowViewSwitch?: boolean } = {},
+): HTMLElement {
   const card = h('div', { class: 'iui-card iui-table-card' });
   if (spec.title) {
     card.appendChild(h('div', { class: 'iui-title' }, spec.title));
@@ -99,6 +104,39 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
 
   const columnTypes: ColumnType[] = columns.map((_, colIdx) => detectColumnType(rows, colIdx));
   const isNumericCol: boolean[] = columnTypes.map((t) => t === 'numeric');
+  const hasNumericCol = isNumericCol.some(Boolean);
+  const canSwitchView = options.allowViewSwitch !== false && columns.length >= 2 && hasNumericCol && rows.length > 0;
+
+  // Precompute max value for non-negative numeric columns (for proportional inline micro-bars)
+  const colBarMax: (number | null)[] = columns.map((_, colIdx) => {
+    if (!isNumericCol[colIdx] || rows.length < 2) return null;
+    let maxVal = 0;
+    let count = 0;
+    for (const r of rows) {
+      const val = parseNumericValue(r[colIdx] ?? '');
+      if (val !== null) {
+        if (val < 0) return null;
+        if (val > maxVal) maxVal = val;
+        count++;
+      }
+    }
+    return count >= 2 && maxVal > 0 ? maxVal : null;
+  });
+
+  // Precompute numeric summary (Sum / Avg) per column
+  const colSummary: ({ sum: number; avg: number; count: number } | null)[] = columns.map((_, colIdx) => {
+    if (!isNumericCol[colIdx] || rows.length < 2) return null;
+    let sum = 0;
+    let count = 0;
+    for (const r of rows) {
+      const val = parseNumericValue(r[colIdx] ?? '');
+      if (val !== null) {
+        sum += val;
+        count++;
+      }
+    }
+    return count >= 2 ? { sum, avg: sum / count, count } : null;
+  });
 
   interface IndexedRow {
     row: string[];
@@ -107,11 +145,16 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
   const originalRows: IndexedRow[] = rows.map((r, i) => ({ row: r, idx: i }));
 
   type SortDir = 'none' | 'asc' | 'desc';
+  type ViewMode = 'table' | 'chart' | 'cards';
   let sortCol: number | null = null;
   let sortDir: SortDir = 'none';
   let filterQuery = '';
+  let viewMode: ViewMode = 'table';
+  let currentEntries: IndexedRow[] = [...originalRows];
 
   const actionsBar = h('div', { class: 'iui-table-actions' });
+  const rightActions = h('div', { class: 'iui-table-actions-right' });
+
   const copyButton = h('button', {
     class: 'iui-table-copy-btn',
     type: 'button',
@@ -136,7 +179,123 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
       }
     },
   }, iconEl('copy', 14), 'Copy data');
-  actionsBar.appendChild(copyButton);
+  rightActions.appendChild(copyButton);
+
+  let scrollWrap: HTMLElement;
+  let chartViewHost: HTMLElement | null = null;
+  let cardsViewHost: HTMLElement | null = null;
+  let chartViewCleanup: (() => void) | null = null;
+
+  const viewButtons: { mode: ViewMode; btn: HTMLButtonElement }[] = [];
+
+  function renderCardsView(entries: IndexedRow[]): void {
+    if (!cardsViewHost) return;
+    clear(cardsViewHost);
+    if (entries.length === 0) {
+      cardsViewHost.appendChild(h('div', { class: 'iui-table-cards-empty' }, 'No matching rows'));
+      return;
+    }
+    const primaryCol = Math.max(0, isNumericCol.findIndex((isNum) => !isNum));
+    const grid = h('div', { class: 'iui-table-cards-grid' });
+    for (const item of entries) {
+      const kvCard = h('div', { class: 'iui-table-kv-card' });
+      const head = h('div', { class: 'iui-table-kv-head' });
+      renderMathText(head, item.row[primaryCol] ?? '');
+      kvCard.appendChild(head);
+
+      const body = h('div', { class: 'iui-table-kv-body' });
+      for (let c = 0; c < columns.length; c++) {
+        if (c === primaryCol) continue;
+        const kvRow = h('div', { class: 'iui-table-kv-row' });
+        kvRow.appendChild(h('span', { class: 'iui-table-kv-key' }, columns[c] ?? ''));
+        const valSpan = h('span', { class: `iui-table-kv-val${isNumericCol[c] ? ' is-numeric' : ''}` });
+        renderMathText(valSpan, item.row[c] ?? '');
+        kvRow.appendChild(valSpan);
+        body.appendChild(kvRow);
+      }
+      kvCard.appendChild(body);
+      grid.appendChild(kvCard);
+    }
+    cardsViewHost.appendChild(grid);
+  }
+
+  function renderChartView(entries: IndexedRow[]): void {
+    if (!chartViewHost) return;
+    chartViewCleanup?.();
+    chartViewCleanup = null;
+    clear(chartViewHost);
+    const labelCol = Math.max(0, isNumericCol.findIndex((isNum) => !isNum));
+    const numericCols = columns
+      .map((_, i) => i)
+      .filter((i) => i !== labelCol && isNumericCol[i]);
+    const targetCols = numericCols.length > 0 ? numericCols : columns.map((_, i) => i).filter((i) => i !== labelCol);
+
+    const chartSpec: ChartSpec = {
+      type: 'chart',
+      chartType: columnTypes[labelCol] === 'date' ? 'line' : 'bar',
+      labels: entries.map((entry) => entry.row[labelCol] ?? ''),
+      datasets: targetCols.map((c) => ({
+        label: columns[c] ?? `Col ${c + 1}`,
+        data: entries.map((entry) => parseNumericValue(entry.row[c] ?? '') ?? 0),
+      })),
+    };
+    const chartCtx = {
+      ...ctx,
+      onCleanup: (cleanup: () => void) => {
+        chartViewCleanup = cleanup;
+        ctx.onCleanup(cleanup);
+      },
+    };
+    const chartEl = renderChart(chartSpec, chartCtx);
+    chartViewHost.appendChild(chartEl);
+  }
+
+  function setViewMode(nextMode: ViewMode): void {
+    viewMode = nextMode;
+    for (const entry of viewButtons) {
+      const active = entry.mode === viewMode;
+      entry.btn.classList.toggle('is-active', active);
+      entry.btn.setAttribute('aria-pressed', String(active));
+    }
+    scrollWrap.hidden = viewMode !== 'table';
+    if (chartViewHost) {
+      chartViewHost.hidden = viewMode !== 'chart';
+      if (viewMode === 'chart') renderChartView(currentEntries);
+    }
+    if (cardsViewHost) {
+      cardsViewHost.hidden = viewMode !== 'cards';
+      if (viewMode === 'cards') renderCardsView(currentEntries);
+    }
+  }
+
+  if (canSwitchView) {
+    const viewSwitch = h('div', {
+      class: 'iui-table-view-switch',
+      role: 'group',
+      'aria-label': 'Table view mode',
+    });
+    const modes: { mode: ViewMode; label: string }[] = [
+      { mode: 'table', label: 'Table' },
+      { mode: 'chart', label: 'Chart' },
+      { mode: 'cards', label: 'Cards' },
+    ];
+    for (const m of modes) {
+      const btn = h(
+        'button',
+        {
+          type: 'button',
+          class: `iui-table-view-btn${m.mode === 'table' ? ' is-active' : ''}`,
+          'aria-pressed': m.mode === 'table' ? 'true' : 'false',
+          onClick: () => setViewMode(m.mode),
+        },
+        m.label,
+      ) as HTMLButtonElement;
+      viewButtons.push({ mode: m.mode, btn });
+      viewSwitch.appendChild(btn);
+    }
+    rightActions.prepend(viewSwitch);
+  }
+  actionsBar.appendChild(rightActions);
 
   // Filter input bar for tables with > 6 rows
   let filterCountEl: HTMLElement | null = null;
@@ -166,7 +325,7 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
   }
   card.appendChild(actionsBar);
 
-  const scrollWrap = h('div', { class: 'iui-table-wrap' });
+  scrollWrap = h('div', { class: 'iui-table-wrap' });
   const innerScroll = h('div', { class: 'iui-table-scroll' });
   const table = h('table', { class: 'iui-table' });
   const thead = h('thead', { class: 'iui-table-header c-stone' });
@@ -229,12 +388,25 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
         }
 
         const td = h('td', { class: tdClasses.join(' ') });
+        const barMax = colBarMax[c];
+        if (barMax !== null) {
+          td.style.position = 'relative';
+          const parsedVal = parseNumericValue(cellText);
+          if (parsedVal !== null && parsedVal >= 0) {
+            const pct = Math.min(100, Math.max(0, (parsedVal / barMax) * 100));
+            const bar = h('span', { class: 'iui-table-cell-bar', 'aria-hidden': 'true' });
+            bar.style.width = `${pct.toFixed(1)}%`;
+            td.appendChild(bar);
+          }
+        }
         if (isBest) {
           const pill = h('span', { class: 'iui-table-highlight-pill c-mint' });
           renderMathText(pill, cellText);
           td.appendChild(pill);
         } else {
-          renderMathText(td, cellText);
+          const valWrap = barMax !== null ? h('span', { class: 'iui-table-cell-val' }) : td;
+          renderMathText(valWrap, cellText);
+          if (valWrap !== td) td.appendChild(valWrap);
         }
         tr.appendChild(td);
       }
@@ -278,7 +450,12 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
       });
     }
 
+    currentEntries = sorted;
     renderRows(sorted);
+    if (viewMode === 'chart') renderChartView(sorted);
+    if (viewMode === 'cards') {
+      renderCardsView(sorted);
+    }
 
     // Update header icons and ARIA attributes
     for (let c = 0; c < columns.length; c++) {
@@ -353,9 +530,43 @@ export function renderTable(spec: TableSpec, _ctx: RenderContext): HTMLElement {
   thead.appendChild(headerTr);
   table.appendChild(thead);
   table.appendChild(tbody);
+
+  if (colSummary.some(Boolean)) {
+    const tfoot = h('tfoot', { class: 'iui-table-tfoot' });
+    const sumTr = h('tr', { class: 'iui-table-summary-tr' });
+    const labelColIdx = Math.max(0, isNumericCol.findIndex((n) => !n));
+    for (let c = 0; c < columns.length; c++) {
+      const summary = colSummary[c];
+      if (summary) {
+        const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        sumTr.appendChild(
+          h(
+            'td',
+            { class: 'iui-table-summary-td is-numeric' },
+            h('span', { class: 'iui-table-summary-sum' }, `Σ ${fmt(summary.sum)}`),
+            h('span', { class: 'iui-table-summary-avg' }, `Avg ${fmt(summary.avg)}`),
+          ),
+        );
+      } else if (c === labelColIdx) {
+        sumTr.appendChild(h('td', { class: 'iui-table-summary-td is-label' }, 'Summary'));
+      } else {
+        sumTr.appendChild(h('td', { class: 'iui-table-summary-td' }));
+      }
+    }
+    tfoot.appendChild(sumTr);
+    table.appendChild(tfoot);
+  }
+
   innerScroll.appendChild(table);
   scrollWrap.appendChild(innerScroll);
   card.appendChild(scrollWrap);
+
+  if (canSwitchView) {
+    chartViewHost = h('div', { class: 'iui-table-chart-view', hidden: true });
+    cardsViewHost = h('div', { class: 'iui-table-cards-view', hidden: true });
+    card.appendChild(chartViewHost);
+    card.appendChild(cardsViewHost);
+  }
 
   updateDisplay();
 

@@ -70,7 +70,7 @@
 
 .iui-stat-delta {
   font-size: 11.5px;
-  font-weight: 550;
+  font-weight: 600;
   padding: 0;
   border: none;
   background: transparent;
@@ -78,11 +78,11 @@
 }
 
 .iui-stat-delta.c-mint {
-  color: #10b981;
+  color: var(--iui-success, #10b981);
 }
 
 .iui-stat-delta.c-rose {
-  color: #ef4444;
+  color: var(--iui-danger, #ef4444);
 }
 
 .iui-stat-delta.c-stone {
@@ -93,4 +93,14 @@
   font-size: 11px;
   color: var(--iui-muted);
   line-height: 1.25;
+}
+
+/* Inline SVG sparkline */
+.iui-stat-sparkline-wrap {
+  margin-top: 4px;
+}
+
+.iui-stat-sparkline {
+  display: block;
+  overflow: visible;
 }

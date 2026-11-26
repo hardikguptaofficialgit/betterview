@@ -325,11 +325,37 @@ export function getBlockCodeText(adapter: SiteAdapter, block: HTMLElement): stri
   return el.textContent ?? '';
 }
 
+const MERMAID_DIRECTIVE_RE = /^(?:flowchart|graph|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|journey|gantt|pie|mindmap|timeline|gitGraph|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|requirementDiagram|kanban|packet-beta|block-beta|architecture-beta|sankey-beta|xychart-beta|quadrantChart|radar-beta|zenuml)\b/i;
+
+/** Extract Mermaid source only from an explicitly-labelled block or a known Mermaid directive. */
+export function extractMermaidSource(text: string, language?: string | null): string | null {
+  if (!text || text.length > 12000) return null;
+  let source = text.replace(/^\uFEFF/, '').trim();
+  const fence = source.match(/^```\s*([\w-]*)\s*\r?\n([\s\S]*?)\r?\n```\s*$/);
+  if (fence) {
+    if (fence[1] && fence[1].toLowerCase() !== 'mermaid') return null;
+    source = fence[2].trim();
+  } else if (/^```/.test(source)) {
+    return null;
+  }
+
+  const isMermaidLanguage = (language || '').toLowerCase() === 'mermaid';
+  const firstMeaningfulLine = source.split(/\r?\n/).map((line) => line.trim()).find((line) => line && !line.startsWith('%%')) || '';
+  if (!isMermaidLanguage && !MERMAID_DIRECTIVE_RE.test(firstMeaningfulLine)) return null;
+  if (!firstMeaningfulLine || source.length > 8000) return null;
+  return source;
+}
+
+export function mermaidSourceToUiPayload(source: string): string {
+  return JSON.stringify({ type: 'mermaid', title: 'Mermaid diagram', code: source });
+}
+
 export function isUiBlock(adapter: SiteAdapter, block: HTMLElement): boolean {
   const lang = adapter.languageOf(block);
   if (lang === 'ui') return true;
 
   const codeText = getBlockCodeText(adapter, block);
+  if (extractMermaidSource(codeText, lang)) return true;
   let text = codeText.replace(/^\uFEFF/, '').trimStart();
   text = text.replace(/^(?:```\s*ui|ui|json)\s*(?:\r?\n|$)/i, '').trimStart();
 

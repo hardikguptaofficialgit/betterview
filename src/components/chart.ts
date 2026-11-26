@@ -1,10 +1,11 @@
 import type { ChartConfiguration } from 'chart.js';
-import { ChartSpec } from '../core/types';
+import { ChartSpec, TableSpec } from '../core/types';
 import { ThemeMode } from '../core/theme';
 import { RenderContext } from './index';
 import { h } from '../core/dom';
 import { renderGeoChart, renderHeatmap } from './chartExtras';
 import { UIHost } from '../core/types';
+import { renderTable } from './table';
 
 let chartClassPromise: Promise<any> | null = null;
 
@@ -139,6 +140,8 @@ export function buildChartConfig(
       borderRadius: 4,
       borderSkipped: 'bottom',
       maxBarThickness: 28,
+      barPercentage: 0.72,
+      categoryPercentage: 0.78,
       grouped: true,
     }));
   } else if (spec.chartType === 'line' || spec.chartType === 'area') {
@@ -197,6 +200,16 @@ export function buildChartConfig(
     scales = {
       x: {
         stacked: false,
+        title: {
+          display: !!spec.xLabel,
+          text: spec.xLabel || '',
+          color: mutedColor,
+          font: {
+            family: fontStack,
+            size: 11,
+          },
+          padding: { top: 6 },
+        },
         grid: {
           display: false,
         },
@@ -205,9 +218,11 @@ export function buildChartConfig(
         },
         ticks: {
           color: mutedColor,
-          maxRotation: 0,
+          maxRotation: 35,
           minRotation: 0,
-          autoSkip: false,
+          autoSkip: true,
+          autoSkipPadding: 14,
+          padding: 6,
           font: {
             family: fontStack,
             size: 11,
@@ -217,6 +232,16 @@ export function buildChartConfig(
       y: {
         stacked: false,
         beginAtZero: spec.chartType === 'bar',
+        title: {
+          display: !!spec.yLabel,
+          text: spec.yLabel || '',
+          color: mutedColor,
+          font: {
+            family: fontStack,
+            size: 11,
+          },
+          padding: { bottom: 6 },
+        },
         grid: {
           display: true,
           color: 'color-mix(in srgb, var(--iui-text, #000) 6%, transparent)',
@@ -270,23 +295,31 @@ export function buildChartConfig(
         ticks: {
           color: mutedColor,
           backdropColor: 'transparent',
+          maxTicksLimit: 5,
           font: {
             family: fontStack,
-            size: 11,
+            size: 10,
           },
         },
         pointLabels: {
           color: mutedColor,
+          padding: 10,
           font: {
             family: fontStack,
-            size: 12,
+            size: 11,
           },
         },
       },
     };
   }
 
-  const showLegend = spec.datasets.length > 1;
+  const showLegend = isPieOrDoughnut ? spec.labels.length > 1 : spec.datasets.length > 1;
+  const layoutPadding =
+    spec.chartType === 'radar'
+      ? 14
+      : isPieOrDoughnut
+        ? { top: 10, right: 14, bottom: 10, left: 14 }
+        : { top: 8, right: 10, bottom: 6, left: 6 };
 
   const animationConfig = animated
     ? {
@@ -308,8 +341,8 @@ export function buildChartConfig(
       plugins: {
         legend: {
           display: showLegend,
-          position: 'top',
-          align: 'start',
+          position: isPieOrDoughnut ? 'bottom' : 'top',
+          align: isPieOrDoughnut ? 'center' : 'start',
           labels: {
             usePointStyle: true,
             pointStyle: 'circle',
@@ -318,9 +351,9 @@ export function buildChartConfig(
               family: fontStack,
               size: 11,
             },
-            padding: 12,
-            boxWidth: 6,
-            boxHeight: 6,
+            padding: isPieOrDoughnut ? 14 : 12,
+            boxWidth: isPieOrDoughnut ? 10 : 6,
+            boxHeight: isPieOrDoughnut ? 10 : 6,
           },
         },
         title: {
@@ -331,9 +364,9 @@ export function buildChartConfig(
           titleColor: tooltipText,
           bodyColor: tooltipText,
           cornerRadius: 8,
-          padding: 10,
+          padding: { top: 8, right: 12, bottom: 8, left: 12 },
           displayColors: true,
-          boxPadding: 4,
+          boxPadding: 5,
           caretSize: 5,
           titleFont: {
             family: fontStack,
@@ -372,7 +405,7 @@ export function buildChartConfig(
         intersect: false,
       },
       layout: {
-        padding: { top: 8, right: 8, bottom: 4, left: 4 },
+        padding: layoutPadding,
       },
     },
   };
@@ -388,7 +421,56 @@ export function renderChart(spec: ChartSpec, ctx: RenderContext): HTMLElement {
   }
 
   const isPieOrDoughnut = spec.chartType === 'pie' || spec.chartType === 'doughnut';
-  const height = isPieOrDoughnut ? '200px' : '220px';
+  const showLegend = isPieOrDoughnut ? spec.labels.length > 1 : spec.datasets.length > 1;
+  const isTableSwitchable = ['bar', 'line', 'area', 'pie', 'doughnut', 'radar'].includes(spec.chartType);
+
+  if (isTableSwitchable) {
+    const controls = h('div', { class: 'iui-chart-controls' });
+    let currentView: 'chart' | 'table' = 'chart';
+    let tableViewHost: HTMLElement | null = null;
+
+    const makeViewBtn = (label: string, mode: 'chart' | 'table') =>
+      h('button', {
+        type: 'button',
+        class: `iui-chart-view-btn${mode === 'chart' ? ' is-active' : ''}`,
+        'aria-pressed': mode === 'chart' ? 'true' : 'false',
+        onClick: () => {
+          if (currentView === mode) return;
+          currentView = mode;
+          controls.querySelectorAll('.iui-chart-view-btn').forEach((b, i) => {
+            const isActive = (i === 0 && mode === 'chart') || (i === 1 && mode === 'table');
+            b.classList.toggle('is-active', isActive);
+            (b as HTMLElement).setAttribute('aria-pressed', String(isActive));
+          });
+          container.hidden = mode !== 'chart';
+          if (tableViewHost) tableViewHost.hidden = mode !== 'table';
+          if (mode === 'table' && tableViewHost && tableViewHost.childElementCount === 0) {
+            const colNames = spec.datasets.length > 1
+              ? [spec.xLabel || 'Label', ...spec.datasets.map((d) => d.label)]
+              : [spec.xLabel || 'Label', spec.datasets[0]?.label || 'Value'];
+            const tableRows = spec.labels.map((lbl, i) =>
+              spec.datasets.length > 1
+                ? [lbl, ...spec.datasets.map((d) => String(d.data[i] ?? ''))]
+                : [lbl, String(spec.datasets[0]?.data[i] ?? '')]
+            );
+            const tableSpec: TableSpec = { type: 'table', title: spec.title, columns: colNames, rows: tableRows };
+            const tableEl = renderTable(tableSpec, ctx, { allowViewSwitch: false });
+            tableViewHost.appendChild(tableEl);
+          }
+        },
+      }, label);
+
+    const viewSwitch = h('div', { class: 'iui-chart-view-switch', role: 'group', 'aria-label': 'Chart view mode' },
+      makeViewBtn('Chart', 'chart'),
+      makeViewBtn('Table', 'table'),
+    );
+    controls.appendChild(viewSwitch);
+    card.appendChild(controls);
+
+    tableViewHost = h('div', { class: 'iui-chart-table-view', role: 'region', 'aria-label': spec.title ? `${spec.title} data table` : 'Chart data table', hidden: true });
+    // Will append tableViewHost after container
+    (card as any).__chartTableHost = tableViewHost;
+  }
 
   const ariaLabel = spec.title
     ? `${spec.chartType} chart: ${spec.title}`
@@ -403,12 +485,21 @@ export function renderChart(spec: ChartSpec, ctx: RenderContext): HTMLElement {
     'div',
     {
       class: 'iui-chart-plot',
-      style: `position: relative; height: ${height};`,
+      role: 'region',
+      'aria-label': ariaLabel,
+      'data-chart-type': spec.chartType,
+      'data-has-legend': showLegend ? 'true' : 'false',
+      style: 'position: relative;',
     },
     canvas,
   );
 
   card.appendChild(container);
+
+  if (isTableSwitchable && (card as any).__chartTableHost) {
+    card.appendChild((card as any).__chartTableHost);
+    delete (card as any).__chartTableHost;
+  }
 
   const prefersReduced =
     typeof window !== 'undefined' &&

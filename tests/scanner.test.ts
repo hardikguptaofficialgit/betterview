@@ -1,10 +1,45 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
 import { startScanner } from '../src/content/scanner';
-import { GEMINI_ADAPTER, GROK_ADAPTER } from '../src/content/sites';
+import { GEMINI_ADAPTER, GROK_ADAPTER, extractMermaidSource, mermaidSourceToUiPayload } from '../src/content/sites';
 import { RENDERERS } from '../src/components';
 
 describe('startScanner', () => {
+  it('extracts labelled and unlabelled Mermaid source without classifying ordinary code', () => {
+    const flowchart = 'flowchart TD\n  A[Login] --> B{Valid?}\n  B -->|Yes| C[Dashboard]';
+    expect(extractMermaidSource(flowchart)).toBe(flowchart);
+    expect(extractMermaidSource('```mermaid\n' + flowchart + '\n```')).toBe(flowchart);
+    expect(extractMermaidSource('```\n' + flowchart + '\n```')).toBe(flowchart);
+    expect(extractMermaidSource('const value = 1;', 'javascript')).toBeNull();
+    expect(extractMermaidSource('Here is a flowchart: ' + flowchart)).toBeNull();
+    expect(extractMermaidSource('```javascript\n' + flowchart + '\n```')).toBeNull();
+    expect(JSON.parse(mermaidSourceToUiPayload(flowchart))).toMatchObject({ type: 'mermaid', code: flowchart });
+  });
+
+  it('converts Gemini Mermaid code blocks into a rendered Mermaid component', () => {
+    const container = document.createElement('div');
+    container.innerHTML = '<code-block><pre><code class="language-mermaid">flowchart TD\n A[Login] --> B[Dashboard]</code></pre></code-block>';
+    document.body.appendChild(container);
+    const codeBlock = container.querySelector('code-block') as HTMLElement;
+    const scanner = startScanner(GEMINI_ADAPTER, () => 'light', container);
+    const host = container.querySelector('.iui-host') as HTMLElement;
+    expect(host).not.toBeNull();
+    expect(host.shadowRoot?.querySelector('.iui-mermaid-card')).not.toBeNull();
+    expect(codeBlock.style.display).toBe('none');
+    scanner.stop();
+    container.remove();
+
+    const rawContainer = document.createElement('div');
+    rawContainer.innerHTML = '<code-block><pre><code>flowchart TD\n A[Start] --> B[Finish]</code></pre></code-block>';
+    document.body.appendChild(rawContainer);
+    const rawScanner = startScanner(GEMINI_ADAPTER, () => 'dark', rawContainer);
+    const rawHost = rawContainer.querySelector('.iui-host') as HTMLElement;
+    expect(rawHost).not.toBeNull();
+    expect(rawHost.shadowRoot?.querySelector('.iui-mermaid-card')).not.toBeNull();
+    rawScanner.stop();
+    rawContainer.remove();
+  });
+
   it('scans root, hides original wrapper and mounts host', () => {
     const container = document.createElement('div');
     container.innerHTML = `
@@ -368,7 +403,7 @@ describe('Gemini live DOM code block detection (Bug #2)', () => {
     container.remove();
   });
 
-  it('mounts card toolbar with 3 icon buttons (Copy data, Export card, View source) and sets data-host on .iui-root', () => {
+  it('mounts card toolbar with 4 icon buttons (Copy data, Export card, View source, Expand card) and sets data-host on .iui-root', () => {
     const container = document.createElement('div');
     container.innerHTML = `
       <code-block id="tb-wrap">
@@ -392,10 +427,49 @@ describe('Gemini live DOM code block detection (Bug #2)', () => {
     expect(toolbar).not.toBeNull();
 
     const buttons = toolbar?.querySelectorAll('button');
-    expect(buttons?.length).toBe(3);
+    expect(buttons?.length).toBe(4);
 
     const ariaLabels = Array.from(buttons || []).map((b) => b.getAttribute('aria-label'));
-    expect(ariaLabels).toEqual(['Copy data', 'Export card', 'View source']);
+    expect(ariaLabels).toEqual(['Copy data', 'Export card', 'View source', 'Expand card']);
+
+    scanner.stop();
+    container.remove();
+  });
+
+  it('traps modal focus inside visible controls in the Shadow DOM', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <code-block id="modal-tree">
+        <div class="code-block-decoration">ui</div>
+        <pre><code>{"type":"tree","title":"Architecture","root":{"id":"root","label":"Root","children":[{"id":"child","label":"Child"}]}}</code></pre>
+      </code-block>
+    `;
+    document.body.appendChild(container);
+    const scanner = startScanner(GEMINI_ADAPTER, () => 'light', container);
+    const shadowRoot = container.querySelector<HTMLElement>('.iui-host')?.shadowRoot;
+    expect(shadowRoot).not.toBeNull();
+
+    shadowRoot!.querySelector<HTMLButtonElement>('[aria-label="Expand card"]')!.click();
+    const modal = shadowRoot!.querySelector<HTMLElement>('.iui-modal-container')!;
+    const hiddenWrap = document.createElement('div');
+    hiddenWrap.hidden = true;
+    hiddenWrap.appendChild(document.createElement('button'));
+    modal.appendChild(hiddenWrap);
+
+    const focusable = Array.from(modal.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    )).filter((el) => !el.matches(':disabled') && !el.closest('[hidden], [inert], [aria-hidden="true"]'));
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    expect(focusable).not.toContain(hiddenWrap.querySelector('button'));
+
+    last.focus();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    expect(shadowRoot!.activeElement).toBe(first);
+
+    first.focus();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+    expect(shadowRoot!.activeElement).toBe(last);
 
     scanner.stop();
     container.remove();
@@ -604,7 +678,7 @@ describe('M15: Safe wrapper, prose preservation, and flicker-free streaming', ()
     container.remove();
   });
 
-  it('mounts card toolbar with 3 icon buttons (Copy data, Export card, View source) and sets data-host on .iui-root', () => {
+  it('mounts card toolbar with 4 icon buttons (Copy data, Export card, View source, Expand card) and sets data-host on .iui-root', () => {
     const container = document.createElement('div');
     container.innerHTML = `
       <code-block id="tb-wrap">
@@ -628,10 +702,10 @@ describe('M15: Safe wrapper, prose preservation, and flicker-free streaming', ()
     expect(toolbar).not.toBeNull();
 
     const buttons = toolbar?.querySelectorAll('button');
-    expect(buttons?.length).toBe(3);
+    expect(buttons?.length).toBe(4);
 
     const ariaLabels = Array.from(buttons || []).map((b) => b.getAttribute('aria-label'));
-    expect(ariaLabels).toEqual(['Copy data', 'Export card', 'View source']);
+    expect(ariaLabels).toEqual(['Copy data', 'Export card', 'View source', 'Expand card']);
 
     scanner.stop();
     container.remove();

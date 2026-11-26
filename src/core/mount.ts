@@ -106,6 +106,7 @@ export function mountBlock(
 
   let hasGoodRender = false;
   let activeModalEl: HTMLElement | null = null;
+  let activeModalCleanup: (() => void) | null = null;
   let watermarkEnabled = true;
 
   loadSettings()
@@ -246,11 +247,34 @@ export function mountBlock(
     const exportWrap = h('div', { class: 'iui-export-wrap' });
     const exportMenu = h('div', { class: 'iui-export-menu is-hidden', role: 'menu' });
 
+    function handleExportMenuKeyDown(e: KeyboardEvent): void {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeExportMenu();
+        exportBtn.focus();
+        return;
+      }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        e.stopPropagation();
+        const items = Array.from(exportMenu.querySelectorAll<HTMLElement>('.iui-export-item'));
+        if (items.length === 0) return;
+        const active = (shadowRoot.activeElement as HTMLElement | null) || (document.activeElement as HTMLElement | null);
+        const idx = active ? items.indexOf(active) : -1;
+        const nextIdx = e.key === 'ArrowDown'
+          ? (idx + 1) % items.length
+          : (idx - 1 + items.length) % items.length;
+        items[nextIdx].focus();
+      }
+    }
+
     function closeExportMenu(): void {
       exportMenu.classList.add('is-hidden');
       exportBtn.setAttribute('aria-expanded', 'false');
       toolbar.classList.remove('is-open');
       document.removeEventListener('click', closeExportMenu);
+      exportMenu.removeEventListener('keydown', handleExportMenuKeyDown);
     }
 
     function toggleExportMenu(): void {
@@ -395,6 +419,7 @@ export function mountBlock(
         exportMenu.classList.remove('is-hidden');
         exportBtn.setAttribute('aria-expanded', 'true');
         toolbar.classList.add('is-open');
+        exportMenu.addEventListener('keydown', handleExportMenuKeyDown);
         setTimeout(() => {
           document.addEventListener('click', closeExportMenu);
         }, 10);
@@ -416,6 +441,20 @@ export function mountBlock(
           e.stopPropagation();
           toggleExportMenu();
         },
+        onKeydown: (e: Event) => {
+          const ke = e as KeyboardEvent;
+          if (ke.key === 'ArrowDown' && exportMenu.classList.contains('is-hidden')) {
+            ke.preventDefault();
+            ke.stopPropagation();
+            toggleExportMenu();
+            const firstItem = exportMenu.querySelector<HTMLElement>('.iui-export-item');
+            firstItem?.focus();
+          } else if (ke.key === 'Escape' && !exportMenu.classList.contains('is-hidden')) {
+            ke.preventDefault();
+            ke.stopPropagation();
+            closeExportMenu();
+          }
+        },
       },
       iconEl('export', 16),
       exportTooltip,
@@ -432,14 +471,17 @@ export function mountBlock(
         class: 'iui-tool-btn',
         type: 'button',
         'aria-label': 'View source',
+        'aria-expanded': 'false',
         onClick: (e: Event) => {
           e.stopPropagation();
           const isCollapsed = sourcePanel.classList.contains('is-collapsed');
           if (isCollapsed) {
             sourcePanel.classList.remove('is-collapsed');
+            sourceBtn.setAttribute('aria-expanded', 'true');
             toolbar.classList.add('is-open');
           } else {
             sourcePanel.classList.add('is-collapsed');
+            sourceBtn.setAttribute('aria-expanded', 'false');
             toolbar.classList.remove('is-open');
           }
         },
@@ -448,9 +490,27 @@ export function mountBlock(
       sourceTooltip,
     );
 
+    // 4. Expand / fullscreen modal button
+    const expandTooltip = h('span', { class: 'iui-tooltip', role: 'tooltip' }, 'Expand');
+    const expandBtn = h(
+      'button',
+      {
+        class: 'iui-tool-btn',
+        type: 'button',
+        'aria-label': 'Expand card',
+        onClick: (e: Event) => {
+          e.stopPropagation();
+          openExpandModal(expandBtn, getSpec);
+        },
+      },
+      iconEl('arrows-out', 16),
+      expandTooltip,
+    );
+
     toolbar.appendChild(copyBtn);
     toolbar.appendChild(exportWrap);
     toolbar.appendChild(sourceBtn);
+    toolbar.appendChild(expandBtn);
     header.appendChild(toolbar);
 
     // Source panel
@@ -462,6 +522,10 @@ export function mountBlock(
   }
 
   function openExpandModal(triggerBtn: HTMLElement, getSpec: () => UISpec | null): void {
+    if (activeModalCleanup) {
+      activeModalCleanup();
+      activeModalCleanup = null;
+    }
     if (activeModalEl) {
       activeModalEl.remove();
       activeModalEl = null;
@@ -469,6 +533,8 @@ export function mountBlock(
 
     const currentSpec = getSpec();
     if (!currentSpec) return;
+
+    const modalCleanups: (() => void)[] = [];
 
     const overlay = h('div', {
       class: 'iui-modal-overlay',
@@ -489,6 +555,9 @@ export function mountBlock(
     const modalTitle = h('div', { class: 'iui-title' }, currentSpec.title || 'Expanded view');
     modalHeader.appendChild(modalTitle);
 
+    const escHint = h('span', { class: 'iui-modal-esc-hint', 'aria-hidden': 'true' }, 'Esc');
+    modalHeader.appendChild(escHint);
+
     const closeBtn = h(
       'button',
       {
@@ -508,7 +577,9 @@ export function mountBlock(
       const modalCtx: RenderContext = {
         theme: currentTheme,
         host: opts.host,
-        onCleanup: () => {},
+        onCleanup(fn: () => void) {
+          modalCleanups.push(fn);
+        },
       };
       const renderer = RENDERERS[currentSpec.type];
       if (renderer) {
@@ -521,8 +592,21 @@ export function mountBlock(
     container.appendChild(modalBody);
     overlay.appendChild(container);
 
-    function closeModal(): void {
+    function flushModalCleanups(): void {
       document.removeEventListener('keydown', handleKeyDown);
+      for (const fn of modalCleanups) {
+        try {
+          fn();
+        } catch (err) {
+          console.error('Error during modal cleanup:', err);
+        }
+      }
+      modalCleanups.length = 0;
+    }
+
+    function closeModal(): void {
+      flushModalCleanups();
+      activeModalCleanup = null;
       overlay.remove();
       activeModalEl = null;
       triggerBtn.focus();
@@ -541,17 +625,21 @@ export function mountBlock(
           container.querySelectorAll<HTMLElement>(
             'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
           ),
-        ).filter((el) => !el.hasAttribute('disabled'));
+        ).filter((el) =>
+          !el.matches(':disabled') &&
+          !el.closest('[hidden], [inert], [aria-hidden="true"]'),
+        );
 
         if (focusable.length === 0) return;
 
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
 
-        if (e.shiftKey && document.activeElement === first) {
+        const activeElement = (root.getRootNode() as ShadowRoot).activeElement ?? document.activeElement;
+        if (e.shiftKey && activeElement === first) {
           e.preventDefault();
           last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
+        } else if (!e.shiftKey && activeElement === last) {
           e.preventDefault();
           first.focus();
         }
@@ -561,6 +649,7 @@ export function mountBlock(
     document.addEventListener('keydown', handleKeyDown);
     root.appendChild(overlay);
     activeModalEl = overlay;
+    activeModalCleanup = flushModalCleanups;
     closeBtn.focus();
   }
 
@@ -691,10 +780,19 @@ export function mountBlock(
         () => componentEl,
       );
 
-      // Insert header as first child of component card
-      componentEl.insertBefore(header, componentEl.firstChild);
-      // Insert source panel just under header
-      header.after(sourcePanel);
+      const isInitialEnter = !hasGoodRender;
+      if (isInitialEnter) {
+        componentEl.setAttribute('data-animate', 'enter');
+      }
+
+      // Wrap component body in scrollable container so .iui-card can stay overflow: visible
+      const bodyWrap = h('div', { class: 'iui-card-body' });
+      while (componentEl.firstChild) {
+        bodyWrap.appendChild(componentEl.firstChild);
+      }
+      componentEl.appendChild(header);
+      componentEl.appendChild(sourcePanel);
+      componentEl.appendChild(bodyWrap);
 
       const wrapper = h('div', { class: 'iui-rendered-wrap' });
       wrapper.appendChild(componentEl);
@@ -949,6 +1047,10 @@ export function mountBlock(
       if (renderThrottleTimer !== null) {
         window.clearTimeout(renderThrottleTimer);
         renderThrottleTimer = null;
+      }
+      if (activeModalCleanup) {
+        activeModalCleanup();
+        activeModalCleanup = null;
       }
       if (activeModalEl) {
         activeModalEl.remove();

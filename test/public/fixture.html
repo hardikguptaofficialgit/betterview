@@ -437,9 +437,41 @@
       </script>
     </section>
 
-    <!-- 14. Mermaid: Redirect sequence -->
+    <!-- 14. Tree: Product architecture -->
+    <section class="fixture-section" id="section-tree">
+      <h2>14. Tree: Product architecture</h2>
+      <div class="fixture-mount" data-spec-id="tree-spec"></div>
+      <script type="application/json" id="tree-spec">
+      {
+        "type": "tree",
+        "title": "Product architecture",
+        "layout": "vertical",
+        "root": {
+          "id": "product",
+          "label": "Product",
+          "note": "Core platform and supporting services",
+          "children": [
+            { "id": "client", "label": "Client", "badge": "Web", "color": "blue", "children": [
+              { "id": "ui", "label": "User interface", "note": "Accessible interactive components" },
+              { "id": "state", "label": "State management" }
+            ] },
+            { "id": "api", "label": "API services", "color": "green", "collapsed": true, "children": [
+              { "id": "auth", "label": "Authentication" },
+              { "id": "data", "label": "Data access" }
+            ] },
+            { "id": "infra", "label": "Infrastructure", "color": "purple", "children": [
+              { "id": "cache", "label": "Cache" },
+              { "id": "observability", "label": "Observability" }
+            ] }
+          ]
+        }
+      }
+      </script>
+    </section>
+
+    <!-- 15. Mermaid: Redirect sequence -->
     <section class="fixture-section" id="section-mermaid-sequence">
-      <h2>14. Mermaid: Redirect sequence</h2>
+      <h2>15. Mermaid: Redirect sequence</h2>
       <div class="fixture-mount" data-spec-id="mermaid-sequence-spec"></div>
       <script type="application/json" id="mermaid-sequence-spec">
       {
@@ -450,9 +482,22 @@
       </script>
     </section>
 
-    <!-- 15. Mermaid: Invalid diagram test -->
+    <!-- 15b. Mermaid: Authentication flowchart -->
+    <section class="fixture-section" id="section-mermaid-flowchart">
+      <h2>15b. Mermaid: Authentication flowchart</h2>
+      <div class="fixture-mount" data-spec-id="mermaid-flowchart-spec"></div>
+      <script type="application/json" id="mermaid-flowchart-spec">
+      {
+        "type": "mermaid",
+        "title": "Authentication and account protection",
+        "code": "flowchart TD\n  A[User opens sign-in] --> B[Enter email and password]\n  B --> C{Credentials valid?}\n  C -->|Yes| D[Generate JWT]\n  D --> E[Open dashboard]\n  C -->|No| F[Increment failed attempts]\n  F --> G{Five failed attempts?}\n  G -->|No| B\n  G -->|Yes| H[Lock account]\n  H --> I[Show recovery instructions]"
+      }
+      </script>
+    </section>
+
+    <!-- 16. Mermaid: Invalid diagram test -->
     <section class="fixture-section" id="section-mermaid-invalid">
-      <h2>15. Mermaid: Invalid diagram test (Error box)</h2>
+      <h2>16. Mermaid: Invalid diagram test (Error box)</h2>
       <div class="fixture-mount" data-spec-id="mermaid-invalid-spec"></div>
       <script type="application/json" id="mermaid-invalid-spec">
       {
@@ -463,9 +508,9 @@
       </script>
     </section>
 
-    <!-- 16. Callout: Production Tip -->
+    <!-- 17. Callout: Production Tip -->
     <section class="fixture-section" id="section-callout">
-      <h2>16. Callout: Production Deployment Tip</h2>
+      <h2>17. Callout: Production Deployment Tip</h2>
       <div class="fixture-mount" data-spec-id="callout-spec"></div>
       <script type="application/json" id="callout-spec">
       {
@@ -477,9 +522,9 @@
       </script>
     </section>
 
-    <!-- 17. Stats: System Health & Scale -->
+    <!-- 18. Stats: System Health & Scale -->
     <section class="fixture-section" id="section-stats">
-      <h2>17. Stats: System Health &amp; Scale</h2>
+      <h2>18. Stats: System Health &amp; Scale</h2>
       <div class="fixture-mount" data-spec-id="stats-spec"></div>
       <script type="application/json" id="stats-spec">
       {
@@ -495,9 +540,9 @@
       </script>
     </section>
 
-    <!-- 18. Tabs: API Protocol Options -->
+    <!-- 19. Tabs: API Protocol Options -->
     <section class="fixture-section" id="section-tabs">
-      <h2>18. Tabs: API Protocol Options</h2>
+      <h2>19. Tabs: API Protocol Options</h2>
       <div class="fixture-mount" data-spec-id="tabs-spec"></div>
       <script type="application/json" id="tabs-spec">
       {
@@ -525,9 +570,9 @@
       </script>
     </section>
 
-    <!-- 19. Timeline: Deployment Roadmap -->
+    <!-- 20. Timeline: Deployment Roadmap -->
     <section class="fixture-section" id="section-timeline">
-      <h2>19. Timeline: Deployment &amp; Scale Roadmap</h2>
+      <h2>20. Timeline: Deployment &amp; Scale Roadmap</h2>
       <div class="fixture-mount" data-spec-id="timeline-spec"></div>
       <script type="application/json" id="timeline-spec">
       {
@@ -537,26 +582,33 @@
           {
             "title": "Phase 1: Architecture RFC",
             "time": "Month 1",
-            "text": "Finalized Base62 collision-free ID hashing and Redis cluster caching topology."
+            "text": "Finalized Base62 collision-free ID hashing and Redis cluster caching topology.",
+            "status": "done"
           },
           {
             "title": "Phase 2: Alpha Canary Release",
             "time": "Month 2",
-            "text": "Deployed to 1% of internal traffic with automated latency regression monitoring."
+            "text": "Deployed to 1% of internal traffic with automated latency regression monitoring.",
+            "status": "done"
           },
           {
             "title": "Phase 3: Global Edge Rollout",
             "time": "Month 3",
-            "text": "100% production traffic live across 18 edge point-of-presence data centers."
-          }
+            "text": "100% production traffic live across 18 edge point-of-presence data centers.",
+            "status": "active"
+          },
+          { "title": "Phase 4: Regional failover", "time": "Month 4", "text": "Exercise failover across regional clusters.", "status": "upcoming" },
+          { "title": "Phase 5: Analytics expansion", "time": "Month 5", "text": "Add usage analytics and reporting.", "status": "upcoming" },
+          { "title": "Phase 6: Public launch", "time": "Month 6", "text": "Open the platform to all customers.", "status": "upcoming" },
+          { "title": "Phase 7: Capacity review", "time": "Month 7", "text": "Review throughput and storage capacity." }
         ]
       }
       </script>
     </section>
 
-    <!-- 20. Followups: Suggested Next Steps -->
+    <!-- 21. Followups: Suggested Next Steps -->
     <section class="fixture-section" id="section-followups">
-      <h2>20. Followups: Suggested Next Steps</h2>
+      <h2>21. Followups: Suggested Next Steps</h2>
       <div class="fixture-mount" data-spec-id="followups-spec"></div>
       <script type="application/json" id="followups-spec">
       {
@@ -571,9 +623,9 @@
       </script>
     </section>
 
-    <!-- 21. Math: Bayes Theorem Derivation -->
+    <!-- 22. Math: Bayes Theorem Derivation -->
     <section class="fixture-section" id="section-math">
-      <h2>21. Math: Bayes Theorem Derivation</h2>
+      <h2>22. Math: Bayes Theorem Derivation</h2>
       <div class="fixture-mount" data-spec-id="math-spec"></div>
       <script type="application/json" id="math-spec">
       {
@@ -602,9 +654,9 @@
       </script>
     </section>
 
-    <!-- 22. Code: Quick Sort Algorithm -->
+    <!-- 23. Code: Quick Sort Algorithm -->
     <section class="fixture-section" id="section-code">
-      <h2>22. Code: Quick Sort Algorithm</h2>
+      <h2>23. Code: Quick Sort Algorithm</h2>
       <div class="fixture-mount" data-spec-id="code-spec"></div>
       <script type="application/json" id="code-spec">
       {
@@ -617,17 +669,17 @@
       </script>
     </section>
 
-    <!-- 23. Progressive Streaming Simulation (All Types) -->
+    <!-- 24. Progressive Streaming Simulation (All Types) -->
     <section class="fixture-section" id="section-simulate-streaming">
-      <h2>23. Progressive Streaming Simulation (14 Included Examples)</h2>
+      <h2>24. Progressive Streaming Simulation (15 Included Examples)</h2>
       <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
         <button id="btn-simulate-streaming" class="theme-btn" type="button">Simulate streaming</button>
-        <span id="streaming-status" style="font-size: 13px; color: #6B6B6B;">Click to stream 14 included sample specs in 15-char chunks</span>
+        <span id="streaming-status" style="font-size: 13px; color: #6B6B6B;">Click to stream 15 included sample specs in 15-char chunks</span>
       </div>
       <div id="streaming-all-mount" style="display: flex; flex-direction: column; gap: 20px;"></div>
     </section>
 
-    <!-- 22. Host simulation section -->
+    <!-- 25. Host simulation section -->
     <section class="fixture-section" id="section-host-sim">
       <h2>22. Host simulation (Gemini &amp; Grok Scanner)</h2>
       <button id="btn-run-simulation" class="theme-btn" type="button" style="align-self: flex-start; margin-bottom: 12px;">Run host simulation</button>
@@ -644,7 +696,7 @@
       <div id="sim-grok">
         <div>
           <div><span>ui</span><button type="button">Copy</button></div>
-          <pre><code>{"type":"quiz","title":"Simulated Grok Quiz","questions":[{"q":"Does scanner work?","options":["Yes","No"],"answer":0,"explain":"It works flawlessly."}]}</code></pre>
+          <pre><code class="language-ui">{"type":"quiz","title":"Simulated Grok Quiz","questions":[{"q":"Does scanner work?","options":["Yes","No"],"answer":0,"explain":"It works flawlessly."}]}</code></pre>
         </div>
       </div>
 
@@ -660,7 +712,7 @@
       <div id="sim-invalid">
         <div>
           <div><span>ui</span><button type="button">Copy</button></div>
-          <pre><code id="sim-invalid-code">{"type":"flow","title":"Corrupted JSON</code></pre>
+          <pre><code id="sim-invalid-code" class="language-ui">{"type":"flow","title":"Corrupted JSON</code></pre>
         </div>
       </div>
     </section>

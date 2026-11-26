@@ -60,14 +60,48 @@ function getCardExportSize(card: HTMLElement): { width: number; height: number }
   return { width, height };
 }
 
+function readExportThemeColors(card: HTMLElement, isDark: boolean): {
+  bg: string;
+  surface: string;
+  text: string;
+  muted: string;
+  border: string;
+} {
+  const fallbackBg = isDark ? '#0A0A0A' : '#FFFFFF';
+  const fallbackSurface = isDark ? '#18181A' : '#FAFAFA';
+  const fallbackText = isDark ? '#FAFAFA' : '#0A0A0A';
+  const fallbackMuted = isDark ? '#A3A3A3' : '#6B7280';
+  const fallbackBorder = isDark ? '#454545' : '#D8DDE5';
+
+  try {
+    const target = card.closest<HTMLElement>('.iui-root') || card;
+    const style = typeof getComputedStyle === 'function' ? getComputedStyle(target) : null;
+    if (!style) {
+      return { bg: fallbackBg, surface: fallbackSurface, text: fallbackText, muted: fallbackMuted, border: fallbackBorder };
+    }
+    const readVar = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
+    const bg = readVar('--iui-bg', fallbackBg);
+    return {
+      bg,
+      surface: readVar('--iui-surface', bg || fallbackSurface),
+      text: readVar('--iui-text', fallbackText),
+      muted: readVar('--iui-muted', fallbackMuted),
+      border: readVar('--iui-border', fallbackBorder),
+    };
+  } catch {
+    return { bg: fallbackBg, surface: fallbackSurface, text: fallbackText, muted: fallbackMuted, border: fallbackBorder };
+  }
+}
+
 /**
  * Serializes the card's shadow-DOM subtree into an SVG foreignObject string
  * with inlined styles, background, 24px padding, and optional watermark.
  */
 export function serializeCardToSvg(card: HTMLElement, opts: ExportOptions = {}): string {
   const isDark = opts.theme === 'dark';
-  const bgColor = isDark ? '#0A0A0A' : '#FFFFFF';
-  const watermarkColor = isDark ? '#737373' : '#A3A3A3';
+  const colors = readExportThemeColors(card, isDark);
+  const bgColor = colors.bg;
+  const watermarkColor = colors.muted;
   const showWatermark = opts.watermark !== false;
 
   // Clone card and strip toolbar, source panel, toast, and notes
@@ -130,10 +164,11 @@ export function serializeCardToSvg(card: HTMLElement, opts: ExportOptions = {}):
  * foreignObject rendering failures and keeps connectors crisp at any size. */
 export function serializeFlowToSvg(card: HTMLElement, opts: ExportOptions = {}): string {
   const isDark = opts.theme === 'dark';
-  const background = isDark ? '#0A0A0A' : '#FFFFFF';
-  const foreground = isDark ? '#FAFAFA' : '#202124';
-  const muted = isDark ? '#A3A3A3' : '#6B7280';
-  const border = isDark ? '#454545' : '#D8DDE5';
+  const colors = readExportThemeColors(card, isDark);
+  const background = colors.bg;
+  const foreground = colors.text;
+  const muted = colors.muted;
+  const border = colors.border;
   const padding = 28;
   const inner = card.querySelector<HTMLElement>('.flow-inner');
   const diagram = card.querySelector<HTMLElement>('.flow-diagram');
@@ -243,9 +278,10 @@ export async function renderChartToCanvas(
   opts: ExportOptions = {},
 ): Promise<HTMLCanvasElement> {
   const isDark = opts.theme === 'dark';
-  const bgColor = isDark ? '#0A0A0A' : '#FFFFFF';
-  const textColor = isDark ? '#FAFAFA' : '#0A0A0A';
-  const watermarkColor = isDark ? '#737373' : '#A3A3A3';
+  const colors = readExportThemeColors(card, isDark);
+  const bgColor = colors.bg;
+  const textColor = colors.text;
+  const watermarkColor = colors.muted;
   const showWatermark = opts.watermark !== false;
 
   const base64 = chartInstance.toBase64Image();
@@ -348,9 +384,10 @@ function escapeXml(value: string): string {
 
 function serializeChartToSvg(card: HTMLElement, chart: any, opts: ExportOptions): string {
   const isDark = opts.theme === 'dark';
-  const background = isDark ? '#0A0A0A' : '#FFFFFF';
-  const foreground = isDark ? '#FAFAFA' : '#0A0A0A';
-  const muted = isDark ? '#737373' : '#A3A3A3';
+  const colors = readExportThemeColors(card, isDark);
+  const background = colors.bg;
+  const foreground = colors.text;
+  const muted = colors.muted;
   const padding = 24;
   const width = Math.max(1, Math.round(chart.width || 640));
   const height = Math.max(1, Math.round(chart.height || 300));

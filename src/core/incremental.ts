@@ -10,6 +10,7 @@ export interface TypeMeta {
 
 export const TYPE_META: Record<UIType, TypeMeta> = {
   flow: { icon: 'tree-structure', color: 'blue', label: 'Flow' },
+  tree: { icon: 'network', color: 'teal', label: 'Tree' },
   stepper: { icon: 'steps', color: 'blue', label: 'Steps' },
   table: { icon: 'table', color: 'stone', label: 'Table' },
   compare: { icon: 'scales', color: 'amber', label: 'Compare' },
@@ -192,6 +193,17 @@ export function createTypeSkeleton(typeHint?: UIType): HTMLElement {
     wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 16px; width: 80%;' }));
     wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 16px; width: 45%;' }));
     wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 16px; width: 70%;' }));
+    card.appendChild(wrap);
+  } else if (typeHint === 'tree') {
+    const wrap = h('div', { class: 'iui-skel-tree-wrap' });
+    // Root node
+    wrap.appendChild(h('div', { class: 'iui-skel', style: 'height: 24px; width: 50%; margin-bottom: 8px; border-radius: 6px;' }));
+    // Level-1 children
+    for (const w of ['70%', '55%', '65%']) {
+      const row = h('div', { class: 'iui-skel-stepper-row', style: 'padding-left: 20px; margin-bottom: 6px;' });
+      row.appendChild(h('div', { class: 'iui-skel', style: `height: 18px; width: ${w}; border-radius: 5px;` }));
+      wrap.appendChild(row);
+    }
     card.appendChild(wrap);
   } else {
     // Default 4 lines with varied deterministic widths

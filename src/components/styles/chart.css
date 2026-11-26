@@ -1,25 +1,134 @@
 .iui-chart-card {
   overflow: visible;
-  gap: 8px;
+  gap: 10px;
 }
 
 .iui-chart-card > .iui-title {
   margin: 0;
-  font-size: 13px;
+  padding: 0 2px;
+  font-size: 13.5px;
   font-weight: 600;
   line-height: 1.4;
 }
 
-.iui-chart-plot {
+.iui-chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.iui-chart-view-switch {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--iui-surface);
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 12%, transparent);
+  border-radius: 7px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.iui-chart-view-btn {
+  all: unset;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--iui-muted);
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+.iui-chart-view-btn:hover {
+  color: var(--iui-text);
+}
+
+.iui-chart-view-btn.is-active {
+  background-color: var(--iui-bg);
+  color: var(--iui-text);
+  font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 12%, transparent);
+}
+
+.iui-chart-view-btn:focus-visible {
+  outline: 2px solid var(--iui-accent);
+  outline-offset: 1px;
+}
+
+.iui-chart-table-view {
+  margin-top: 2px;
+}
+
+.iui-chart-table-view .iui-table-card,
+.iui-table-chart-view .iui-chart-card {
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.iui-chart-table-view .iui-table-card > .iui-title,
+.iui-table-chart-view .iui-chart-controls {
+  display: none;
+}
+
+.iui-chart-wrap {
   width: 100%;
   min-width: 0;
+  padding: 2px 0;
+  box-sizing: border-box;
+}
+
+.iui-chart-plot {
+  --iui-chart-legend-offset: 0px;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: calc(clamp(240px, 32vw, 300px) + var(--iui-chart-legend-offset));
   border: none;
   background: transparent;
-  padding: 4px 0 0;
+  padding: 6px 4px 2px;
   box-sizing: border-box;
+}
+
+.iui-chart-plot[data-has-legend="true"],
+[data-has-legend="true"] .iui-chart-plot {
+  --iui-chart-legend-offset: 28px;
+}
+
+.iui-chart-plot[data-chart-type="pie"],
+.iui-chart-plot[data-chart-type="doughnut"],
+[data-chart-type="pie"] .iui-chart-plot,
+[data-chart-type="doughnut"] .iui-chart-plot {
+  height: calc(clamp(220px, 28vw, 270px) + var(--iui-chart-legend-offset));
+}
+
+.iui-root .iui-modal-container .iui-chart-plot {
+  height: clamp(320px, 50vh, 460px);
+  padding: 8px 6px 4px;
 }
 
 .iui-chart-plot canvas {
   display: block;
+  width: 100%;
   max-width: 100%;
+}
+
+@container iui (max-width: 520px) {
+  .iui-chart-card {
+    gap: 8px;
+  }
+
+  .iui-chart-plot {
+    height: calc(clamp(220px, 46vw, 270px) + var(--iui-chart-legend-offset));
+    padding: 4px 2px 2px;
+  }
+
+  .iui-chart-plot[data-chart-type="pie"],
+  .iui-chart-plot[data-chart-type="doughnut"],
+  [data-chart-type="pie"] .iui-chart-plot,
+  [data-chart-type="doughnut"] .iui-chart-plot {
+    height: calc(clamp(200px, 42vw, 250px) + var(--iui-chart-legend-offset));
+  }
 }

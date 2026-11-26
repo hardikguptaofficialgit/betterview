@@ -112,6 +112,7 @@ const REGULAR_ICON_MAP: Record<string, string> = {
   'copy': copyIcon,
   'code': codeIcon,
   'corners-out': maximizeIcon,
+  'arrows-out': maximizeIcon,
   'maximize': maximizeIcon,
   'maximize-2': maximizeIcon,
   'expand': maximizeIcon,
@@ -270,6 +271,7 @@ const CARD_TYPE_ICONS: Record<UIType, string> = {
   form: listIcon,
   image: imageIcon,
   dashboard: panelsTopLeftIcon,
+  tree: workflowIcon,
   generic: listIcon,
 };
 
@@ -281,6 +283,7 @@ export const ALLOWED_ICONS = [
   'copy',
   'code',
   'corners-out',
+  'arrows-out',
   'maximize',
   'maximize-2',
   'expand',

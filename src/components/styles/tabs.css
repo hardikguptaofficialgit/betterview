@@ -1,5 +1,5 @@
 .iui-tabs-card {
-  border-radius: var(--iui-radius-card, 18px);
+  border-radius: var(--iui-radius-card, 12px);
 }
 
 .iui-tabs-nav {

@@ -56,6 +56,11 @@
   color: var(--iui-text);
 }
 
+.iui-quiz-nav-btn:focus-visible {
+  outline: 2px solid var(--iui-accent);
+  outline-offset: 1px;
+}
+
 .iui-quiz-nav-btn:disabled {
   opacity: 0.35;
   cursor: default;
@@ -69,7 +74,7 @@
 
 .iui-quiz-q-text {
   font-size: 13.5px;
-  font-weight: 550;
+  font-weight: 600;
   color: var(--iui-text);
   line-height: 1.45;
 }
@@ -140,25 +145,25 @@
 
 /* Correct / incorrect subtle tint */
 .iui-quiz-opt-row.is-correct {
-  background-color: color-mix(in srgb, #10b981 12%, transparent);
-  border-color: color-mix(in srgb, #10b981 40%, transparent);
+  background-color: color-mix(in srgb, var(--iui-success, #10b981) 12%, transparent);
+  border-color: color-mix(in srgb, var(--iui-success, #10b981) 40%, transparent);
   color: var(--iui-text);
 }
 
 .iui-quiz-opt-row.is-correct .iui-quiz-letter-circle {
-  border-color: #10b981;
-  color: #10b981;
+  border-color: var(--iui-success, #10b981);
+  color: var(--iui-success, #10b981);
 }
 
 .iui-quiz-opt-row.is-incorrect {
-  background-color: color-mix(in srgb, #ef4444 12%, transparent);
-  border-color: color-mix(in srgb, #ef4444 40%, transparent);
+  background-color: color-mix(in srgb, var(--iui-danger, #ef4444) 12%, transparent);
+  border-color: color-mix(in srgb, var(--iui-danger, #ef4444) 40%, transparent);
   color: var(--iui-text);
 }
 
 .iui-quiz-opt-row.is-incorrect .iui-quiz-letter-circle {
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--iui-danger, #ef4444);
+  color: var(--iui-danger, #ef4444);
 }
 
 /* Explanation */

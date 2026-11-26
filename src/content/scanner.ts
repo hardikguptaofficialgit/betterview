@@ -1,4 +1,4 @@
-import { SiteAdapter, isUiBlock, getBlockCodeText, isCodeOnlyWrapper } from './sites';
+import { SiteAdapter, isUiBlock, getBlockCodeText, isCodeOnlyWrapper, extractMermaidSource, mermaidSourceToUiPayload } from './sites';
 import { ThemeMode } from '../core/theme';
 import { mountBlock, BlockHandle } from '../core/mount';
 import { tryParse } from '../core/parse';
@@ -117,7 +117,8 @@ export function startScanner(
         const text = getBlockCodeText(adapter, block);
         if (text !== item.lastText) {
           item.lastText = text;
-          item.handle.update(text);
+          const mermaidSource = extractMermaidSource(text, adapter.languageOf(block));
+          item.handle.update(mermaidSource ? mermaidSourceToUiPayload(mermaidSource) : text);
 
           if (item.finalizeTimer !== undefined) {
             window.clearTimeout(item.finalizeTimer);
@@ -145,16 +146,18 @@ export function startScanner(
       }
 
       const text = getBlockCodeText(adapter, block);
+      const mermaidSource = extractMermaidSource(text, adapter.languageOf(block));
+      const mountText = mermaidSource ? mermaidSourceToUiPayload(mermaidSource) : text;
       const target = isCodeOnlyWrapper(wrapper, block) ? wrapper : block;
 
       let initialText: string | undefined = undefined;
       if (renderedTextsCache.has(text)) {
-        initialText = text;
+        initialText = mountText;
       } else {
-        const parseRes = tryParse(text);
+        const parseRes = tryParse(mountText);
         if (parseRes.ok && typeof parseRes.value === 'object' && parseRes.value !== null) {
           if (validateSpec(parseRes.value).ok) {
-            initialText = text;
+            initialText = mountText;
           }
         }
       }
@@ -217,7 +220,7 @@ export function startScanner(
       }
 
       if (!initialText) {
-        handle.update(text);
+        handle.update(mountText);
       }
     }
   }

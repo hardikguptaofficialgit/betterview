@@ -113,7 +113,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background-color: transparent;
+  background-color: var(--iui-surface, var(--iui-bg));
 }
 
 .iui-table-header-tr {
@@ -216,8 +216,176 @@
   align-items: center;
   padding: 1px 6px;
   border-radius: 4px;
-  background-color: color-mix(in srgb, #10b981 12%, transparent);
+  background-color: color-mix(in srgb, var(--iui-success, #10b981) 12%, transparent);
   color: var(--iui-text);
   font-weight: 500;
   font-size: 12px;
+}
+
+/* View switcher segmented control */
+.iui-table-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.iui-table-view-switch {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--iui-surface);
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 12%, transparent);
+  border-radius: 7px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.iui-table-view-btn {
+  all: unset;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--iui-muted);
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+.iui-table-view-btn:hover {
+  color: var(--iui-text);
+}
+
+.iui-table-view-btn.is-active {
+  background-color: var(--iui-bg);
+  color: var(--iui-text);
+  font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 12%, transparent);
+}
+
+.iui-table-view-btn:focus-visible {
+  outline: 2px solid var(--iui-accent);
+  outline-offset: 1px;
+}
+
+/* Chart/Cards view containers */
+.iui-table-chart-view,
+.iui-table-cards-view {
+  margin-top: 4px;
+}
+
+/* Cards grid view */
+.iui-table-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+  gap: 8px;
+}
+
+.iui-table-kv-card {
+  border: 1px solid color-mix(in srgb, var(--iui-text, #000) 10%, transparent);
+  border-radius: var(--iui-radius-card, 12px);
+  padding: 10px 12px;
+  background: var(--iui-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.iui-table-kv-head {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--iui-text);
+  line-height: 1.4;
+}
+
+.iui-table-kv-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.iui-table-kv-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.iui-table-kv-key {
+  color: var(--iui-muted);
+  flex-shrink: 0;
+}
+
+.iui-table-kv-val {
+  color: var(--iui-text);
+  text-align: right;
+}
+
+.iui-table-kv-val.is-numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.iui-table-cards-empty {
+  color: var(--iui-muted);
+  font-size: 13px;
+  padding: 16px 0;
+  text-align: center;
+}
+
+/* Proportional inline micro-bars */
+.iui-table-cell-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  display: block;
+  background-color: color-mix(in srgb, var(--iui-accent, #0b57d0) 8%, transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.iui-table-cell-val {
+  position: relative;
+  z-index: 1;
+}
+
+/* Numeric summary footer */
+.iui-table-tfoot {
+  border-top: 1px solid color-mix(in srgb, var(--iui-text, #000) 15%, transparent);
+}
+
+.iui-table-summary-tr {
+  background: color-mix(in srgb, var(--iui-text, #000) 2%, transparent);
+}
+
+.iui-table-summary-td {
+  padding: 6px 10px;
+  font-size: 11.5px;
+  color: var(--iui-muted);
+  border: none;
+}
+
+.iui-table-summary-td.is-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.iui-table-summary-td.is-label {
+  font-weight: 600;
+  color: var(--iui-text);
+}
+
+.iui-table-summary-sum {
+  display: block;
+  font-weight: 600;
+  color: var(--iui-text);
+}
+
+.iui-table-summary-avg {
+  display: block;
+  font-size: 11px;
 }

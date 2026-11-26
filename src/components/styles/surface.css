@@ -1,0 +1,125 @@
+/* Shared component surface: quiet, borderless and consistent across hosts. */
+.iui-root .iui-card:not(.iui-dashboard-visual) {
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 14px;
+  background: #FFFFFF !important;
+  box-shadow: none;
+}
+
+.iui-root[data-theme="dark"] .iui-card:not(.iui-dashboard-visual) {
+  background: #09090B !important;
+}
+
+.iui-root .iui-card > .iui-title {
+  margin: 0 0 10px;
+  color: var(--iui-text);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+/* Chart/table view switching nests one renderer inside the other card. Keep
+   that inner renderer visually transparent so the outer card owns the surface. */
+.iui-root .iui-chart-table-view .iui-table-card,
+.iui-root .iui-table-chart-view .iui-chart-card {
+  border: 0;
+  padding: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.iui-root .iui-chart-table-view .iui-table-card > .iui-title,
+.iui-root .iui-table-chart-view .iui-chart-card .iui-chart-controls {
+  display: none;
+}
+
+.iui-root .iui-card :is(button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--iui-accent, var(--iui-text));
+  outline-offset: 2px;
+}
+
+.iui-root[data-theme="dark"] .iui-card {
+  color-scheme: dark;
+}
+
+.iui-root:not([data-theme="dark"]) .iui-card {
+  color-scheme: light;
+}
+
+/* A restrained divider rhythm instead of nested bordered mini-cards. */
+.iui-root .iui-compare-panel {
+  min-width: 0;
+  padding: 10px 16px;
+}
+
+.iui-root .iui-compare-panel + .iui-compare-panel {
+  border-left-color: color-mix(in srgb, var(--iui-text) 9%, transparent);
+}
+
+.iui-root .iui-stepper-card .iui-stepper-list {
+  gap: 14px;
+}
+
+.iui-root .iui-stepper-card .iui-stepper-step {
+  min-width: 0;
+  gap: 12px;
+}
+
+.iui-root .iui-stepper-card .iui-stepper-circle {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+
+.iui-root .iui-stepper-card .iui-stepper-track {
+  width: 24px;
+}
+
+.iui-root .iui-stats-grid {
+  column-gap: 28px;
+  row-gap: 18px;
+}
+
+.iui-root .iui-stat-item {
+  min-width: min(100%, 96px);
+}
+
+.iui-root .iui-stat-value {
+  font-size: clamp(20px, 2.5vw, 25px);
+  letter-spacing: -0.035em;
+}
+
+.iui-root .iui-table-card,
+.iui-root .iui-chart-card,
+.iui-root .iui-tree-card,
+.iui-root .iui-compare-card,
+.iui-root .iui-stepper-card,
+.iui-root .iui-stats-card,
+.iui-root .iui-tabs-card,
+.iui-root .iui-checklist-card,
+.iui-root .iui-quiz-card,
+.iui-root .iui-form-card,
+.iui-root .iui-callout-card,
+.iui-root .iui-math-card,
+.iui-root .iui-generic-card,
+.iui-root .iui-dashboard-card,
+.iui-root .iui-image-card {
+  min-width: 0;
+}
+
+@container iui (max-width: 520px) {
+  .iui-root .iui-card:not(.iui-dashboard-visual) {
+    border-radius: 12px;
+  }
+
+  .iui-root .iui-compare-panel {
+    padding: 10px 0;
+  }
+
+  .iui-root .iui-stats-grid {
+    column-gap: 20px;
+    row-gap: 14px;
+  }
+}

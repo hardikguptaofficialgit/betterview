@@ -39,11 +39,34 @@ function createTokens(raw: {
   subtle: string;
   accent: string;
   accentBg: string;
+  success?: string;
+  successBg?: string;
+  danger?: string;
+  dangerBg?: string;
+  warning?: string;
+  info?: string;
+  shadowFloat?: string;
   radiusCard: string;
   radiusInner: string;
+  radiusPill?: string;
+  ease?: string;
+  durFast?: string;
+  durMed?: string;
   font: string;
   mono: string;
-}): Tokens {
+}, isDark = false): Tokens {
+  const success = raw.success ?? (isDark ? '#34D399' : '#16A34A');
+  const successBg = raw.successBg ?? (isDark ? 'rgba(52, 211, 153, 0.16)' : 'rgba(22, 163, 74, 0.12)');
+  const danger = raw.danger ?? (isDark ? '#F87171' : '#DC2626');
+  const dangerBg = raw.dangerBg ?? (isDark ? 'rgba(248, 113, 113, 0.16)' : 'rgba(220, 38, 38, 0.10)');
+  const warning = raw.warning ?? (isDark ? '#FBBF24' : '#D97706');
+  const info = raw.info ?? (isDark ? '#60A5FA' : '#2563EB');
+  const shadowFloat = raw.shadowFloat ?? (isDark ? '0 8px 28px rgba(0, 0, 0, 0.45)' : '0 8px 24px rgba(0, 0, 0, 0.12)');
+  const radiusPill = raw.radiusPill ?? '999px';
+  const ease = raw.ease ?? 'cubic-bezier(.2,.8,.2,1)';
+  const durFast = raw.durFast ?? '120ms';
+  const durMed = raw.durMed ?? '200ms';
+
   return {
     bg: raw.bg,
     '--iui-bg': raw.bg,
@@ -65,12 +88,23 @@ function createTokens(raw: {
     'accent-bg': raw.accentBg,
     accentBg: raw.accentBg,
     '--iui-accent-bg': raw.accentBg,
+    '--iui-success': success,
+    '--iui-success-bg': successBg,
+    '--iui-danger': danger,
+    '--iui-danger-bg': dangerBg,
+    '--iui-warning': warning,
+    '--iui-info': info,
+    '--iui-shadow-float': shadowFloat,
     'radius-card': raw.radiusCard,
     radiusCard: raw.radiusCard,
     '--iui-radius-card': raw.radiusCard,
     'radius-inner': raw.radiusInner,
     radiusInner: raw.radiusInner,
     '--iui-radius-inner': raw.radiusInner,
+    '--iui-radius-pill': radiusPill,
+    '--iui-ease': ease,
+    '--iui-dur-fast': durFast,
+    '--iui-dur-med': durMed,
     font: raw.font,
     '--iui-font': raw.font,
     mono: raw.mono,
@@ -78,7 +112,9 @@ function createTokens(raw: {
   };
 }
 
-export const HOST_THEMES: Record<'gemini' | 'grok', { light: Tokens; dark: Tokens }> = {
+export type SupportedHostTheme = 'gemini' | 'grok' | 'chatgpt' | 'claude';
+
+export const HOST_THEMES: Record<SupportedHostTheme, { light: Tokens; dark: Tokens }> = {
   gemini: {
     light: createTokens({
       bg: '#FFFFFF',
@@ -94,7 +130,7 @@ export const HOST_THEMES: Record<'gemini' | 'grok', { light: Tokens; dark: Token
       radiusInner: '8px',
       font: '"Google Sans Text", "Google Sans", Roboto, Arial, sans-serif',
       mono: '"Google Sans Mono", "Roboto Mono", ui-monospace, monospace',
-    }),
+    }, false),
     dark: createTokens({
       bg: '#131314',
       surface: '#1E1F20',
@@ -109,14 +145,14 @@ export const HOST_THEMES: Record<'gemini' | 'grok', { light: Tokens; dark: Token
       radiusInner: '8px',
       font: '"Google Sans Text", "Google Sans", Roboto, Arial, sans-serif',
       mono: '"Google Sans Mono", "Roboto Mono", ui-monospace, monospace',
-    }),
+    }, true),
   },
   grok: {
     light: createTokens({
       bg: '#FFFFFF',
       surface: '#FAFAFA',
       surface2: '#F2F2F2',
-      border: 'rgba(0,0,0,.08)',
+      border: 'rgba(0, 0, 0, 0.12)',
       text: '#0D0D0D',
       muted: '#6B6B6B',
       subtle: '#9A9A9A',
@@ -126,12 +162,12 @@ export const HOST_THEMES: Record<'gemini' | 'grok', { light: Tokens; dark: Token
       radiusInner: '8px',
       font: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
       mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
-    }),
+    }, false),
     dark: createTokens({
       bg: '#141414',
       surface: '#1C1C1C',
       surface2: '#242424',
-      border: 'rgba(255,255,255,.08)',
+      border: 'rgba(255, 255, 255, 0.12)',
       text: '#F5F5F5',
       muted: '#A3A3A3',
       subtle: '#737373',
@@ -141,7 +177,71 @@ export const HOST_THEMES: Record<'gemini' | 'grok', { light: Tokens; dark: Token
       radiusInner: '8px',
       font: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
       mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
-    }),
+    }, true),
+  },
+  chatgpt: {
+    light: createTokens({
+      bg: '#FFFFFF',
+      surface: '#F9F9FB',
+      surface2: '#F1F2F6',
+      border: 'rgba(15, 23, 42, 0.10)',
+      text: '#0D0D0D',
+      muted: '#5D6370',
+      subtle: '#8E95A2',
+      accent: '#10A37F',
+      accentBg: 'rgba(16, 163, 127, 0.12)',
+      radiusCard: '12px',
+      radiusInner: '8px',
+      font: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+      mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    }, false),
+    dark: createTokens({
+      bg: '#212121',
+      surface: '#2F2F2F',
+      surface2: '#383838',
+      border: 'rgba(255, 255, 255, 0.12)',
+      text: '#ECECEC',
+      muted: '#B4B4B4',
+      subtle: '#8E8E8E',
+      accent: '#10A37F',
+      accentBg: 'rgba(16, 163, 127, 0.20)',
+      radiusCard: '12px',
+      radiusInner: '8px',
+      font: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+      mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    }, true),
+  },
+  claude: {
+    light: createTokens({
+      bg: '#FAF9F5',
+      surface: '#F0EEE6',
+      surface2: '#E6E3D8',
+      border: 'rgba(61, 57, 41, 0.14)',
+      text: '#141413',
+      muted: '#5E5D59',
+      subtle: '#87867F',
+      accent: '#D97757',
+      accentBg: 'rgba(217, 119, 87, 0.14)',
+      radiusCard: '12px',
+      radiusInner: '8px',
+      font: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    }, false),
+    dark: createTokens({
+      bg: '#262624',
+      surface: '#30302E',
+      surface2: '#3A3A37',
+      border: 'rgba(255, 250, 235, 0.12)',
+      text: '#FAF9F5',
+      muted: '#C2C0B6',
+      subtle: '#8C8A80',
+      accent: '#D97757',
+      accentBg: 'rgba(217, 119, 87, 0.22)',
+      radiusCard: '12px',
+      radiusInner: '8px',
+      font: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    }, true),
   },
 };
 
@@ -150,7 +250,7 @@ export const DEFAULT_THEME: { light: Tokens; dark: Tokens } = {
     bg: '#FFFFFF',
     surface: '#FAFAFA',
     surface2: '#F4F4F5',
-    border: 'rgba(0, 0, 0, 0.08)',
+    border: 'rgba(0, 0, 0, 0.12)',
     text: '#0A0A0A',
     muted: '#6B6B6B',
     subtle: '#A3A3A3',
@@ -160,12 +260,12 @@ export const DEFAULT_THEME: { light: Tokens; dark: Tokens } = {
     radiusInner: '8px',
     font: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-  }),
+  }, false),
   dark: createTokens({
     bg: '#0f0f10',
     surface: '#18181A',
     surface2: '#222225',
-    border: 'rgba(255, 255, 255, 0.08)',
+    border: 'rgba(255, 255, 255, 0.12)',
     text: '#FAFAFA',
     muted: '#A3A3A3',
     subtle: '#71717A',
@@ -175,11 +275,11 @@ export const DEFAULT_THEME: { light: Tokens; dark: Tokens } = {
     radiusInner: '8px',
     font: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-  }),
+  }, true),
 };
 
 export function selectHostTheme(host: string | undefined, mode: ThemeMode): Tokens {
-  if (host === 'gemini' || host === 'grok') {
+  if (host === 'gemini' || host === 'grok' || host === 'chatgpt' || host === 'claude') {
     return HOST_THEMES[host][mode];
   }
   return DEFAULT_THEME[mode];
@@ -347,8 +447,19 @@ export function applyHostTheme(
   root.style.setProperty('--iui-subtle', tokens.subtle);
   root.style.setProperty('--iui-accent', tokens.accent);
   root.style.setProperty('--iui-accent-bg', tokens['accent-bg']);
+  root.style.setProperty('--iui-success', tokens['--iui-success']!);
+  root.style.setProperty('--iui-success-bg', tokens['--iui-success-bg']!);
+  root.style.setProperty('--iui-danger', tokens['--iui-danger']!);
+  root.style.setProperty('--iui-danger-bg', tokens['--iui-danger-bg']!);
+  root.style.setProperty('--iui-warning', tokens['--iui-warning']!);
+  root.style.setProperty('--iui-info', tokens['--iui-info']!);
+  root.style.setProperty('--iui-shadow-float', tokens['--iui-shadow-float']!);
   root.style.setProperty('--iui-radius-card', tokens['radius-card']);
   root.style.setProperty('--iui-radius-inner', tokens['radius-inner']);
+  root.style.setProperty('--iui-radius-pill', tokens['--iui-radius-pill']!);
+  root.style.setProperty('--iui-ease', tokens['--iui-ease']!);
+  root.style.setProperty('--iui-dur-fast', tokens['--iui-dur-fast']!);
+  root.style.setProperty('--iui-dur-med', tokens['--iui-dur-med']!);
   root.style.setProperty('--iui-mono', tokens.mono);
 
   // Typography

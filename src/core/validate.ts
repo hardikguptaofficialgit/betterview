@@ -8,6 +8,8 @@ import {
   FlowEdge,
   FlowGroup,
   FlowSpec,
+  TreeNode,
+  TreeSpec,
   StepperSpec,
   TableSpec,
   CompareSpec,
@@ -113,6 +115,7 @@ function validateFlow(raw: Record<string, unknown>, warnings: string[]): { ok: t
     }
 
     const sub = cleanString(rec.sub ?? rec.subtitle ?? rec.description);
+    const detail = cleanString(rec.detail, 600);
     const icon = cleanString(rec.icon);
     const rawColor = rec.color;
     const color = rawColor !== undefined ? resolveColor(rawColor, id || label) : undefined;
@@ -128,6 +131,7 @@ function validateFlow(raw: Record<string, unknown>, warnings: string[]): { ok: t
       id,
       label,
       ...(sub ? { sub } : {}),
+      ...(detail ? { detail } : {}),
       ...(icon ? { icon } : {}),
       ...(color ? { color } : {}),
       ...(group ? { group } : {}),
@@ -272,7 +276,7 @@ function validateCompare(raw: Record<string, unknown>, warnings: string[]): { ok
     rawItems = rawItems.slice(0, 4);
   }
 
-  const items: { label: string; tone: 'good' | 'bad' | 'neutral'; points: string[] }[] = [];
+  const items: { label: string; tone: 'good' | 'bad' | 'neutral'; badge?: string; points: string[] }[] = [];
   for (const item of rawItems) {
     if (!item || typeof item !== 'object') {
       return { ok: false, error: 'Compare item must be an object' };
@@ -286,6 +290,7 @@ function validateCompare(raw: Record<string, unknown>, warnings: string[]): { ok
     if (toneStr !== 'good' && toneStr !== 'bad' && toneStr !== 'neutral') {
       toneStr = 'neutral';
     }
+    const badge = cleanString(rec.badge, 60);
 
     let rawPoints = Array.isArray(rec.points) ? rec.points : [];
     if (rawPoints.length > 12) {
@@ -293,7 +298,7 @@ function validateCompare(raw: Record<string, unknown>, warnings: string[]): { ok
       rawPoints = rawPoints.slice(0, 12);
     }
     const points = rawPoints.map((p) => cleanString(p)).filter(Boolean);
-    items.push({ label, tone: toneStr as 'good' | 'bad' | 'neutral', points });
+    items.push({ label, tone: toneStr as 'good' | 'bad' | 'neutral', ...(badge ? { badge } : {}), points });
   }
 
   return { ok: true, spec: { type: 'compare', items } };
@@ -568,6 +573,19 @@ function validateStats(raw: Record<string, unknown>, warnings: string[]): { ok: 
     const delta = cleanString(rec.delta ?? rec.change);
     const hint = cleanString(rec.hint ?? rec.sub ?? rec.detail);
     const icon = cleanString(rec.icon);
+    const rawTone = cleanString(rec.tone).toLowerCase();
+    const tone = (rawTone === 'good' || rawTone === 'bad' || rawTone === 'neutral')
+      ? (rawTone as 'good' | 'bad' | 'neutral')
+      : undefined;
+    let sparkline: number[] | undefined;
+    if (Array.isArray(rec.sparkline)) {
+      const nums = rec.sparkline
+        .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+        .slice(0, 24);
+      if (nums.length >= 2) {
+        sparkline = nums;
+      }
+    }
 
     items.push({
       label,
@@ -575,6 +593,8 @@ function validateStats(raw: Record<string, unknown>, warnings: string[]): { ok: 
       ...(delta ? { delta } : {}),
       ...(hint ? { hint } : {}),
       ...(icon ? { icon } : {}),
+      ...(sparkline ? { sparkline } : {}),
+      ...(tone ? { tone } : {}),
     });
   }
 
@@ -638,12 +658,17 @@ function validateTimeline(raw: Record<string, unknown>, warnings: string[]): { o
     const text = cleanString(rec.text ?? rec.detail ?? rec.description);
     const time = cleanString(rec.time ?? rec.date ?? rec.timestamp);
     const icon = cleanString(rec.icon);
+    const rawStatus = cleanString(rec.status).toLowerCase();
+    const status = (rawStatus === 'done' || rawStatus === 'active' || rawStatus === 'upcoming')
+      ? (rawStatus as 'done' | 'active' | 'upcoming')
+      : undefined;
 
     events.push({
       title,
       text,
       ...(time ? { time } : {}),
       ...(icon ? { icon } : {}),
+      ...(status ? { status } : {}),
     });
   }
 
@@ -865,6 +890,99 @@ function validateDashboard(raw: Record<string, unknown>, warnings: string[]): { 
   return { ok: true, spec: { type: 'dashboard', items } };
 }
 
+function validateTree(raw: Record<string, unknown>, warnings: string[]): { ok: true; spec: TreeSpec } | { ok: false; error: string } {
+  const rawRoot = raw.root;
+  if (!rawRoot || typeof rawRoot !== 'object' || Array.isArray(rawRoot)) {
+    return { ok: false, error: 'tree must have a root node object' };
+  }
+
+  const MAX_DEPTH = 6;
+  const MAX_NODES = 80;
+  let totalNodes = 0;
+  let depthCapped = false;
+  let nodesCapped = false;
+  const seenIds = new Set<string>();
+
+  function parseNode(input: unknown, depth: number): TreeNode | null {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+    if (totalNodes >= MAX_NODES) {
+      nodesCapped = true;
+      return null;
+    }
+
+    const rec = input as Record<string, unknown>;
+    const label = cleanString(rec.label ?? rec.title ?? rec.name);
+    if (!label) return null;
+
+    totalNodes++;
+    const baseId = cleanString(rec.id) || `node-${totalNodes}`;
+    let id = baseId;
+    let suffix = 2;
+    while (seenIds.has(id)) {
+      id = `${baseId}-${suffix++}`;
+    }
+    seenIds.add(id);
+
+    const note = cleanString(rec.note ?? rec.description, 500);
+    const badge = cleanString(rec.badge, 60);
+    const color = rec.color !== undefined ? resolveColor(rec.color, id || label) : undefined;
+    const collapsed = typeof rec.collapsed === 'boolean' ? rec.collapsed : undefined;
+
+    let children: TreeNode[] | undefined;
+    if (Array.isArray(rec.children) && rec.children.length > 0) {
+      if (depth >= MAX_DEPTH) {
+        depthCapped = true;
+      } else {
+        const parsedChildren: TreeNode[] = [];
+        for (const childRaw of rec.children) {
+          if (totalNodes >= MAX_NODES) {
+            nodesCapped = true;
+            break;
+          }
+          const child = parseNode(childRaw, depth + 1);
+          if (child) parsedChildren.push(child);
+        }
+        if (parsedChildren.length > 0) {
+          children = parsedChildren;
+        }
+      }
+    }
+
+    return {
+      id,
+      label,
+      ...(note ? { note } : {}),
+      ...(badge ? { badge } : {}),
+      ...(color ? { color } : {}),
+      ...(collapsed !== undefined ? { collapsed } : {}),
+      ...(children ? { children } : {}),
+    };
+  }
+
+  const root = parseNode(rawRoot, 1);
+  if (!root) {
+    return { ok: false, error: 'tree root node must have a non-empty label' };
+  }
+
+  if (depthCapped) warnings.push('Tree depth capped at 6');
+  if (nodesCapped) warnings.push('Tree nodes capped at 80');
+
+  const rawLayout = cleanString(raw.layout).toLowerCase();
+  const layout = (rawLayout === 'horizontal' || rawLayout === 'vertical' || rawLayout === 'outline')
+    ? (rawLayout as TreeSpec['layout'])
+    : undefined;
+
+  return {
+    ok: true,
+    spec: {
+      type: 'tree',
+      ...(cleanString(raw.title) ? { title: cleanString(raw.title) } : {}),
+      ...(layout ? { layout } : {}),
+      root,
+    },
+  };
+}
+
 function validateGeneric(raw: Record<string, unknown>, _warnings: string[]): { ok: true; spec: GenericSpec } | { ok: false; error: string } {
   const title = cleanString(raw.title);
   const originalType = cleanString(raw.originalType);
@@ -908,6 +1026,9 @@ export function validateSpec(input: unknown): ValidateResult {
   switch (raw.type as UIType) {
     case 'flow':
       result = validateFlow(raw, warnings);
+      break;
+    case 'tree':
+      result = validateTree(raw, warnings);
       break;
     case 'stepper':
       result = validateStepper(raw, warnings);

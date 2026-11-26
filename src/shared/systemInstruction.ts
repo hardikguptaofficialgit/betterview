@@ -9,6 +9,12 @@ export interface ComponentCatalogEntry {
 
 export const COMPONENT_CATALOG: ComponentCatalogEntry[] = [
   {
+    type: 'tree',
+    required: ['type', 'root'],
+    whenToUse: 'Hierarchies, mind maps, org charts',
+    schemaSnippet: '{"type":"tree","layout":"vertical","root":{"id":"r","label":"Root","children":[{"id":"a","label":"Branch"}]}}',
+  },
+  {
     type: 'flow',
     required: ['type', 'nodes', 'edges'],
     whenToUse: 'Process flows or architecture',
@@ -114,7 +120,7 @@ export const COMPONENT_CATALOG: ComponentCatalogEntry[] = [
     type: 'dashboard',
     required: ['type', 'items'],
     whenToUse: 'A compact dashboard with 2-8 different visual panels',
-    schemaSnippet: '{"type":"dashboard","title":"...","items":[{"title":"Traffic","visual":{"type":"chart","chartType":"line","labels":["Mon","Tue"],"datasets":[{"label":"Visits","data":[12,18]}]}},{"title":"Status","visual":{"type":"stats","items":[{"label":"Uptime","value":"99.9%"},{"label":"Errors","value":"0.1%"}]}}]}',
+    schemaSnippet: '{"type":"dashboard","title":"...","items":[{"title":"KPI","visual":{"type":"stats","items":[{"label":"Up","value":"99%"}]}}]}',
   },
 ];
 
@@ -134,14 +140,14 @@ function generateCompactCatalog(): string {
 
 export const CURRENT_INSTRUCTION_VERSION = 12;
 
-export const SETUP_INSTRUCTION = `[BetterView v12] Keep the normal text answer. Add at most 1-2 \`\`\`ui blocks where they genuinely help. No visuals for short/casual replies, and never invent facts. Never generate or insert images for diagrams, charts, flows, tables or quizzes. Always use a \`\`\`ui block instead. Use double-quoted JSON.
+export const SETUP_INSTRUCTION = `[BetterView v12] Keep the normal text answer. Add at most 1-2 \`\`\`ui blocks where they genuinely help. Short/casual replies get none. Never invent facts. Never generate or insert images for diagrams, charts, flows, tables or quizzes. Always use a \`\`\`ui block instead. Use double-quoted JSON.
 
-STYLE: Minimal, compact, document-like; no outer container or background panel; Never nest cards. Keep labels readable. Keep flows to 12 nodes or fewer, use short node labels (6 words or fewer); large/branching flows may use pan/zoom. Use 3-5 quiz questions. Keep charts to 8 categories or fewer. Never invent image URLs. Use image only when requested with real HTTPS src and alt text.
-Types: flow{nodes[id,label],edges[from,to,label?]} stepper{steps[title,detail?]} table{columns,rows} compare{items[label,tone,points]} quiz{questions[q,options,answer]} chart{chartType:bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo,labels,datasets} scatter/bubble data[{x,y,r?}]; geo data[{lon,lat,label?}]; heatmap numeric rows. mermaid{code} callout{tone,text} stats{items[label,value]} tabs{tabs[label,content]} timeline{events[title,text]} followups{suggestions} math{latex} code{language,code} checklist{items[text,checked?]} form{fields[id,label,type]} image{src,alt,caption?} dashboard{items:[{title?,visual:{...}}]}.`;
+STYLE: Minimal, compact; no outer container or background panel; Never nest cards. Readable labels. Keep flows to 12 nodes or fewer, use short node labels (6 words or fewer); large/branching flows may use pan/zoom. Trees: labeled root, children; vertical/horizontal/outline; max 6 levels/80 nodes. Use 3-5 quiz questions. Keep charts to 8 categories or fewer. Never invent image URLs.
+Types: flow{nodes[id,label],edges[from,to,label?]} tree{root{id,label,children?},layout?:vertical|horizontal|outline} stepper{steps[title,detail?]} table{columns,rows} compare{items[label,tone,points]} quiz{questions[q,options,answer]} chart{chartType:bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo,labels,datasets} scatter/bubble data[{x,y,r?}]; geo data[{lon,lat,label?}]; heatmap numeric rows. mermaid{code} callout{tone,text} stats{items[label,value]} tabs{tabs[label,content]} timeline{events[title,text]} followups{suggestions} math{latex} code{language,code} checklist{items[text,checked?]} form{fields[id,label,type]} image{src,alt,caption?} dashboard{items:[{title?,visual:{...}}]}.`;
 
-export const SYSTEM_INSTRUCTION = `[BetterView v12] Keep normal text answer. Add at most 1-2 \`\`\`ui blocks where genuinely helpful; short/casual replies get none. Never invent facts. Never generate or insert images for diagrams, charts, flows, tables or quizzes. Always use a \`\`\`ui block instead. Images only when requested, with real HTTPS src and descriptive alt. Never invent image URLs.
+export const SYSTEM_INSTRUCTION = `[BetterView v12] Keep normal text answer. Add at most 1-2 \`\`\`ui blocks when helpful; short/casual replies get none. Never invent facts. Never invent image URLs. Never generate images for diagrams, charts, flows, tables or quizzes; use a \`\`\`ui block. Images only when requested, with HTTPS src and descriptive alt.
 
-VISUAL STYLE: Minimal, compact; no outer container. Never nest cards; concise labels and restrained colors. Flows to 12 nodes or fewer (<=6 words/label); for large or branching graphs use the readable pan/zoom canvas or titled sections. 3-5 quiz questions. Charts to 8 categories.
+VISUAL STYLE: Minimal, compact; no outer container. Never nest cards; concise labels. Flows to 12 nodes (<=6 words/label); large or branching graphs use the readable pan/zoom canvas. Trees: labeled root/children; vertical/horizontal/outline; max 6 levels/80 nodes. 3-5 quiz questions. Charts to 8 categories.
 
 Type catalog:
 ${generateCatalogSection()}
@@ -150,7 +156,7 @@ Chart modes: bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo. Scatte
 
 export const SYSTEM_INSTRUCTION_SHORT = `[BetterView v12] Keep the normal text answer. Add at most 1-2 \`\`\`ui blocks where they genuinely help; casual/short: no ui; max 2 blocks; never invent facts or image URLs. Never generate or insert images for diagrams, charts, flows, tables or quizzes. Always use a \`\`\`ui block instead. Images only when requested, with real HTTPS src and descriptive alt. STYLE: compact; no outer container. No nested cards; host colors, concise readable labels. Keep flows to 12 nodes or fewer (6 words or fewer labels); large flows pan/zoom or use titled sections. 3-5 quiz questions. Charts to 8 categories or fewer.
 Types: ${generateCompactCatalog()}
-Charts: bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo; scatter/bubble points {x,y,r?}, geo points {lon,lat,label?}, heatmap rows numeric. Dashboards: 2-8 panels; no nesting.`;
+Charts: bar|line|area|pie|doughnut|radar|scatter|bubble|heatmap|geo; scatter/bubble points {x,y,r?}, geo points {lon,lat,label?}, heatmap rows numeric. Dashboards: 2-8 panels; no nesting. Trees: root{id,label,children?} max depth 6 / 80 nodes; layout horizontal|vertical|outline.`;
 
 export function getCompactInstruction(): string {
   return SETUP_INSTRUCTION;

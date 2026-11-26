@@ -1,5 +1,5 @@
 .iui-checklist-card {
-  border-radius: var(--iui-radius-card, 18px);
+  border-radius: var(--iui-radius-card, 12px);
 }
 
 .iui-checklist-header {
@@ -39,7 +39,7 @@
   width: 0;
   height: 100%;
   border-radius: inherit;
-  background: var(--c-ink, #4C3D91);
+  background: var(--c-ink, var(--iui-accent, #4C3D91));
   transition: width 180ms ease;
 }
 
@@ -98,16 +98,16 @@
 
 .iui-checklist-box svg { width: 13px; height: 13px; }
 .iui-checklist-row.is-checked .iui-checklist-box {
-  border-color: var(--c-ink, #4C3D91);
-  background: var(--c-ink, #4C3D91);
+  border-color: var(--c-ink, var(--iui-accent, #4C3D91));
+  background: var(--c-ink, var(--iui-accent, #4C3D91));
   color: #fff;
 }
 
 .iui-checklist-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
-.iui-checklist-text { color: var(--iui-text); font-size: 13.5px; font-weight: 550; line-height: 1.4; }
+.iui-checklist-text { color: var(--iui-text); font-size: 13.5px; font-weight: 600; line-height: 1.4; }
 .iui-checklist-detail { color: var(--iui-muted); font-size: 12px; line-height: 1.45; }
 .iui-checklist-row.is-checked .iui-checklist-text { color: var(--iui-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
-.iui-checklist-card.is-complete .iui-checklist-progress-fill { background: #39966B; }
+.iui-checklist-card.is-complete .iui-checklist-progress-fill { background: var(--iui-success, #39966B); }
 
 @media (prefers-reduced-motion: reduce) {
   .iui-checklist-row { animation: none; }

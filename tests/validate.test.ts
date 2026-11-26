@@ -43,6 +43,73 @@ describe('validateSpec', () => {
     }
   });
 
+  it('normalizes tree nodes and guarantees unique ids across generated and explicit ids', () => {
+    const result = validateSpec({
+      type: 'tree',
+      title: 'Product structure',
+      layout: 'outline',
+      root: {
+        id: 'root',
+        label: 'Product',
+        children: [
+          { label: 'Generated id' },
+          { id: 'node-2', label: 'Explicit id matching the next generated id' },
+          { id: 'duplicate', label: 'First duplicate' },
+          { id: 'duplicate', label: 'Second duplicate' },
+          { label: 'Another generated id' },
+        ],
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok && result.spec.type === 'tree') {
+      expect(result.spec.title).toBe('Product structure');
+      expect(result.spec.layout).toBe('outline');
+      const ids = [result.spec.root, ...(result.spec.root.children ?? [])].map((node) => node.id);
+      expect(ids).toEqual(['root', 'node-2', 'node-2-2', 'duplicate', 'duplicate-2', 'node-6']);
+      expect(new Set(ids).size).toBe(ids.length);
+    }
+  });
+
+  it('enforces tree depth and node-count limits with warnings', () => {
+    const makeChain = (depth: number): Record<string, unknown> => ({
+      label: `Level ${depth}`,
+      ...(depth < 8 ? { children: [makeChain(depth + 1)] } : {}),
+    });
+    const deep = validateSpec({ type: 'tree', root: makeChain(1) });
+    expect(deep.ok).toBe(true);
+    if (deep.ok && deep.spec.type === 'tree') {
+      let depth = 1;
+      let node = deep.spec.root;
+      while (node.children?.[0]) {
+        depth++;
+        node = node.children[0];
+      }
+      expect(depth).toBe(6);
+      expect(deep.warnings).toContain('Tree depth capped at 6');
+    }
+
+    const wide = validateSpec({
+      type: 'tree',
+      root: { label: 'Root', children: Array.from({ length: 100 }, (_, i) => ({ label: `Child ${i}` })) },
+    });
+    expect(wide.ok).toBe(true);
+    if (wide.ok && wide.spec.type === 'tree') {
+      expect(1 + (wide.spec.root.children?.length ?? 0)).toBe(80);
+      expect(wide.warnings).toContain('Tree nodes capped at 80');
+    }
+  });
+
+  it('rejects a tree without a valid root label and ignores unsupported layout values', () => {
+    expect(validateSpec({ type: 'tree', root: { children: [] } }).ok).toBe(false);
+    const result = validateSpec({ type: 'tree', title: 'Roadmap', layout: 'diagonal', root: { label: 'Root' } });
+    expect(result.ok).toBe(true);
+    if (result.ok && result.spec.type === 'tree') {
+      expect(result.spec.title).toBe('Roadmap');
+      expect(result.spec.layout).toBeUndefined();
+    }
+  });
+
   it('missing edge node auto-created in flow', () => {
     const input = {
       type: 'flow',

@@ -19,6 +19,55 @@ function parseNumberParts(raw: string | number): { prefix: string; value: number
   return { prefix, value: num, suffix, decimals };
 }
 
+function buildSparklineSVG(data: number[]): SVGSVGElement | null {
+  if (!data || data.length < 2) return null;
+
+  const W = 64;
+  const H = 20;
+  const pad = 1;
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+
+  const toX = (i: number) => pad + (i / (data.length - 1)) * (W - 2 * pad);
+  const toY = (v: number) => H - pad - ((v - min) / range) * (H - 2 * pad);
+
+  const pts = data.map((v, i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
+  const last = data[data.length - 1];
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', String(W));
+  svg.setAttribute('height', String(H));
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.classList.add('iui-stat-sparkline');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute(
+    'title',
+    `Min: ${min.toLocaleString()}, Max: ${max.toLocaleString()}, Last: ${last.toLocaleString()}`,
+  );
+
+  const polyline = document.createElementNS(NS, 'polyline');
+  polyline.setAttribute('points', pts);
+  polyline.setAttribute('fill', 'none');
+  polyline.setAttribute('stroke', 'var(--iui-accent, #0b57d0)');
+  polyline.setAttribute('stroke-width', '1.5');
+  polyline.setAttribute('stroke-linecap', 'round');
+  polyline.setAttribute('stroke-linejoin', 'round');
+  svg.appendChild(polyline);
+
+  // Dot at last point
+  const dot = document.createElementNS(NS, 'circle');
+  dot.setAttribute('cx', String(toX(data.length - 1).toFixed(1)));
+  dot.setAttribute('cy', String(toY(last).toFixed(1)));
+  dot.setAttribute('r', '2');
+  dot.setAttribute('fill', 'var(--iui-accent, #0b57d0)');
+  svg.appendChild(dot);
+
+  return svg;
+}
+
 export function renderStats(spec: StatsSpec, ctx: RenderContext): HTMLElement {
   const card = h('div', { class: 'iui-card iui-stats-card' });
   if (spec.title) {
@@ -73,6 +122,17 @@ export function renderStats(spec: StatsSpec, ctx: RenderContext): HTMLElement {
     if (item.hint) {
       const hint = h('div', { class: 'iui-stat-hint' }, item.hint);
       itemCard.appendChild(hint);
+    }
+
+    // Optional sparkline (item.sparkline must be number[] with >= 2 entries)
+    const sparklineData = (item as any).sparkline as number[] | undefined;
+    if (Array.isArray(sparklineData) && sparklineData.length >= 2) {
+      const sparkSVG = buildSparklineSVG(sparklineData);
+      if (sparkSVG) {
+        const sparkWrap = h('div', { class: 'iui-stat-sparkline-wrap' });
+        sparkWrap.appendChild(sparkSVG);
+        itemCard.appendChild(sparkWrap);
+      }
     }
 
     grid.appendChild(itemCard);

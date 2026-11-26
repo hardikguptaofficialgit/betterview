@@ -1,6 +1,7 @@
 import { TabsSpec } from '../core/types';
 import { RenderContext } from './index';
 import { clear, h } from '../core/dom';
+import { renderMathText } from '../core/mathParser';
 
 export function renderTabs(spec: TabsSpec, ctx: RenderContext): HTMLElement {
   const card = h('div', { class: 'iui-card iui-tabs-card' });
@@ -46,11 +47,14 @@ export function renderTabs(spec: TabsSpec, ctx: RenderContext): HTMLElement {
     if (Array.isArray(tab.content)) {
       const ul = h('ul', { class: 'iui-tabs-list' });
       for (const item of tab.content) {
-        ul.appendChild(h('li', { class: 'iui-tabs-list-item' }, item));
+        const li = h('li', { class: 'iui-tabs-list-item' });
+        renderMathText(li, item);
+        ul.appendChild(li);
       }
       contentPanel.appendChild(ul);
     } else {
-      const p = h('div', { class: 'iui-tabs-text' }, String(tab.content || ''));
+      const p = h('div', { class: 'iui-tabs-text' });
+      renderMathText(p, String(tab.content || ''));
       contentPanel.appendChild(p);
     }
   }

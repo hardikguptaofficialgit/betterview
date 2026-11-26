@@ -2,6 +2,22 @@
   border-radius: var(--iui-radius-card, 12px);
 }
 
+.iui-stepper-progress-wrap {
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--iui-text, #000) 8%, transparent);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.iui-stepper-progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--iui-success, #10b981);
+  transition: width 180ms ease;
+}
+
 .iui-stepper-list {
   display: flex;
   flex-direction: column;
@@ -26,10 +42,12 @@
 .iui-stepper-circle {
   width: 20px;
   height: 20px;
+  padding: 0;
   border-radius: 9999px;
   background-color: var(--iui-surface, #f4f4f5);
   border: 1px solid color-mix(in srgb, var(--iui-text, #000) 15%, transparent);
   color: var(--iui-text);
+  font-family: inherit;
   font-size: 11px;
   font-weight: 600;
   display: flex;
@@ -37,6 +55,28 @@
   justify-content: center;
   flex-shrink: 0;
   user-select: none;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.iui-stepper-circle:hover {
+  border-color: var(--iui-accent);
+}
+
+.iui-stepper-circle:focus-visible {
+  outline: 2px solid var(--iui-accent);
+  outline-offset: 2px;
+}
+
+.iui-stepper-circle.is-done {
+  background-color: var(--iui-success, #10b981);
+  border-color: var(--iui-success, #10b981);
+  color: #fff;
+}
+
+.iui-stepper-step.is-completed .iui-stepper-title {
+  color: var(--iui-muted);
+  text-decoration: line-through;
 }
 
 /* Thin 1px rail between circles */

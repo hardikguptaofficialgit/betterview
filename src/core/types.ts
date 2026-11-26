@@ -1,5 +1,6 @@
 export type UIType =
   | 'flow'
+  | 'tree'
   | 'stepper'
   | 'table'
   | 'compare'
@@ -21,6 +22,7 @@ export type UIType =
 
 export const UI_TYPES: readonly UIType[] = [
   'flow',
+  'tree',
   'stepper',
   'table',
   'compare',
@@ -84,6 +86,7 @@ export interface FlowNode {
   id: string;
   label: string;
   sub?: string;
+  detail?: string;
   icon?: string;
   color?: Color;
   group?: string;
@@ -128,7 +131,7 @@ export interface TableSpec {
 export interface CompareSpec {
   type: 'compare';
   title?: string;
-  items: { label: string; tone: 'good' | 'bad' | 'neutral'; points: string[] }[];
+  items: { label: string; tone: 'good' | 'bad' | 'neutral'; badge?: string; points: string[] }[];
 }
 
 export interface QuizSpec {
@@ -178,6 +181,8 @@ export interface StatItem {
   delta?: string;
   hint?: string;
   icon?: string;
+  sparkline?: number[];
+  tone?: 'good' | 'bad' | 'neutral';
 }
 
 export interface StatsSpec {
@@ -202,6 +207,7 @@ export interface TimelineEvent {
   time?: string;
   text: string;
   icon?: string;
+  status?: 'done' | 'active' | 'upcoming';
 }
 
 export interface TimelineSpec {
@@ -282,8 +288,25 @@ export interface ImageSpec {
   fit?: 'contain' | 'cover';
 }
 
+export interface TreeNode {
+  id: string;
+  label: string;
+  note?: string;
+  badge?: string;
+  color?: Color;
+  collapsed?: boolean;
+  children?: TreeNode[];
+}
+
+export interface TreeSpec {
+  type: 'tree';
+  title?: string;
+  layout?: 'horizontal' | 'vertical' | 'outline';
+  root: TreeNode;
+}
+
 export type DashboardVisualSpec =
-  | FlowSpec | StepperSpec | TableSpec | CompareSpec | QuizSpec | ChartSpec
+  | FlowSpec | TreeSpec | StepperSpec | TableSpec | CompareSpec | QuizSpec | ChartSpec
   | MermaidSpec | CalloutSpec | StatsSpec | TabsSpec | TimelineSpec
   | FollowupsSpec | MathSpec | CodeSpec | ChecklistSpec | FormSpec | ImageSpec;
 
@@ -307,6 +330,7 @@ export interface GenericSpec {
 
 export type UISpec =
   | FlowSpec
+  | TreeSpec
   | StepperSpec
   | TableSpec
   | CompareSpec

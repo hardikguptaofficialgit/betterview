@@ -5,6 +5,7 @@ import { renderCompare } from './compare';
 import { renderStepper } from './stepper';
 import { renderQuiz } from './quiz';
 import { renderFlow } from './flow';
+import { renderTree } from './tree';
 import { renderChart } from './chart';
 import { renderMermaid } from './mermaid';
 import { renderCallout } from './callout';
@@ -30,6 +31,7 @@ export type RenderFn<T extends UISpec> = (spec: T, ctx: RenderContext) => HTMLEl
 
 export const RENDERERS: { [K in UIType]: RenderFn<Extract<UISpec, { type: K }>> } = {
   flow: renderFlow,
+  tree: renderTree,
   stepper: renderStepper,
   table: renderTable,
   compare: renderCompare,
